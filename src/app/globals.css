@@ -1,26 +1,201 @@
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
+/* ── TAILWIND V4 THEME MAPPING ──────────────────────────────────────────────
+   Explicitly maps all DESIGN-airbnb.md tokens into Tailwind v4 @theme block
+   ──────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-brand: #ff385c;
+  --color-brand-active: #e00b41;
+  --color-brand-disabled: #ffd1da;
+
+  --color-ink: #222222;
+  --color-body: #3f3f3f;
+  --color-muted: #6a6a6a;
+  --color-muted-soft: #929292;
+
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f7f7f7;
+  --color-surface-strong: #f2f2f2;
+
+  --color-hairline: #dddddd;
+  --color-hairline-soft: #ebebeb;
+  --color-border-strong: #c1c1c1;
+
+  --color-on-primary: #ffffff;
+  --color-on-dark: #ffffff;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-card: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px 0, rgba(0,0,0,0.1) 0 4px 8px 0;
+}
+
+/* ── CSS CUSTOM PROPERTIES ──────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-brand: #ff385c;
+  --color-brand-active: #e00b41;
+  --color-brand-disabled: #ffd1da;
+
+  --color-ink: #222222;
+  --color-body: #3f3f3f;
+  --color-muted: #6a6a6a;
+  --color-muted-soft: #929292;
+
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f7f7f7;
+  --color-surface-strong: #f2f2f2;
+
+  --color-hairline: #dddddd;
+  --color-hairline-soft: #ebebeb;
+  --color-border-strong: #c1c1c1;
+
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px 0, rgba(0,0,0,0.1) 0 4px 8px 0;
+
+  --font-sans: var(--font-inter), Circular, -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── BASE RESETS ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ffffff;
+  color: #222222;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── UTILITY CLASS UTILITIES ─────────────────────────────────────────────── */
+
+/* Spacing Padding */
+.px-base { padding-left: 16px; padding-right: 16px; }
+.px-xl { padding-left: 32px; padding-right: 32px; }
+.px-lg { padding-left: 24px; padding-right: 24px; }
+.px-md { padding-left: 12px; padding-right: 12px; }
+.px-sm { padding-left: 8px; padding-right: 8px; }
+.px-xs { padding-left: 4px; padding-right: 4px; }
+
+.py-section { padding-top: 64px; padding-bottom: 64px; }
+.py-xxl { padding-top: 48px; padding-bottom: 48px; }
+.py-xl { padding-top: 32px; padding-bottom: 32px; }
+.py-lg { padding-top: 24px; padding-bottom: 24px; }
+.py-base { padding-top: 16px; padding-bottom: 16px; }
+.py-md { padding-top: 12px; padding-bottom: 12px; }
+.py-sm { padding-top: 8px; padding-bottom: 8px; }
+.py-xs { padding-top: 4px; padding-bottom: 4px; }
+
+.p-base { padding: 16px; }
+.p-lg { padding: 24px; }
+.p-xl { padding: 32px; }
+.p-xxl { padding: 48px; }
+.p-md { padding: 12px; }
+
+/* Gaps */
+.gap-xxs { gap: 2px; }
+.gap-xs { gap: 4px; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 12px; }
+.gap-base { gap: 16px; }
+.gap-lg { gap: 24px; }
+.gap-xl { gap: 32px; }
+.gap-xxl { gap: 48px; }
+
+/* Margins */
+.mb-xxs { margin-bottom: 2px; }
+.mb-xs { margin-bottom: 4px; }
+.mb-sm { margin-bottom: 8px; }
+.mb-md { margin-bottom: 12px; }
+.mb-base { margin-bottom: 16px; }
+.mb-lg { margin-bottom: 24px; }
+.mb-xl { margin-bottom: 32px; }
+.mb-xxl { margin-bottom: 48px; }
+
+.mt-xxs { margin-top: 2px; }
+.mt-xs { margin-top: 4px; }
+.mt-sm { margin-top: 8px; }
+.mt-md { margin-top: 12px; }
+
+/* Colors */
+.bg-canvas { background-color: #ffffff; }
+.bg-surface-soft { background-color: #f7f7f7; }
+.bg-surface-strong { background-color: #f2f2f2; }
+.bg-brand { background-color: #ff385c; }
+.bg-brand-active { background-color: #e00b41; }
+.bg-ink { background-color: #222222; }
+
+.text-ink { color: #222222; }
+.text-body { color: #3f3f3f; }
+.text-muted { color: #6a6a6a; }
+.text-brand { color: #ff385c; }
+.text-on-primary { color: #ffffff; }
+.text-on-dark { color: #ffffff; }
+.text-legal-link { color: #428bff; }
+
+.border-hairline { border-color: #dddddd; }
+.border-hairline-soft { border-color: #ebebeb; }
+.border-border-strong { border-color: #c1c1c1; }
+
+/* Border Radius */
+.rounded-card { border-radius: 14px; }
+.rounded-xs { border-radius: 4px; }
+.rounded-sm { border-radius: 8px; }
+.rounded-lg { border-radius: 20px; }
+.rounded-xl { border-radius: 32px; }
+
+/* Shadows */
+.shadow-card {
+  box-shadow: rgba(0,0,0,0.02) 0 0 0 1px,
+              rgba(0,0,0,0.04) 0 2px 6px 0,
+              rgba(0,0,0,0.1)  0 4px 8px 0;
+}
+
+/* Typography scale */
+.text-display-xl { font-size: 28px; line-height: 1.43; }
+.text-display-lg { font-size: 22px; line-height: 1.18; letter-spacing: -0.44px; }
+.text-display-md { font-size: 21px; line-height: 1.43; }
+.text-display-sm { font-size: 20px; line-height: 1.20; letter-spacing: -0.18px; }
+.text-title-md { font-size: 16px; line-height: 1.25; }
+.text-title-sm { font-size: 16px; line-height: 1.25; }
+.text-body-md { font-size: 16px; line-height: 1.5; }
+.text-body-sm { font-size: 14px; line-height: 1.43; }
+.text-caption { font-size: 14px; line-height: 1.29; }
+.text-caption-sm { font-size: 13px; line-height: 1.23; }
+.text-badge { font-size: 11px; line-height: 1.18; }
+.text-btn-md { font-size: 16px; line-height: 1.25; }
+.text-btn-sm { font-size: 14px; line-height: 1.29; }
+
+/* FOCUS VISIBLE */
+:focus-visible {
+  outline: 2px solid #222222;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* SCROLLBAR UTILITY */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
