@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, MapPin, Sparkles } from "lucide-react";
+import { Star, MapPin, Sparkles, Calendar, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Rotaract Experiences | RotaSphere",
@@ -16,62 +16,125 @@ interface ExperienceItem {
   reviews: number;
   image: string;
   price: string;
+  badge?: string;
+  dates: string;
 }
 
-const EXPERIENCES: ExperienceItem[] = [];
+const EXPERIENCES: ExperienceItem[] = [
+  {
+    id: "exp-1",
+    title: "High-Altitude Youth Leadership Camp & Trek",
+    location: "Western Ghats, Sakleshpur",
+    rating: 4.96,
+    reviews: 84,
+    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop&q=80",
+    price: "₹3,499",
+    badge: "Bestseller",
+    dates: "March 14–16, 2026",
+  },
+  {
+    id: "exp-2",
+    title: "Public Speaking & Keynote Mastery Retreat",
+    location: "Nandi Hills Heritage Resort, Bengaluru",
+    rating: 4.92,
+    reviews: 62,
+    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+    price: "₹2,199",
+    badge: "Masterclass",
+    dates: "April 4–5, 2026",
+  },
+  {
+    id: "exp-3",
+    title: "Eco-Innovation & Social Impact Hackathon",
+    location: "IIM Ahmedabad Campus",
+    rating: 4.88,
+    reviews: 47,
+    image: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&auto=format&fit=crop&q=80",
+    price: "₹1,299",
+    badge: "Hackathon",
+    dates: "April 18–19, 2026",
+  },
+];
 
 export default function ExperiencesPage() {
   return (
-    <div className="max-w-[1440px] mx-auto px-base md:px-xl py-section">
-      <div className="flex items-center gap-sm mb-xs">
-        <span className="text-badge font-bold uppercase tracking-wider bg-brand/10 text-brand px-xs py-xxs rounded-full flex items-center gap-xxs">
-          <Sparkles size={12} /> NEW
-        </span>
-        <h1 className="text-display-md font-bold text-ink">Rotaract Experiences</h1>
-      </div>
-      <p className="text-body-md text-muted mb-xl max-w-xl">
-        Immersive multi-day workshops, retreats, and hands-on masterclasses designed for leadership development.
-      </p>
-
-      {EXPERIENCES.length === 0 ? (
-        <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-3xl p-8 bg-gray-50/50">
-          <Sparkles className="mx-auto text-gray-300 mb-3" size={36} />
-          <h3 className="text-lg font-bold text-gray-900">No experiences scheduled yet</h3>
-          <p className="text-sm text-gray-500 max-w-sm mx-auto mt-1">
-            District workshops and leadership experiences will be listed here once announced.
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+        
+        {/* Header */}
+        <div className="max-w-2xl space-y-3 mb-10 sm:mb-12">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] text-xs font-extrabold uppercase tracking-wider">
+            <Sparkles size={12} /> CURATED IMMERSIONS
+          </div>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+            Rotaract Experiences
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 font-normal leading-relaxed">
+            Immersive multi-day workshops, outdoor leadership retreats, and hands-on masterclasses curated across District 3192.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-lg">
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {EXPERIENCES.map((exp) => (
             <div
               key={exp.id}
-              className="group bg-canvas border border-hairline rounded-card overflow-hidden shadow-card hover:shadow-card transition-shadow"
+              className="group bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
             >
-              <div className="relative w-full h-64 overflow-hidden bg-surface-strong">
+              <div className="relative w-full aspect-16/10 overflow-hidden bg-gray-100">
                 <Image
                   src={exp.image}
                   alt={exp.title}
                   fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+                {exp.badge && (
+                  <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-gray-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full shadow-sm">
+                    {exp.badge}
+                  </span>
+                )}
               </div>
-              <div className="p-base">
-                <div className="flex items-center justify-between gap-xs mb-xxs">
-                  <span className="text-body-sm text-muted flex items-center gap-xxs">
-                    <MapPin size={12} /> {exp.location}
-                  </span>
-                  <span className="flex items-center gap-xxs text-body-sm font-medium text-ink">
-                    <Star size={14} className="fill-ink text-ink" /> {exp.rating} ({exp.reviews})
-                  </span>
+
+              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} className="text-[#ff385c]" /> {exp.location}
+                    </span>
+                    <span className="flex items-center gap-1 font-bold text-gray-900">
+                      <Star size={13} className="fill-amber-400 text-amber-400" /> {exp.rating} ({exp.reviews})
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-gray-900 leading-snug group-hover:text-[#ff385c] transition-colors">
+                    {exp.title}
+                  </h3>
+
+                  <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                    <Calendar size={12} /> {exp.dates}
+                  </p>
                 </div>
-                <h3 className="text-title-md font-semibold text-ink mb-xs line-clamp-1">{exp.title}</h3>
-                <p className="text-body-sm font-semibold text-ink">{exp.price} <span className="font-normal text-muted">/ person</span></p>
+
+                <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-base sm:text-lg font-black text-gray-900">{exp.price}</span>
+                    <span className="text-xs text-gray-500 font-normal"> / delegate</span>
+                  </div>
+
+                  <Link
+                    href="/events"
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#ff385c] hover:underline"
+                  >
+                    View Details <ArrowRight size={13} />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
         </div>
-      )}
+
+      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Super Admin Governance Panel | RotaSphere SaaS",
-  description: "Platform-wide KYC moderation, event approvals, immutable audit logs, and fee rules.",
+  description: "Platform-wide KYC moderation, event approvals, financial ledger, gate analytics, and fee rules.",
 };
 
 export default async function AdminPage() {
@@ -31,8 +31,30 @@ export default async function AdminPage() {
   `);
   const events = eventsData || [];
 
-  const { data: ordersData } = await executeSql(`SELECT * FROM saas_orders ORDER BY created_at DESC LIMIT 100;`);
+  const { data: ordersData } = await executeSql(`
+    SELECT o.*, e.title as event_title
+    FROM saas_orders o
+    LEFT JOIN saas_events e ON o.event_id = e.id
+    ORDER BY o.created_at DESC LIMIT 200;
+  `);
   const orders = ordersData || [];
+
+  const { data: ticketsData } = await executeSql(`
+    SELECT t.*, e.title as event_title, tt.name as tier_name
+    FROM saas_tickets t
+    LEFT JOIN saas_events e ON t.event_id = e.id
+    LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
+    ORDER BY t.created_at DESC LIMIT 200;
+  `);
+  const tickets = ticketsData || [];
+
+  const { data: checkInsData } = await executeSql(`
+    SELECT c.*, e.title as event_title
+    FROM check_in_logs c
+    LEFT JOIN saas_events e ON c.event_id = e.id
+    ORDER BY c.created_at DESC LIMIT 50;
+  `);
+  const checkInLogs = checkInsData || [];
 
   const { data: auditData } = await executeSql(`SELECT * FROM platform_audit_logs ORDER BY created_at DESC LIMIT 50;`);
   const auditLogs = auditData || [];
@@ -46,6 +68,8 @@ export default async function AdminPage() {
       initialOrganizations={organizations}
       initialEvents={events}
       initialOrders={orders}
+      initialTickets={tickets}
+      initialCheckInLogs={checkInLogs}
       initialAuditLogs={auditLogs}
       initialFeatureFlags={featureFlags}
     />

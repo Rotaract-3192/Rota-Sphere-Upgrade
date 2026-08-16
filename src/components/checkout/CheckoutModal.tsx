@@ -1,16 +1,39 @@
 "use client";
 
 /**
- * High-Conversion Multi-Tier Checkout Modal
- * Supports multi-attendee name/email collection, coupons, fee breakdowns, and instant ticket generation.
+ * Dynamic UPI QR & 1-Click UPI App Checkout Modal
+ * Architecture:
+ * 1. Multi-Tier & Multi-Attendee pass selection.
+ * 2. Real-time Dynamic UPI QR code generation with exact amount and reference notes.
+ * 3. 1-Click "Pay with UPI App" button (opens GPay, PhonePe, Paytm, BHIM on mobile).
+ * 4. Attendee UTR / UPI Transaction Reference submission.
+ * 5. Instant dispatch to Organizer & Admin Verification Queue.
  */
 
-import { useState } from "react";
-import { X, Sparkles, Tag, ShieldCheck, ArrowRight, CheckCircle2, Loader2, User, Mail, Phone } from "lucide-react";
+import { useState, useEffect } from "react";
+import QRCode from "qrcode";
+import {
+  X,
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  QrCode,
+  Copy,
+  Check,
+  Smartphone,
+  AlertCircle,
+  Clock,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
-import { createCheckoutOrderAction, confirmOrderPaymentAction } from "@/app/actions/orderActions";
+import { createCheckoutOrderAction } from "@/app/actions/orderActions";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import Link from "next/link";
+import Image from "next/image";
 
 interface CheckoutModalProps {
   event: SaasEvent;
@@ -21,7 +44,16 @@ interface CheckoutModalProps {
   userName?: string;
 }
 
-export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userName }: CheckoutModalProps) {
+export function CheckoutModal({
+  event,
+  tiers,
+  isOpen,
+  onClose,
+  userEmail,
+  userName,
+}: CheckoutModalProps) {
+  const [checkoutStep, setCheckoutStep] = useState<"SELECT_PASSES" | "UPI_PAYMENT" | "SUCCESS">("SELECT_PASSES");
+
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     if (tiers.length > 0) {
@@ -35,21 +67,55 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
 
-  // Attendees list
-  const [attendees, setAttendees] = useState<Array<{ tierId: string; name: string; email: string; phone: string }>>([
+  const [currentUrl, setCurrentUrl] = useState("/events");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
+
+  // Tier Staggering & Categorization (Early Bird -> General Release Dropdown -> VIP)
+  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name));
+  const generalTiers = tiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
+  const otherTiers = tiers.filter(
+    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
+  );
+
+  const isEarlyBirdAvailable =
+    earlyBirdTiers.length > 0 &&
+    earlyBirdTiers.some((t) => {
+      const cap = t.total_capacity ?? 9999;
+      const sold = t.sold_count ?? 0;
+      return cap - sold > 0;
+    });
+
+  const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
+
+  // Attendees list - Keep empty by default as requested
+  const [attendees, setAttendees] = useState<
+    Array<{ tierId: string; name: string; email: string; phone: string }>
+  >([
     {
       tierId: tiers[0]?.id || "",
-      name: userName || "",
-      email: userEmail || "",
+      name: "",
+      email: "",
       phone: "",
     },
   ]);
 
-  const [loading, setLoading] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; isFree: boolean } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // UPI Payment State
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState<string>("");
+  const [upiTransactionId, setUpiTransactionId] = useState("");
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
 
-  if (!isOpen) return null;
+  const [loading, setLoading] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<{
+    orderNumber: string;
+    isFree: boolean;
+    status: string;
+  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Calculate totals
   let subtotal = 0;
@@ -66,23 +132,61 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
     couponDiscountAmount: discountAmount,
   });
 
+  const isFreeOrder = fees.totalPayable === 0;
+
+  // Resolve target Organizer UPI ID & Payee Name
+  const targetUpiId = (event as any).upi_id || "rotaractdistrict3192@okaxis";
+  const targetPayeeName = (event as any).upi_payee_name || "District 3192 Rotaract";
+
+  // Dynamic UPI URI Format: upi://pay?pa={upi_id}&pn={name}&am={amount}&tn={note}&cu=INR
+  const upiPaymentUri = `upi://pay?pa=${encodeURIComponent(targetUpiId)}&pn=${encodeURIComponent(
+    targetPayeeName
+  )}&am=${fees.totalPayable.toFixed(2)}&tn=${encodeURIComponent(`Passes for ${event.title.slice(0, 30)}`)}&cu=INR`;
+
+  // Generate dynamic QR code whenever payment amount is calculated
+  useEffect(() => {
+    if (isOpen && isFreeOrder) {
+      setUpiQrDataUrl("");
+      return;
+    }
+
+    if (isOpen && upiPaymentUri) {
+      QRCode.toDataURL(upiPaymentUri, {
+        width: 320,
+        margin: 2,
+        errorCorrectionLevel: "H",
+        color: {
+          dark: "#0f172a",
+          light: "#ffffff",
+        },
+      })
+        .then((url) => setUpiQrDataUrl(url))
+        .catch((err) => console.error("Error generating UPI QR:", err));
+    }
+  }, [fees.totalPayable, upiPaymentUri, isOpen, isFreeOrder]);
+
+  if (!isOpen) return null;
+
   function handleCountChange(tierId: string, delta: number) {
     const current = selectedCounts[tierId] || 0;
     const next = Math.max(0, Math.min(10, current + delta));
     const newCounts = { ...selectedCounts, [tierId]: next };
     setSelectedCounts(newCounts);
 
-    // Rebuild attendee slots
+    // Rebuild attendee slots while preserving what user typed
     const newAttendees: Array<{ tierId: string; name: string; email: string; phone: string }> = [];
+    let prevIndex = 0;
     tiers.forEach((t) => {
       const count = newCounts[t.id] || 0;
       for (let i = 0; i < count; i++) {
+        const existing = attendees[prevIndex];
         newAttendees.push({
           tierId: t.id,
-          name: i === 0 ? userName || "" : "",
-          email: i === 0 ? userEmail || "" : "",
-          phone: "",
+          name: existing?.name || "",
+          email: existing?.email || "",
+          phone: existing?.phone || "",
         });
+        prevIndex++;
       }
     });
     setAttendees(newAttendees.length > 0 ? newAttendees : [{ tierId: tiers[0]?.id || "", name: "", email: "", phone: "" }]);
@@ -105,13 +209,17 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
     }
   }
 
-  async function handleCompleteCheckout() {
+  function handleProceedToPayment() {
+    if (!userEmail) {
+      setErrorMessage("Please sign in to your account before purchasing tickets.");
+      return;
+    }
+
     if (totalTicketCount === 0) {
       setErrorMessage("Please select at least 1 ticket");
       return;
     }
 
-    // Validate attendees
     for (let i = 0; i < attendees.length; i++) {
       if (!attendees[i].name.trim() || !attendees[i].email.trim()) {
         setErrorMessage(`Please fill out Name and Email for Attendee #${i + 1}`);
@@ -119,6 +227,18 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
       }
     }
 
+    setErrorMessage(null);
+
+    if (isFreeOrder) {
+      // If free, submit immediately
+      handleSubmitOrder("");
+    } else {
+      // Show Dynamic UPI QR Screen
+      setCheckoutStep("UPI_PAYMENT");
+    }
+  }
+
+  async function handleSubmitOrder(utrNumber: string) {
     setLoading(true);
     setErrorMessage(null);
 
@@ -136,44 +256,68 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
       customerName: attendees[0]?.name,
       customerEmail: attendees[0]?.email,
       customerPhone: attendees[0]?.phone,
+      upiTransactionId: utrNumber.trim() || undefined,
     });
 
+    setLoading(false);
+
     if (!res.success) {
-      setLoading(false);
-      setErrorMessage(res.error || "Failed to process order");
+      setErrorMessage(res.error || "Failed to submit order");
       return;
     }
 
-    if (res.isFree) {
-      setLoading(false);
-      setCompletedOrder({ orderNumber: res.orderNumber || "RS-ORDER", isFree: true });
-      return;
-    }
+    setCompletedOrder({
+      orderNumber: res.orderNumber || "RS-CONFIRMED",
+      isFree: res.isFree ?? false,
+      status: res.status || "PENDING_VERIFICATION",
+    });
+    setCheckoutStep("SUCCESS");
+  }
 
-    // Paid Order -> Process simulation / gateway confirmation
-    setTimeout(async () => {
-      if (res.orderId) {
-        await confirmOrderPaymentAction(res.orderId, `pay_mock_${Date.now()}`);
-      }
-      setLoading(false);
-      setCompletedOrder({ orderNumber: res.orderNumber || "RS-ORDER", isFree: false });
-    }, 1200);
+  function handleCopy(text: string, type: "upi" | "amount") {
+    navigator.clipboard.writeText(text);
+    if (type === "upi") {
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2000);
+    } else {
+      setCopiedAmount(true);
+      setTimeout(() => setCopiedAmount(false), 2000);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 my-8">
-        
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in-50">
+      {/* Explicit backdrop element */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+      />
+
+      {/* Modal Dialog Box */}
+      <div
+        style={{ width: "100%", maxWidth: "640px" }}
+        className="relative z-10 w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 mx-auto"
+      >
         {/* Modal Header */}
-        <div className="bg-gray-900 text-white p-6 sm:p-8 flex items-start justify-between relative overflow-hidden">
-          <div className="relative z-10 space-y-1">
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Sparkles size={14} /> Instant Registration
-            </span>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">{event.title}</h2>
-            <p className="text-xs text-gray-400">
-              {event.city} · {new Date(event.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
-            </p>
+        <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
+
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="relative w-10 h-10 rounded-2xl overflow-hidden shadow-xs bg-white shrink-0">
+              <Image
+                src="/brand/logo.png"
+                alt="Rotaract District 3192 Ticketing Logo"
+                fill
+                className="object-contain p-0.5"
+                priority
+              />
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#60a5fa] flex items-center gap-1.5 leading-none">
+                <QrCode size={12} /> DYNAMIC UPI CHECKOUT
+              </span>
+              <h2 className="text-lg sm:text-xl font-black text-white leading-tight line-clamp-1">{event.title}</h2>
+              <p className="text-[11px] text-gray-400 font-medium">District 3192 Direct UPI Pass Booking</p>
+            </div>
           </div>
 
           <button
@@ -184,229 +328,556 @@ export function CheckoutModal({ event, tiers, isOpen, onClose, userEmail, userNa
           </button>
         </div>
 
-        {/* Success Confirmation State */}
-        {completedOrder ? (
+        {/* ── 1. GATED STATE: NOT LOGGED IN ─────────────────────────────── */}
+        {!userEmail ? (
           <div className="p-8 sm:p-12 text-center space-y-6">
+            <div className="w-16 h-16 bg-blue-50 text-[#1e9df1] rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <Lock size={32} />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight">Sign In to Book Passes</h3>
+              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                To issue your encrypted digital QR entry passes, save your tickets, and manage transfers, you must sign in to your RotaSphere account.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 max-w-sm mx-auto">
+              <Link
+                href={`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`}
+                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                Sign In to Continue <ArrowRight size={15} />
+              </Link>
+              <Link
+                href={`/sign-up?redirect_url=${encodeURIComponent(currentUrl)}`}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center cursor-pointer"
+              >
+                Create Account
+              </Link>
+            </div>
+          </div>
+        ) : checkoutStep === "SUCCESS" ? (
+          /* ── 2. SUCCESS CONFIRMATION STATE ─────────────────────────────── */
+          <div className="p-8 sm:p-10 text-center space-y-6 overflow-y-auto">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 size={36} />
             </div>
-            <div>
-              <h3 className="text-2xl font-extrabold text-gray-900">Registration Confirmed!</h3>
-              <p className="text-sm text-gray-500 mt-2">
-                Your entry passes with cryptographic QR codes have been issued and sent to{" "}
-                <span className="font-semibold text-gray-900">{attendees[0]?.email}</span>.
+            <div className="space-y-3">
+              <h3 className="text-2xl font-black text-gray-900">
+                {completedOrder?.isFree ? "Registration Confirmed!" : "UPI Payment Submitted!"}
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {completedOrder?.isFree
+                  ? "Your complimentary entry pass has been issued and is available in your passes dashboard."
+                  : `Your UTR reference (${upiTransactionId || "Submitted"}) has been dispatched to the event organizer for verification. Passes will be confirmed once approved.`}
               </p>
-              <div className="mt-4 inline-block bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-700">
-                Order Reference: {completedOrder.orderNumber}
+              <div className="mt-3 inline-block bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-700">
+                Order Ref: {completedOrder?.orderNumber}
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 max-w-xs mx-auto">
               <Link
                 href="/tickets"
-                className="bg-[#ff385c] hover:bg-[#e00b41] text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
-                View My Tickets & QR Code <ArrowRight size={16} />
+                View My Passes &amp; Status <ArrowRight size={15} />
               </Link>
+            </div>
+          </div>
+
+        ) : checkoutStep === "UPI_PAYMENT" ? (
+          /* ── 3. DYNAMIC UPI QR & 1-CLICK PAY STEP ───────────────────────── */
+          <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+            {errorMessage && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Price Summary Pill */}
+            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-500 uppercase font-extrabold block">Total Payable Amount</span>
+                <span className="text-xl font-black text-gray-900">₹{fees.totalPayable.toFixed(2)}</span>
+              </div>
               <button
-                onClick={onClose}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-sm px-6 py-3 rounded-xl transition-colors cursor-pointer"
+                type="button"
+                onClick={() => handleCopy(fees.totalPayable.toFixed(2), "amount")}
+                className="text-xs font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer"
               >
-                Done
+                {copiedAmount ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                {copiedAmount ? "Copied" : "Copy Amount"}
+              </button>
+            </div>
+
+            {/* Mobile 1-Click UPI Payment Button */}
+            <div className="space-y-2">
+              <a
+                href={upiPaymentUri}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
+              >
+                <Smartphone size={18} />
+                Pay with UPI App (GPay / PhonePe / Paytm)
+              </a>
+              <p className="text-[11px] text-center text-gray-400">
+                On mobile devices, this button directly launches your installed UPI app with the exact amount prefilled.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-gray-200" />
+              <span className="flex-shrink mx-4 text-[10px] uppercase font-extrabold text-gray-400">
+                OR SCAN DYNAMIC UPI QR
+              </span>
+              <div className="flex-grow border-t border-gray-200" />
+            </div>
+
+            {/* Dynamic UPI QR Code Box */}
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
+              <div className="bg-white p-3 rounded-2xl border-2 border-gray-900 shadow-md">
+                {upiQrDataUrl ? (
+                  <img
+                    src={upiQrDataUrl}
+                    alt="Dynamic UPI QR Code"
+                    className="w-52 h-52 sm:w-56 sm:h-56 object-contain"
+                  />
+                ) : (
+                  <div className="w-52 h-52 flex items-center justify-center">
+                    <Loader2 size={24} className="animate-spin text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* Payee Info */}
+              <div className="w-full max-w-sm bg-white p-3 rounded-2xl border border-gray-200 text-xs">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Organizer UPI ID (VPA)</span>
+                  <span className="font-mono font-bold text-gray-900 truncate block">{targetUpiId}</span>
+                  <span className="text-[10px] text-gray-500 truncate block">Payee: {targetPayeeName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: UTR Reference Form */}
+            <div className="space-y-3 p-5 bg-blue-50/60 border border-blue-200/80 rounded-3xl">
+              <div className="space-y-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 flex items-center gap-1.5">
+                  <Clock size={15} className="text-[#1e9df1]" />
+                  Enter 12-Digit UPI Reference / UTR Number *
+                </label>
+                <p className="text-xs text-gray-600">
+                  After completing the payment in GPay/PhonePe/Paytm, paste your 12-digit UTR/Txn Reference number below.
+                </p>
+              </div>
+
+              <input
+                type="text"
+                required
+                maxLength={32}
+                placeholder="e.g. 421893821034 or UPI/421893..."
+                value={upiTransactionId}
+                onChange={(e) => {
+                  setUpiTransactionId(e.target.value);
+                  setErrorMessage(null);
+                }}
+                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10"
+              />
+            </div>
+
+            {/* Navigation / Submit Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCheckoutStep("SELECT_PASSES")}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-3.5 rounded-2xl text-xs transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={loading || !upiTransactionId.trim()}
+                onClick={() => handleSubmitOrder(upiTransactionId)}
+                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : "Submit Payment for Approval"}
               </button>
             </div>
           </div>
         ) : (
-          /* Multi-Step Checkout Body */
-          <div className="p-6 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
-            {/* Step 1: Select Ticket Tiers */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">1. Select Ticket Tier</h3>
-              <div className="space-y-2.5">
-                {tiers.map((tier) => {
-                  const count = selectedCounts[tier.id] || 0;
-                  const isFree = Number(tier.price) === 0;
-                  return (
-                    <div
-                      key={tier.id}
-                      className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                        count > 0 ? "border-amber-400 bg-amber-50/20 shadow-xs" : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">{tier.name}</span>
-                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
-                            {tier.tier_type}
-                          </span>
-                        </div>
-                        {tier.description && <p className="text-xs text-gray-500 mt-0.5">{tier.description}</p>}
-                        <p className="text-sm font-extrabold text-[#ff385c] mt-1">
-                          {isFree ? "FREE" : `₹${tier.price}`}
-                        </p>
-                      </div>
-
-                      {/* Quantity selector */}
-                      <div className="flex items-center gap-3 bg-gray-100 px-3 py-1.5 rounded-xl">
-                        <button
-                          onClick={() => handleCountChange(tier.id, -1)}
-                          disabled={count === 0}
-                          className="w-6 h-6 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center hover:bg-gray-200 disabled:opacity-40 cursor-pointer text-sm"
-                        >
-                          -
-                        </button>
-                        <span className="font-bold text-sm text-gray-900 w-4 text-center">{count}</span>
-                        <button
-                          onClick={() => handleCountChange(tier.id, 1)}
-                          disabled={count >= tier.max_per_order}
-                          className="w-6 h-6 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center hover:bg-gray-200 disabled:opacity-40 cursor-pointer text-sm"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Step 2: Attendee Details */}
-            {totalTicketCount > 0 && (
-              <div className="space-y-4 pt-4 border-t border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">2. Attendee Passes ({attendees.length})</h3>
-                {attendees.map((att, idx) => (
-                  <div key={idx} className="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                      Attendee #{idx + 1}
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Full Name *</label>
-                        <div className="relative">
-                          <User size={15} className="absolute left-3 top-3 text-gray-400" />
-                          <input
-                            type="text"
-                            required
-                            value={att.name}
-                            onChange={(e) => {
-                              const updated = [...attendees];
-                              updated[idx].name = e.target.value;
-                              setAttendees(updated);
-                            }}
-                            placeholder="Rtr. Priya Sharma"
-                            className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-900 outline-none focus:border-amber-400"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Email Address *</label>
-                        <div className="relative">
-                          <Mail size={15} className="absolute left-3 top-3 text-gray-400" />
-                          <input
-                            type="email"
-                            required
-                            value={att.email}
-                            onChange={(e) => {
-                              const updated = [...attendees];
-                              updated[idx].email = e.target.value;
-                              setAttendees(updated);
-                            }}
-                            placeholder="priya@rotaract.org"
-                            className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-900 outline-none focus:border-amber-400"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          /* ── 4. STEP 1: PASS SELECTION & ATTENDEE FORM ─────────────────── */
+          <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+            {errorMessage && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{errorMessage}</span>
               </div>
             )}
 
-            {/* Step 3: Coupon Code */}
-            <div className="pt-4 border-t border-gray-100">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                Have a Promo Code?
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Tag size={15} className="absolute left-3 top-3 text-gray-400" />
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="Try 'EARLYBIRD' or 'ROTARACT'"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs font-mono uppercase text-gray-900 outline-none focus:border-amber-400"
-                  />
+            {/* Tiers List */}
+            <div className="space-y-3">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                Select Entry Passes
+              </span>
+              <div className="space-y-3">
+                {/* 1. Early Bird Tiers */}
+                {earlyBirdTiers.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full inline-block">
+                      🔥 Early Bird Release
+                    </span>
+                    <div className="space-y-2">
+                      {earlyBirdTiers.map((tier) => {
+                        const count = selectedCounts[tier.id] || 0;
+                        const remaining = (tier.total_capacity ?? 9999) - (tier.sold_count ?? 0);
+                        const isSoldOut = remaining <= 0;
+                        return (
+                          <div
+                            key={tier.id}
+                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                              count > 0
+                                ? "border-[#1e9df1] bg-blue-50/20 shadow-xs"
+                                : isSoldOut
+                                ? "border-gray-200 bg-gray-50 opacity-75"
+                                : "border-gray-200 bg-white"
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                  {tier.tier_type || "Pass"}
+                                </span>
+                                {isSoldOut && (
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                                    Sold Out
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-sm font-black text-[#1e9df1]">
+                                {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, -1)}
+                                disabled={count === 0 || isSoldOut}
+                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, 1)}
+                                disabled={isSoldOut}
+                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Dropdown under Early Bird for General Release Passes */}
+                {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
+                      className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-900">General Release Passes</span>
+                        {isEarlyBirdAvailable ? (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Unlocks after Early Bird
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Now Active
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-extrabold text-[#1e9df1] flex items-center gap-1">
+                        {showGeneralDropdown ? (
+                          <>Hide General Tickets <ChevronUp size={14} /></>
+                        ) : (
+                          <>View General Tickets <ChevronDown size={14} /></>
+                        )}
+                      </span>
+                    </button>
+
+                    {showGeneralDropdown && (
+                      <div className="p-3 border-t border-gray-200 space-y-2 bg-white">
+                        {generalTiers.map((tier) => {
+                          const count = selectedCounts[tier.id] || 0;
+                          return (
+                            <div
+                              key={tier.id}
+                              className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                                count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                              }`}
+                            >
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                    {tier.tier_type || "Pass"}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                                <p className="text-sm font-black text-[#1e9df1]">
+                                  {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, -1)}
+                                  disabled={count === 0}
+                                  className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, 1)}
+                                  className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. If NO Early Bird exists, render General Tiers normally */}
+                {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
+                  <div className="space-y-2">
+                    {generalTiers.map((tier) => {
+                      const count = selectedCounts[tier.id] || 0;
+                      return (
+                        <div
+                          key={tier.id}
+                          className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                            count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                          }`}
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                {tier.tier_type || "Pass"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                            <p className="text-sm font-black text-[#1e9df1]">
+                              {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleCountChange(tier.id, -1)}
+                              disabled={count === 0}
+                              className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCountChange(tier.id, 1)}
+                              className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 4. VIP & Other Tiers */}
+                {otherTiers.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    {earlyBirdTiers.length > 0 && (
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full inline-block">
+                        ⭐ Special &amp; VIP Passes
+                      </span>
+                    )}
+                    <div className="space-y-2">
+                      {otherTiers.map((tier) => {
+                        const count = selectedCounts[tier.id] || 0;
+                        return (
+                          <div
+                            key={tier.id}
+                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                              count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                  {tier.tier_type || "Pass"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-sm font-black text-[#1e9df1]">
+                                {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, -1)}
+                                disabled={count === 0}
+                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, 1)}
+                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Attendee Details Form */}
+            {attendees.length > 0 && totalTicketCount > 0 && (
+              <div className="space-y-4 pt-2">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                  Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
+                </span>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {attendees.map((att, idx) => (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                      <span className="text-[10px] font-bold uppercase text-[#1e9df1] tracking-wider block">
+                        Attendee #{idx + 1}
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Full Name *"
+                          value={att.name}
+                          onChange={(e) => {
+                            const updated = [...attendees];
+                            updated[idx].name = e.target.value;
+                            setAttendees(updated);
+                          }}
+                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                        />
+                        <input
+                          type="email"
+                          required
+                          placeholder="Email Address *"
+                          value={att.email}
+                          onChange={(e) => {
+                            const updated = [...attendees];
+                            updated[idx].email = e.target.value;
+                            setAttendees(updated);
+                          }}
+                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
+
+            {/* Promo Code Input */}
+            <div className="space-y-2 pt-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Promo or Discount Code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs uppercase font-mono outline-none focus:border-[#1e9df1]"
+                />
                 <button
                   type="button"
                   onClick={handleApplyCoupon}
-                  className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="bg-gray-900 hover:bg-black text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors cursor-pointer"
                 >
                   Apply
                 </button>
               </div>
               {couponMessage && (
-                <p className={`text-xs mt-1.5 font-semibold ${couponApplied ? "text-emerald-600" : "text-rose-500"}`}>
+                <p className={`text-[11px] font-bold ${couponApplied ? "text-emerald-600" : "text-rose-500"}`}>
                   {couponMessage}
                 </p>
               )}
             </div>
 
-            {/* Step 4: Summary & Pricing Ledger */}
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-2.5">
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>Tickets Subtotal ({totalTicketCount})</span>
-                <span className="font-semibold text-gray-900">₹{fees.subtotal}</span>
+            {/* Price Breakdown */}
+            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal ({totalTicketCount} tickets)</span>
+                <span className="font-semibold">₹{fees.subtotal.toFixed(2)}</span>
               </div>
               {couponApplied && (
-                <div className="flex justify-between text-xs text-emerald-600 font-semibold">
-                  <span>Discount</span>
-                  <span>-₹{fees.discount}</span>
+                <div className="flex justify-between text-emerald-600 font-bold">
+                  <span>Promo Discount ({discountPercent}%)</span>
+                  <span>-₹{fees.discount.toFixed(2)}</span>
                 </div>
               )}
-              {fees.convenienceFee > 0 && (
-                <div className="flex justify-between text-xs text-gray-600">
-                  <span>Convenience Fee</span>
-                  <span>₹{fees.convenienceFee}</span>
-                </div>
-              )}
-              {fees.tax > 0 && (
-                <div className="flex justify-between text-xs text-gray-600">
-                  <span>GST (18%)</span>
-                  <span>₹{fees.tax}</span>
-                </div>
-              )}
-              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
-                <span className="text-sm font-bold text-gray-900">Total Payable</span>
-                <span className="text-xl font-extrabold text-[#ff385c]">
-                  {fees.totalPayable === 0 ? "FREE" : `₹${fees.totalPayable}`}
-                </span>
+              <div className="pt-2 border-t border-gray-200 flex justify-between text-sm font-black text-gray-900">
+                <span>Total Payable</span>
+                <span className="text-[#1e9df1]">₹{fees.totalPayable.toFixed(2)}</span>
               </div>
             </div>
 
-            {errorMessage && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold">
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Action CTA */}
+            {/* Action Button */}
             <button
-              onClick={handleCompleteCheckout}
+              type="button"
               disabled={loading || totalTicketCount === 0}
-              className="w-full bg-[#ff385c] hover:bg-[#e00b41] disabled:opacity-50 text-white font-bold text-sm py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              onClick={handleProceedToPayment}
+              className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm py-4 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
             >
               {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" /> Securing Your Tickets...
-                </>
+                <Loader2 size={16} className="animate-spin" />
+              ) : isFreeOrder ? (
+                "Confirm Free Registration"
               ) : (
-                <>
-                  <ShieldCheck size={18} /> Confirm & Get Passes ({totalTicketCount})
-                </>
+                `Proceed to Dynamic UPI Payment • ₹${fees.totalPayable.toFixed(2)}`
               )}
+              <ArrowRight size={16} />
             </button>
           </div>
         )}

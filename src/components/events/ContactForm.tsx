@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ContactForm — Interactive Glassmorphism Inquiry Form
- * DESIGN-airbnb.md & Cinematic dark showcase style
+ * ContactForm — Interactive Light-Mode Inquiry Form
+ * RotaSphere Design System: Clean white/blue, high contrast, crisp inputs.
  */
 
 import { useState } from "react";
@@ -22,20 +22,20 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <div className="lg:col-span-7 bg-amber-500/10 border border-amber-400/30 rounded-2xl p-8 text-center space-y-3">
-        <CheckCircle2 size={48} className="text-amber-400 mx-auto" />
-        <h4 className="text-2xl font-bold text-white">Inquiry Received!</h4>
-        <p className="text-sm text-gray-300">
-          Thank you, {name}. Our District 3192 Team will contact you at {phone} within 24 hours.
+      <div className="lg:col-span-7 bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center space-y-3">
+        <CheckCircle2 size={48} className="text-emerald-600 mx-auto" />
+        <h4 className="text-2xl font-bold text-gray-900">Inquiry Received!</h4>
+        <p className="text-sm text-gray-600">
+          Thank you, <span className="font-bold text-gray-900">{name}</span>. Our District 3192 Team will contact you at <span className="font-bold text-gray-900">{phone}</span> within 24 hours.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-4">
+    <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-5">
       <div>
-        <label htmlFor="user-name" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+        <label htmlFor="user-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
           Your Name
         </label>
         <div className="relative">
@@ -47,13 +47,13 @@ export function ContactForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your full name"
-            className="w-full bg-black/40 border border-white/15 rounded-xl px-4 py-3 pl-10 text-sm text-white placeholder:text-gray-500 outline-none focus:border-amber-400 transition-colors"
+            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl px-4 py-3 pl-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="user-phone" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+        <label htmlFor="user-phone" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
           Phone / WhatsApp Number
         </label>
         <div className="relative">
@@ -65,13 +65,13 @@ export function ContactForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+91 98765 43210"
-            className="w-full bg-black/40 border border-white/15 rounded-xl px-4 py-3 pl-10 text-sm text-white placeholder:text-gray-500 outline-none focus:border-amber-400 transition-colors"
+            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl px-4 py-3 pl-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="user-comment" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+        <label htmlFor="user-comment" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
           Message / Club Details
         </label>
         <textarea
@@ -80,13 +80,13 @@ export function ContactForm() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Tell us about your event or inquiry..."
-          className="w-full bg-black/40 border border-white/15 rounded-xl p-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-amber-400 transition-colors resize-none"
+          className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl p-4 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all resize-none"
         />
       </div>
 
       <button
         type="submit"
-        className="w-full bg-white hover:bg-amber-400 text-gray-900 font-bold text-sm py-3.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-sm py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#1e9df1]/20 active:scale-98 cursor-pointer"
       >
         <Send size={16} /> Send Inquiry
       </button>

@@ -13,7 +13,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { Clock, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import type { TicketTier, EventStatus } from "@/types/database";
 
 interface ReservationCardProps {
@@ -60,6 +60,64 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
   const publicTiers = tiers.filter((t) => t.enabled && t.visibility === "PUBLIC");
   const isRegistrationOpen = event.status === "REGISTRATION_OPEN" && !event.registrations_disabled;
   const isClosed = event.status === "REGISTRATION_CLOSED" || event.status === "COMPLETED";
+
+  const earlyBirdTiers = publicTiers.filter((t) => /early/i.test(t.name));
+  const generalTiers = publicTiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
+  const otherTiers = publicTiers.filter(
+    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
+  );
+
+  const isEarlyBirdAvailable =
+    earlyBirdTiers.length > 0 &&
+    earlyBirdTiers.some((t) => (t.capacity - t.sold_count - t.reserved_count) > 0);
+
+  const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
+
+  const renderTierCard = (tier: TicketTier) => {
+    const available = tier.capacity - tier.sold_count - tier.reserved_count;
+    const qty = quantities[tier.id] ?? 0;
+    const isSoldOut = available <= 0;
+
+    return (
+      <div key={tier.id} className="border border-hairline rounded-sm p-md">
+        <div className="flex items-start justify-between gap-sm">
+          <div className="flex-1 min-w-0">
+            <p className="text-title-md font-semibold text-ink">{tier.name}</p>
+            <p className="text-body-sm text-muted">{formatPrice(tier.price)}</p>
+            {tier.description && (
+              <p className="text-body-sm text-muted mt-xxs line-clamp-2">{tier.description}</p>
+            )}
+            {available < 20 && !isSoldOut && (
+              <p className="text-body-sm text-error mt-xxs">Only {available} left</p>
+            )}
+            {isSoldOut && <p className="text-body-sm text-error mt-xxs">Sold out</p>}
+          </div>
+
+          {!isSoldOut && (
+            <div className="flex items-center gap-xs flex-shrink-0">
+              <button
+                onClick={() => setQty(tier.id, qty - 1)}
+                disabled={qty === 0}
+                className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors cursor-pointer"
+                aria-label={`Remove one ${tier.name}`}
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-body-sm font-semibold text-ink">{qty}</span>
+              <button
+                onClick={() => setQty(tier.id, qty + 1)}
+                disabled={qty >= Math.min(available, tier.maximum_quantity)}
+                className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors cursor-pointer"
+                aria-label={`Add one ${tier.name}`}
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const total = publicTiers.reduce((sum, tier) => {
     const qty = quantities[tier.id] ?? 0;
@@ -117,61 +175,62 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
       {/* Tier selection */}
       {isRegistrationOpen && publicTiers.length > 0 && (
         <div className="space-y-sm mb-base">
-          {publicTiers.map((tier) => {
-            const available = tier.capacity - tier.sold_count - tier.reserved_count;
-            const qty = quantities[tier.id] ?? 0;
-            const isSoldOut = available <= 0;
+          {/* 1. Early Bird Tiers */}
+          {earlyBirdTiers.length > 0 && (
+            <div className="space-y-xs">
+              <span className="text-[10px] font-bold text-[#1e9df1] uppercase tracking-wider block">
+                Early Bird Release
+              </span>
+              {earlyBirdTiers.map(renderTierCard)}
+            </div>
+          )}
 
-            return (
-              <div
-                key={tier.id}
-                className="border border-hairline rounded-sm p-md"
+          {/* 2. Dropdown for General Release Passes */}
+          {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
+            <div className="border border-hairline rounded-sm overflow-hidden bg-surface-soft">
+              <button
+                type="button"
+                onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
+                className="w-full px-md py-sm flex items-center justify-between text-left cursor-pointer hover:bg-canvas transition-colors"
               >
-                <div className="flex items-start justify-between gap-sm">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-title-md font-semibold text-ink">{tier.name}</p>
-                    <p className="text-body-sm text-muted">{formatPrice(tier.price)}</p>
-                    {tier.description && (
-                      <p className="text-body-sm text-muted mt-xxs line-clamp-2">{tier.description}</p>
-                    )}
-                    {available < 20 && !isSoldOut && (
-                      <p className="text-body-sm text-error mt-xxs">
-                        Only {available} left
-                      </p>
-                    )}
-                    {isSoldOut && (
-                      <p className="text-body-sm text-error mt-xxs">Sold out</p>
-                    )}
-                  </div>
-
-                  {/* Quantity stepper */}
-                  {!isSoldOut && (
-                    <div className="flex items-center gap-xs flex-shrink-0">
-                      <button
-                        onClick={() => setQty(tier.id, qty - 1)}
-                        disabled={qty === 0}
-                        className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors"
-                        aria-label={`Remove one ${tier.name}`}
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-body-sm font-semibold text-ink">
-                        {qty}
-                      </span>
-                      <button
-                        onClick={() => setQty(tier.id, qty + 1)}
-                        disabled={qty >= Math.min(available, tier.maximum_quantity)}
-                        className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors"
-                        aria-label={`Add one ${tier.name}`}
-                      >
-                        +
-                      </button>
-                    </div>
+                <span className="text-body-sm font-semibold text-ink">
+                  General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
+                </span>
+                <span className="text-caption-sm font-semibold text-[#1e9df1] flex items-center gap-xxs">
+                  {showGeneralDropdown ? (
+                    <>Hide <ChevronUp size={12} /></>
+                  ) : (
+                    <>View <ChevronDown size={12} /></>
                   )}
+                </span>
+              </button>
+
+              {showGeneralDropdown && (
+                <div className="p-xs border-t border-hairline space-y-xs bg-canvas">
+                  {generalTiers.map(renderTierCard)}
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          )}
+
+          {/* 3. If NO Early Bird exists, render General Tiers normally */}
+          {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
+            <div className="space-y-xs">
+              {generalTiers.map(renderTierCard)}
+            </div>
+          )}
+
+          {/* 4. VIP & Other Tiers */}
+          {otherTiers.length > 0 && (
+            <div className="space-y-xs pt-xxs">
+              {earlyBirdTiers.length > 0 && (
+                <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">
+                  Special &amp; VIP Passes
+                </span>
+              )}
+              {otherTiers.map(renderTierCard)}
+            </div>
+          )}
         </div>
       )}
 

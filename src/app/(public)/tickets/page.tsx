@@ -51,7 +51,7 @@ export default async function MyTicketsPage() {
         </div>
         <Link
           href="/events"
-          className="inline-flex items-center justify-center gap-2 bg-[#ff385c] hover:bg-[#e00b41] text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm"
+          className="inline-flex items-center justify-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm"
         >
           <TicketIcon size={16} /> Discover More Events
         </Link>

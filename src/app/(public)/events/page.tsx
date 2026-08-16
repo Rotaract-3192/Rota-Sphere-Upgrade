@@ -1,5 +1,5 @@
 import { executeSql } from "@/lib/db/directDb";
-import { EventGrid } from "@/components/events/EventGrid";
+import { EventsPageClient } from "@/components/events/EventsPageClient";
 import { Search, Sparkles, Filter, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -58,14 +58,14 @@ export default async function EventsPage({ searchParams }: PageProps) {
       {/* ── HERO DISCOVERY BANNER ────────────────────────────────────── */}
       <section className="bg-gray-900 text-white py-14 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-6 relative z-10">
-          <div className="space-y-2">
+          <div className="space-y-3 max-w-2xl">
             <span className="text-xs font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
               <Sparkles size={14} /> District 3192 Ticketing Engine
             </span>
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white max-w-2xl">
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
               Discover Verified Events &amp; Masterclasses
             </h1>
-            <p className="text-sm sm:text-base text-gray-400 max-w-xl">
+            <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
               Secure entry passes for youth festivals, leadership conferences, cultural nights, and sports tournaments.
             </p>
           </div>
@@ -84,7 +84,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
             </div>
             <button
               type="submit"
-              className="bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-lg transition-all cursor-pointer"
+              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-lg transition-all cursor-pointer"
             >
               Search
             </button>
@@ -115,9 +115,9 @@ export default async function EventsPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── EVENT LISTINGS GRID ──────────────────────────────────────── */}
+      {/* ── EVENT LISTINGS & INTERACTIVE MAP DISCOVERY ───────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        <EventGrid initialEvents={(events as any) || []} />
+        <EventsPageClient events={(events as any) || []} />
       </section>
     </main>
   );

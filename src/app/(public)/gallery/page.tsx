@@ -2,12 +2,13 @@
 
 /**
  * Gallery Page — District 3192 Moments & Memories
- * High-resolution interactive photography showcase for Rotaract events.
+ * Fully mobile-responsive photography showcase for Rotaract events.
+ * Styled in the website's clean white / #ff385c aesthetic.
  */
 
 import { useState } from "react";
 import Image from "next/image";
-import { Sparkles, MapPin, Calendar, Heart, Eye, Filter, X } from "lucide-react";
+import { Sparkles, MapPin, Calendar, Heart, Eye, Filter, X, ZoomIn, Share2 } from "lucide-react";
 
 interface GalleryItem {
   id: string;
@@ -17,9 +18,71 @@ interface GalleryItem {
   date: string;
   imageUrl: string;
   likes: number;
+  description?: string;
 }
 
-const GALLERY_ITEMS: GalleryItem[] = [];
+const GALLERY_ITEMS: GalleryItem[] = [
+  {
+    id: "gal-1",
+    title: "District Conference 2026 Opening Gala",
+    category: "conference",
+    city: "Bengaluru",
+    date: "Feb 2026",
+    imageUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80",
+    likes: 142,
+    description: "Over 800 delegates gathered for the ceremonial lighting and keynote addresses at District Conference Synergy.",
+  },
+  {
+    id: "gal-2",
+    title: "Youth Leadership Conclave & Trek",
+    category: "leadership",
+    city: "Surat",
+    date: "Jan 2026",
+    imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&auto=format&fit=crop&q=80",
+    likes: 98,
+    description: "Outdoor team-building immersion fostering resilience, leadership communication, and camaraderie.",
+  },
+  {
+    id: "gal-3",
+    title: "Annual Awards & Recognition Night",
+    category: "fellowship",
+    city: "Bengaluru",
+    date: "Dec 2025",
+    imageUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80",
+    likes: 215,
+    description: "Celebrating outstanding community impact projects and stellar club leadership across District 3192.",
+  },
+  {
+    id: "gal-4",
+    title: "Green Earth Mega Tree Plantation Drive",
+    category: "service",
+    city: "Ahmedabad",
+    date: "Nov 2025",
+    imageUrl: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&auto=format&fit=crop&q=80",
+    likes: 176,
+    description: "Volunteers planted 5,000+ saplings in urban green belts as part of District 3192's climate action initiative.",
+  },
+  {
+    id: "gal-5",
+    title: "Inter-Club Sports League Championship",
+    category: "sports",
+    city: "Vadodara",
+    date: "Oct 2025",
+    imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80",
+    likes: 134,
+    description: "High-energy athletics, football, and cricket showdown bringing together 30+ Rotaract clubs.",
+  },
+  {
+    id: "gal-6",
+    title: "Global Changemakers Keynote Session",
+    category: "conference",
+    city: "Bengaluru",
+    date: "Sep 2025",
+    imageUrl: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&auto=format&fit=crop&q=80",
+    likes: 189,
+    description: "Distinguished speakers sharing actionable insights on social entrepreneurship and youth innovation.",
+  },
+];
 
 const CATEGORIES = [
   { id: "all", label: "All Photos" },
@@ -39,69 +102,93 @@ export default function GalleryPage() {
     ? GALLERY_ITEMS
     : GALLERY_ITEMS.filter((item) => item.category === selectedCategory);
 
-  function toggleLike(id: string) {
+  function toggleLike(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
     setLikedMap((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  function handleShare(item: GalleryItem, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({
+        title: item.title,
+        text: `Check out ${item.title} on RotaSphere District 3192!`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
+    }
+  }
+
   return (
-    <div className="bg-[#0b0d12] text-white min-h-screen font-sans">
-      {/* ── 1. HERO HEADER ────────────────────────────────────────────── */}
-      <section className="relative py-16 sm:py-20 px-4 sm:px-8 text-center border-b border-white/10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/20 via-[#0b0d12] to-[#0b0d12]">
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-widest">
-            <Sparkles size={14} className="text-amber-400" /> District 3192 Visual Archives
+    <div className="bg-gray-50 text-gray-900 min-h-screen font-sans">
+      
+      {/* ── 1. MOBILE-OPTIMIZED HERO HEADER ───────────────────────────── */}
+      <section className="py-10 sm:py-16 md:py-20 px-4 sm:px-6 md:px-8 text-center bg-white border-b border-gray-200">
+        <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] text-[11px] sm:text-xs font-extrabold uppercase tracking-widest">
+            <Sparkles size={13} /> District 3192 Visual Archives
           </div>
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight">
-            MOMENTS & MEMORIES
+          
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+            MOMENTS &amp; MEMORIES
           </h1>
-          <p className="text-base sm:text-lg text-gray-300 font-light max-w-xl mx-auto">
+          
+          <p className="text-xs sm:text-sm md:text-base text-gray-600 font-normal leading-relaxed">
             Capturing the spirit of fellowship, leadership, and community service across Rotaract District 3192.
           </p>
 
-          {/* Filter Pills */}
-          <div className="pt-6 flex flex-wrap items-center justify-center gap-2">
-            {CATEGORIES.map((cat) => {
-              const active = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={[
-                    "px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer",
-                    active
-                      ? "bg-amber-400 text-gray-900 shadow-md shadow-amber-400/20 scale-105"
-                      : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white",
-                  ].join(" ")}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Touch-Friendly Horizontally Scrollable Filter Pills on Mobile */}
+          <div className="pt-4 sm:pt-6" />
+        </div>
+
+        {/* Pills live OUTSIDE max-w-2xl so they never get clipped by the container */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:justify-center scrollbar-hide px-4 sm:px-0 w-full mt-0 pt-0">
+          {CATEGORIES.map((cat) => {
+            const active = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`shrink-0 px-4 py-2 sm:px-5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer touch-manipulation active:scale-95 ${
+                  active
+                    ? "bg-[#ff385c] text-white shadow-md shadow-[#ff385c]/20"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* ── 2. GALLERY MASONRY GRID ───────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+      {/* ── 2. RESPONSIVE GALLERY GRID ────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
         {filteredItems.length === 0 ? (
-          <div className="text-center py-20 border border-white/10 rounded-3xl bg-white/5 backdrop-blur-md p-8">
-            <Sparkles className="mx-auto text-amber-400 mb-3" size={36} />
-            <h3 className="text-lg font-bold text-white">No gallery moments uploaded yet</h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto mt-1">
+          <div className="w-full max-w-xl mx-auto text-center py-16 sm:py-20 border border-gray-200 rounded-3xl bg-white p-6 sm:p-8 shadow-xs">
+            <Sparkles className="mx-auto text-[#ff385c] mb-3" size={32} />
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">No moments in this category yet</h3>
+            <p className="text-xs sm:text-sm text-gray-500 w-full max-w-md mx-auto mt-2 leading-relaxed">
               Event photos and highlights from District 3192 will appear here once uploaded.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
             {filteredItems.map((item) => {
               const isLiked = likedMap[item.id];
+              const likesCount = item.likes + (isLiked ? 1 : 0);
+
               return (
                 <div
                   key={item.id}
-                  className="group relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:border-amber-400/50"
+                  onClick={() => setActiveItem(item)}
+                  className="group relative rounded-2xl sm:rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col active:scale-[0.99] touch-manipulation"
                 >
                   {/* Photo aspect ratio container */}
-                  <div className="relative w-full aspect-4/3 overflow-hidden bg-gray-900">
+                  <div className="relative w-full aspect-4/3 sm:aspect-4/3 overflow-hidden bg-gray-100">
                     <Image
                       src={item.imageUrl}
                       alt={item.title}
@@ -109,48 +196,56 @@ export default function GalleryPage() {
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                    
+                    {/* Top-right Like & Share Buttons with 44px touch target */}
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      <button
+                        onClick={(e) => handleShare(item, e)}
+                        className="w-10 h-10 rounded-full bg-white/90 text-gray-700 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                        aria-label="Share photo"
+                      >
+                        <Share2 size={15} />
+                      </button>
 
-                    {/* Top-right Like button */}
-                    <button
-                      onClick={() => toggleLike(item.id)}
-                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 transition-transform"
-                      aria-label="Like moment"
-                    >
-                      <Heart
-                        size={18}
-                        className={isLiked ? "fill-[#ff385c] text-[#ff385c]" : "text-white/80"}
-                      />
-                    </button>
-
-                    {/* Top-left Category badge */}
-                    <div className="absolute top-3 left-3 bg-amber-400/90 text-gray-900 font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-sm">
-                      {item.category}
+                      <button
+                        onClick={(e) => toggleLike(item.id, e)}
+                        className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-sm ${
+                          isLiked ? "bg-[#ff385c] text-white" : "bg-white/90 text-gray-700"
+                        }`}
+                        aria-label="Like moment"
+                      >
+                        <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
+                      </button>
                     </div>
 
-                    {/* Lightbox trigger button */}
-                    <button
-                      onClick={() => setActiveItem(item)}
-                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 cursor-pointer"
-                    >
-                      <span className="w-12 h-12 rounded-full bg-amber-400 text-gray-900 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                        <Eye size={20} />
+                    {/* Overlay Zoom Icon on hover */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center">
+                      <span className="w-10 h-10 rounded-full bg-white/90 text-gray-900 flex items-center justify-center shadow-lg">
+                        <ZoomIn size={18} />
                       </span>
-                    </button>
+                    </div>
                   </div>
 
-                  {/* Info Footer */}
-                  <div className="p-5 space-y-2">
-                    <h3 className="text-base font-bold text-white line-clamp-1">{item.title}</h3>
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span className="flex items-center gap-1 text-amber-300 font-semibold">
-                        <MapPin size={13} /> {item.city}
+                  {/* Card Bottom Meta */}
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                        <span className="text-[#ff385c]">{item.category}</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><MapPin size={11} /> {item.city}</span>
+                      </div>
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug group-hover:text-[#ff385c] transition-colors">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 text-[11px] sm:text-xs text-gray-500 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={13} className="text-gray-400" /> {item.date}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar size={13} /> {item.date}
-                      </span>
-                      <span className="text-gray-400 font-medium">
-                        ❤️ {item.likes + (isLiked ? 1 : 0)}
+                      <span className="flex items-center gap-1 text-gray-700 font-bold">
+                        <Heart size={13} className={isLiked ? "text-[#ff385c] fill-[#ff385c]" : "text-gray-400"} />
+                        {likesCount}
                       </span>
                     </div>
                   </div>
@@ -161,49 +256,96 @@ export default function GalleryPage() {
         )}
       </section>
 
-      {/* ── 3. LIGHTBOX PREVIEW MODAL ──────────────────────────────────── */}
+      {/* ── 3. MOBILE-OPTIMIZED FULL LIGHTBOX MODAL ───────────────────── */}
       {activeItem && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative max-w-4xl w-full bg-[#121620] border border-white/15 rounded-3xl overflow-hidden shadow-2xl">
-            {/* Close button */}
-            <button
-              onClick={() => setActiveItem(null)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-white hover:text-gray-900 transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="relative w-full aspect-16/9 bg-black">
+        <div
+          onClick={() => setActiveItem(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 md:p-6 animate-in fade-in-50"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-4xl bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row text-gray-900 max-h-[90vh] sm:max-h-none overflow-y-auto animate-in slide-in-from-bottom-6 sm:zoom-in-95"
+          >
+            {/* Modal Image */}
+            <div className="relative w-full md:w-3/5 aspect-4/3 sm:aspect-video md:aspect-auto min-h-[260px] sm:min-h-[360px] bg-black shrink-0">
               <Image
                 src={activeItem.imageUrl}
                 alt={activeItem.title}
                 fill
-                className="object-contain"
+                className="object-cover"
               />
+              
+              {/* Close Button on Mobile overlay */}
+              <button
+                onClick={() => setActiveItem(null)}
+                className="sm:hidden absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer shadow-lg"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-white/10 bg-black/50">
-              <div>
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                  {activeItem.category} · {activeItem.city}
-                </span>
-                <h3 className="text-xl font-extrabold text-white mt-0.5">{activeItem.title}</h3>
+            {/* Modal Meta Details */}
+            <div className="w-full md:w-2/5 p-5 sm:p-6 md:p-8 flex flex-col justify-between space-y-4 sm:space-y-6">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="hidden sm:flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] tracking-wider">
+                    {activeItem.category}
+                  </span>
+                  <button
+                    onClick={() => setActiveItem(null)}
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 leading-tight">
+                  {activeItem.title}
+                </h2>
+
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                  {activeItem.description || "Captured live during Rotaract District 3192 events and assemblies."}
+                </p>
+
+                <div className="space-y-2 pt-3 border-t border-gray-100 text-xs">
+                  <div className="flex items-center justify-between text-gray-500">
+                    <span className="font-semibold">Location:</span>
+                    <span className="font-bold text-gray-900 flex items-center gap-1">
+                      <MapPin size={13} className="text-[#ff385c]" /> {activeItem.city}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-gray-500">
+                    <span className="font-semibold">Event Date:</span>
+                    <span className="font-bold text-gray-900">{activeItem.date}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-gray-300">
-                <span className="flex items-center gap-1"><Calendar size={15} /> {activeItem.date}</span>
+              <div className="flex items-center gap-2.5 pt-3 border-t border-gray-100">
                 <button
-                  onClick={() => toggleLike(activeItem.id)}
-                  className="flex items-center gap-1 px-4 py-2 rounded-full bg-white/10 hover:bg-amber-400 hover:text-gray-900 text-xs font-bold transition-colors cursor-pointer"
+                  onClick={(e) => toggleLike(activeItem.id, e)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer active:scale-95 touch-manipulation ${
+                    likedMap[activeItem.id]
+                      ? "bg-[#ff385c] text-white shadow-md shadow-[#ff385c]/20"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  }`}
                 >
-                  <Heart size={14} className={likedMap[activeItem.id] ? "fill-red-500 text-red-500" : ""} />
-                  {activeItem.likes + (likedMap[activeItem.id] ? 1 : 0)} Likes
+                  <Heart size={15} fill={likedMap[activeItem.id] ? "currentColor" : "none"} />
+                  <span>{likedMap[activeItem.id] ? "Liked" : "Like Photo"}</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveItem(null)}
+                  className="px-5 py-3 rounded-2xl bg-gray-900 hover:bg-black text-white text-xs font-bold cursor-pointer"
+                >
+                  Close
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

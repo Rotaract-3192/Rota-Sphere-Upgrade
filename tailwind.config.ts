@@ -18,47 +18,53 @@ const config: Config = {
       // ── COLORS ──────────────────────────────────────────────────────────
       // DESIGN-airbnb.md §colors
       colors: {
-        // Brand / Accent — Rausch
+        // Brand / Accent
         brand: {
-          DEFAULT: "#ff385c",  // primary CTA, search orb, heart saves
-          active:  "#e00b41",  // button press state
-          disabled:"#ffd1da",  // disabled CTA
+          DEFAULT: "var(--primary)",
+          active: "var(--sidebar-primary)",
+          disabled: "var(--color-brand-disabled)",
         },
+        primary: "var(--primary)",
+        secondary: "var(--secondary)",
+        card: "var(--card)",
+        accent: "var(--accent)",
+        muted: "var(--muted)",
+        border: "var(--border)",
+        sidebar: "var(--sidebar)",
+        destructive: "var(--destructive)",
         // Error
         error: {
-          DEFAULT: "#c13515",
-          hover:   "#b32505",
+          DEFAULT: "var(--destructive)",
+          hover: "#c51824",
         },
-        // Sub-brands (reserved — not used in main UI)
-        luxe: "#460479",
-        plus: "#92174d",
+        // Sub-brands
+        luxe: "#1e9df1",
+        plus: "#00b87a",
         // Text
-        ink:         "#222222",  // headlines, body, nav
-        body:        "#3f3f3f",  // long-form running text
-        muted:       "#6a6a6a",  // sub-titles, inactive tabs
-        "muted-soft":"#929292",  // disabled link text
+        ink: "var(--foreground)",
+        body: "var(--muted-foreground)",
+        "muted-soft": "#72767a",
         // Surfaces
-        canvas:          "#ffffff",  // page floor
-        "surface-soft":  "#f7f7f7",  // disabled fields, hover bg
-        "surface-strong":"#f2f2f2",  // icon button surfaces
+        canvas: "var(--background)",
+        "surface-soft": "var(--card)",
+        "surface-strong": "var(--accent)",
         // Borders / Hairlines
-        hairline:        "#dddddd",  // default 1px divider
-        "hairline-soft": "#ebebeb",  // light separators
-        "border-strong": "#c1c1c1",  // focus borders, disabled outline
+        hairline: "var(--border)",
+        "hairline-soft": "var(--sidebar-border)",
+        "border-strong": "var(--border)",
         // On-color
-        "on-primary": "#ffffff",
-        "on-dark":    "#ffffff",
+        "on-primary": "var(--primary-foreground)",
+        "on-dark": "#ffffff",
         // Legal
-        "legal-link": "#428bff",
+        "legal-link": "var(--primary)",
         // Overlay
-        scrim: "#000000",  // used at 50% opacity for modals
+        scrim: "#000000",
       },
 
-      // ── TYPOGRAPHY ──────────────────────────────────────────────────────
-      // DESIGN-airbnb.md §typography
-      // Font loaded via next/font/google (Inter) in src/app/layout.tsx
       fontFamily: {
-        sans: ["var(--font-inter)", "Circular", "-apple-system", "system-ui", "Roboto", "Helvetica Neue", "sans-serif"],
+        sans: ["Open Sans", "var(--font-inter)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        mono: ["var(--font-mono)", "Menlo", "monospace"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
       },
       fontSize: {
         // Design token → [size, { lineHeight, letterSpacing }]

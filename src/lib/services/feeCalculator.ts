@@ -26,8 +26,8 @@ export function calculateOrderFees(input: FeeCalculationInput): FeeCalculationRe
   const discount = Math.min(subtotal, Math.max(0, input.couponDiscountAmount ?? 0));
   const discountedSubtotal = subtotal - discount;
 
-  // Platform fee percentage (default 3.5% if not customized for tenant)
-  const platformFeeRate = (input.customPlatformFeePercent ?? 3.5) / 100;
+  // Platform fee percentage (default 0% commission for the platform)
+  const platformFeeRate = (input.customPlatformFeePercent ?? 0) / 100;
   const platformFee = Math.round(discountedSubtotal * platformFeeRate * 100) / 100;
 
   // Convenience fee (fixed per order, ₹10 default for paid tickets, ₹0 for free)

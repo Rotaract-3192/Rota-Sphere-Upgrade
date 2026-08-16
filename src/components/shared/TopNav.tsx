@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { Menu, X, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle } from "lucide-react";
@@ -47,15 +48,26 @@ export function TopNav() {
         {/* ── LEFT: Wordmark Logo ──────────────────────────────────────── */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-black text-2xl tracking-tight text-gray-900 group focus:outline-hidden"
+          className="flex items-center gap-3 group focus:outline-hidden"
           aria-label="RotaSphere home"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff385c] to-rose-600 flex items-center justify-center text-white font-black text-lg shadow-sm group-hover:scale-105 transition-transform">
-            R
+          <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-2xl overflow-hidden shadow-sm group-hover:scale-105 transition-transform bg-white">
+            <Image
+              src="/brand/logo.png"
+              alt="Rotaract District 3192 Ticketing Logo"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
-          <span className="font-extrabold tracking-tight">
-            Rota<span className="text-[#ff385c]">Sphere</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="font-black tracking-tight text-lg sm:text-xl text-gray-900 leading-none">
+              Rota<span className="text-[#0052ff]">Sphere</span>
+            </span>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#0052ff]">
+              District 3192
+            </span>
+          </div>
         </Link>
 
         {/* ── CENTER: Product Tabs (desktop) ──────────────────────────── */}
@@ -75,11 +87,11 @@ export function TopNav() {
                 ].join(" ")}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon size={18} strokeWidth={active ? 2.2 : 1.75} className={active ? "text-[#ff385c]" : "text-gray-400 group-hover:text-gray-700"} />
+                <Icon size={18} strokeWidth={active ? 2.2 : 1.75} className={active ? "text-[#1e9df1]" : "text-gray-400 group-hover:text-gray-700"} />
                 <span>{label}</span>
 
                 {isNew && (
-                  <span className="bg-amber-100 border border-amber-300 text-amber-900 rounded-full px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wider leading-none">
+                  <span className="bg-blue-50 border border-blue-200 text-[#1e9df1] rounded-full px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wider leading-none">
                     NEW
                   </span>
                 )}
@@ -88,7 +100,7 @@ export function TopNav() {
                 {active && (
                   <motion.span
                     layoutId="nav-underline"
-                    className="absolute -bottom-2 left-0 right-0 h-0.5 bg-[#ff385c] rounded-full"
+                    className="absolute -bottom-2 left-0 right-0 h-0.5 bg-[#1e9df1] rounded-full"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -123,7 +135,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
-              className="text-xs sm:text-sm font-bold text-white bg-[#ff385c] hover:bg-[#e00b41] px-5 py-2 rounded-xl shadow-sm transition-all"
+              className="text-xs sm:text-sm font-bold text-white bg-[#1e9df1] hover:bg-[#1583cd] px-5 py-2 rounded-xl shadow-sm transition-all"
             >
               Sign In
             </Link>

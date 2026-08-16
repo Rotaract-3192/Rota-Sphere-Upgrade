@@ -28,6 +28,12 @@ export async function executeSql<T = any>(sql: string): Promise<{ data: T[] | nu
     }
 
     const data = await res.json();
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      if ("error" in data || "message" in data || "code" in data) {
+        return { data: null, error: data };
+      }
+    }
+
     return { data: Array.isArray(data) ? data : [data], error: null };
   } catch (err: any) {
     return { data: null, error: { message: err?.message || String(err) } };

@@ -98,7 +98,7 @@ export function HeroSearch() {
           <button
             type="submit"
             aria-label="Search events"
-            className="flex-shrink-0 w-12 h-12 rounded-full bg-[#ff385c] hover:bg-[#e00b41] text-white flex items-center justify-center shadow-md hover:scale-105 transition-all duration-150"
+            className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1e9df1] hover:bg-[#1583cd] text-white flex items-center justify-center shadow-md hover:scale-105 transition-all duration-150"
           >
             <Search size={20} strokeWidth={2.5} />
           </button>

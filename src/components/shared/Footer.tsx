@@ -4,6 +4,7 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 
 const FOOTER_COLUMNS = [
   {
@@ -45,7 +46,31 @@ export function Footer() {
     <footer role="contentinfo" className="bg-gray-50 border-t border-gray-200 mt-16">
       {/* ── Main link columns ───────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand Info Column */}
+          <div className="space-y-3">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="relative w-11 h-11 shrink-0 rounded-2xl overflow-hidden shadow-xs bg-white">
+                <Image
+                  src="/brand/logo.png"
+                  alt="Rotaract District 3192 Ticketing Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black tracking-tight text-lg text-gray-900 leading-none">
+                  Rota<span className="text-[#0052ff]">Sphere</span>
+                </span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#0052ff]">
+                  District 3192
+                </span>
+              </div>
+            </Link>
+            <p className="text-xs text-gray-500 leading-relaxed pr-4">
+              Official Multi-Tenant Ticketing, Fellowship Passes, and Gate Verification Platform for Rotaract District 3192.
+            </p>
+          </div>
           {FOOTER_COLUMNS.map((col) => (
             <div key={col.heading}>
               <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">

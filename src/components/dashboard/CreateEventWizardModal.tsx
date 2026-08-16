@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Premium 5-Step Event Creation Wizard Modal
- * Matches website theme (#ff385c brand, crisp white canvas, dark ink text, smooth borders, local device image upload, and Google Maps auto-fill).
+ * Premium 5-Step Event Creation & Editing Wizard Modal
+ * Matches website theme (#1e9df1 brand, crisp white canvas, dark ink text, smooth borders, local device image upload, Google Maps auto-fill, and full Edit Mode support).
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Calendar,
@@ -33,14 +33,17 @@ import {
   UploadCloud,
   ImageIcon,
   FolderOpen,
+  Edit3,
+  QrCode,
 } from "lucide-react";
-import { createEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
+import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
 import type { EventFormat, TicketTierType } from "@/types/saas";
 
 interface CreateEventWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (slug: string) => void;
+  eventToEdit?: any | null;
 }
 
 const BANNER_PRESETS = [
@@ -74,7 +77,7 @@ const CATEGORIES = [
   "Workshops & Masterclasses",
 ];
 
-export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEventWizardModalProps) {
+export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit }: CreateEventWizardModalProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -84,12 +87,10 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Step 1: Basic Info
-  const [title, setTitle] = useState("RotaSphere Global Tech Summit 2026");
-  const [slug, setSlug] = useState("rotasphere-global-tech-summit-2026");
-  const [tagline, setTagline] = useState("A concise, one-sentence description summarizing the event main theme.");
-  const [description, setDescription] = useState(
-    "Describe details, schedules, keynote presenters, food offerings, networking schedules..."
-  );
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
   const [bannerUrl, setBannerUrl] = useState(BANNER_PRESETS[0].url);
   const [bannerFileName, setBannerFileName] = useState<string | null>(null);
   
@@ -102,13 +103,15 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
   const defaultEnd = new Date(now.getTime() + 9 * 86400000).toISOString().slice(0, 16);
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);
-  const [timezone, setTimezone] = useState("Eastern Standard Time (EST) - UTC-5");
+  const [timezone, setTimezone] = useState("India Standard Time (IST) - UTC+05:30");
 
   // Step 3: Event Settings
   const [priceModel, setPriceModel] = useState<"FREE" | "PAID">("FREE");
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
   const [hostingClub, setHostingClub] = useState("Rotaract District 3192 Council");
   const [locationDeliveryType, setLocationDeliveryType] = useState<"IN_PERSON" | "ONLINE" | "HYBRID">("IN_PERSON");
+  const [upiId, setUpiId] = useState("rotaractdistrict3192@okaxis");
+  const [upiPayeeName, setUpiPayeeName] = useState("Rotaract District 3192");
 
   // Ticket Tiers
   const [capacity, setCapacity] = useState(500);
@@ -126,33 +129,71 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
   const [mapsLoading, setMapsLoading] = useState(false);
   const [mapsSuccess, setMapsSuccess] = useState<string | null>(null);
 
-  const [venueName, setVenueName] = useState("Moscone Convention Center");
-  const [venueDirections, setVenueDirections] = useState("Enter through West Lobby building doors");
-  const [country, setCountry] = useState("United States");
-  const [stateRegion, setStateRegion] = useState("California");
-  const [city, setCity] = useState("San Francisco");
-  const [streetAddress, setStreetAddress] = useState("747 Howard St");
-  const [pincode, setPincode] = useState("94103");
+  const [venueName, setVenueName] = useState("");
+  const [venueDirections, setVenueDirections] = useState("");
+  const [country, setCountry] = useState("India");
+  const [stateRegion, setStateRegion] = useState("Karnataka");
+  const [city, setCity] = useState("Bengaluru");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [pincode, setPincode] = useState("");
   const [onlineMeetingUrl, setOnlineMeetingUrl] = useState("");
 
   // Step 5: Additional Details
   const [category, setCategory] = useState("Community Service");
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>(["leadership", "rotaract", "tech"]);
-  const [contactEmail, setContactEmail] = useState("support@rotasphere.com");
-  const [contactPhone, setContactPhone] = useState("+1 (555) 019-2834");
+  const [tags, setTags] = useState<string[]>(["rotaract"]);
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+
+  // Initialize or reset form when eventToEdit changes
+  useEffect(() => {
+    if (eventToEdit) {
+      setTitle(eventToEdit.title || "");
+      setSlug(eventToEdit.slug || "");
+      setTagline(eventToEdit.summary || "");
+      setDescription(eventToEdit.description || "");
+      setBannerUrl(eventToEdit.cover_image_url || BANNER_PRESETS[0].url);
+      setThumbnailUrl(eventToEdit.logo_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80");
+      if (eventToEdit.start_date) {
+        setStartDate(new Date(eventToEdit.start_date).toISOString().slice(0, 16));
+      }
+      if (eventToEdit.end_date) {
+        setEndDate(new Date(eventToEdit.end_date).toISOString().slice(0, 16));
+      }
+      setTimezone(eventToEdit.timezone || "India Standard Time (IST) - UTC+05:30");
+      setCapacity(eventToEdit.capacity || 500);
+      setVenueName(eventToEdit.venue_name || "");
+      setStreetAddress(eventToEdit.address || "");
+      setCity(eventToEdit.city || "Bengaluru");
+      setStateRegion(eventToEdit.state || "Karnataka");
+      setCountry(eventToEdit.country || "India");
+      setOnlineMeetingUrl(eventToEdit.online_meeting_url || "");
+      setContactEmail(eventToEdit.contact_email || "support@rotasphere.com");
+      setContactPhone(eventToEdit.contact_phone || "+1 (555) 019-2834");
+      setVisibility(eventToEdit.visibility || "PUBLIC");
+      setLocationDeliveryType(
+        eventToEdit.event_type === "ONLINE"
+          ? "ONLINE"
+          : eventToEdit.event_type === "HYBRID"
+          ? "HYBRID"
+          : "IN_PERSON"
+      );
+    }
+  }, [eventToEdit]);
 
   if (!isOpen) return null;
 
   function handleTitleChange(val: string) {
     setTitle(val);
-    const autoSlug = val
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    setSlug(autoSlug);
+    if (!eventToEdit) {
+      const autoSlug = val
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      setSlug(autoSlug);
+    }
   }
 
   function handleThumbnailFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -199,11 +240,36 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
       ]);
     } else {
       setTicketTiers([
-        { name: "Early Bird Delegate Pass", tierType: "EARLY_BIRD", price: 499, totalCapacity: 100, description: "Full access + kit" },
-        { name: "VIP All-Access", tierType: "VIP", price: 1299, totalCapacity: 50, description: "VIP front row seating" },
-        { name: "General Admission", tierType: "REGULAR", price: 799, totalCapacity: 350, description: "Full event access" },
+        { name: "Early Bird Pass", tierType: "EARLY_BIRD", price: 199, totalCapacity: 100, description: "Discounted early access pass" },
+        { name: "General Release Pass", tierType: "REGULAR", price: 499, totalCapacity: 350, description: "Full delegate access" },
+        { name: "VIP Delegate Pass", tierType: "VIP", price: 999, totalCapacity: 50, description: "VIP seating + merchandise kit" },
       ]);
     }
+  }
+
+  function addNewTier() {
+    setTicketTiers([
+      ...ticketTiers,
+      { name: `Pass Tier #${ticketTiers.length + 1}`, tierType: "REGULAR", price: 499, totalCapacity: 100, description: "" },
+    ]);
+  }
+
+  function addPresetTier(name: string, tierType: TicketTierType, price: number, totalCapacity: number, description: string) {
+    setTicketTiers([
+      ...ticketTiers,
+      { name, tierType, price, totalCapacity, description },
+    ]);
+  }
+
+  function updateTierField(index: number, field: string, value: any) {
+    setTicketTiers((prev) =>
+      prev.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier))
+    );
+  }
+
+  function removeTier(index: number) {
+    if (ticketTiers.length <= 1) return;
+    setTicketTiers((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleAutoFillMaps() {
@@ -276,11 +342,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
     setLoading(true);
     setErrorMessage(null);
 
-    if (tags.length === 0) {
-      setLoading(false);
-      setErrorMessage("At least one search tag is required");
-      return;
-    }
+    const finalTags = tags.length > 0 ? tags : ["rotaract"];
 
     const eventFormat: EventFormat =
       locationDeliveryType === "ONLINE" ? "ONLINE" : locationDeliveryType === "HYBRID" ? "HYBRID" : "OFFLINE";
@@ -310,16 +372,29 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
         allowRefunds,
         contactEmail,
         contactPhone,
+        upiId: upiId.trim() || "rotaractdistrict3192@okaxis",
+        upiPayeeName: upiPayeeName.trim() || "District 3192 Rotaract",
         ticketTiers,
       };
 
-      const res = await createEventAction(payload);
-      setLoading(false);
-
-      if (res.success && res.slug) {
-        onSuccess(res.slug);
+      if (eventToEdit?.id) {
+        // Edit Mode
+        const res = await updateEventAction(eventToEdit.id, payload);
+        setLoading(false);
+        if (res.success) {
+          onSuccess(slug);
+        } else {
+          setErrorMessage(res.error || "Failed to update event");
+        }
       } else {
-        setErrorMessage(res.error || "Failed to create event");
+        // Create Mode
+        const res = await createEventAction(payload);
+        setLoading(false);
+        if (res.success && res.slug) {
+          onSuccess(res.slug);
+        } else {
+          setErrorMessage(res.error || "Failed to create event");
+        }
       }
     } catch (err: any) {
       setLoading(false);
@@ -335,18 +410,20 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
     { num: 5, label: "ADDITIONAL INFO" },
   ];
 
+  const isEditMode = Boolean(eventToEdit?.id);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       <div className="w-full max-w-5xl bg-white border border-gray-200/90 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col text-gray-900 relative">
         
-        {/* ── TOP HEADER (CREATE EVENT & SEARCH) ────────────────────────── */}
+        {/* ── TOP HEADER (CREATE / EDIT EVENT & SEARCH) ────────────────── */}
         <div className="bg-white border-b border-gray-100 px-6 sm:px-10 py-5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ff385c] block">
-              Event Management Studio
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1] block">
+              {isEditMode ? "Edit Event Listing" : "Event Management Studio"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-serif tracking-tight mt-0.5">
-              Create Event
+              {isEditMode ? "Update Event Details" : "Create Event"}
             </h1>
           </div>
 
@@ -356,7 +433,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
               <input
                 type="text"
                 placeholder="Search presets & tags..."
-                className="bg-gray-50 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 outline-none w-48 focus:w-64 focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/10 transition-all"
+                className="bg-gray-50 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 outline-none w-48 focus:w-64 focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10 transition-all"
               />
             </div>
 
@@ -364,7 +441,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
               <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                 <Bell size={16} />
               </div>
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#ff385c] border-2 border-white" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#1e9df1] border-2 border-white" />
             </div>
 
             <button
@@ -395,7 +472,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
                         isCurrent
-                          ? "bg-[#ff385c] text-white ring-4 ring-[#ff385c]/25 shadow-lg shadow-[#ff385c]/30 scale-110 font-bold"
+                          ? "bg-[#1e9df1] text-white ring-4 ring-[#1e9df1]/25 shadow-lg shadow-[#1e9df1]/30 scale-110 font-bold"
                           : isCompleted
                           ? "bg-gray-900 text-white shadow-sm"
                           : "bg-white text-gray-400 border border-gray-200 group-hover:border-gray-400 group-hover:text-gray-700"
@@ -406,7 +483,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     <span
                       className={`text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap transition-colors ${
                         isCurrent
-                          ? "text-[#ff385c]"
+                          ? "text-[#1e9df1]"
                           : isCompleted
                           ? "text-gray-800"
                           : "text-gray-400"
@@ -420,7 +497,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   {hasNext && (
                     <div
                       className={`absolute top-5 left-1/2 w-full h-[2px] -z-0 transition-all duration-500 ${
-                        currentStep > s.num ? "bg-[#ff385c]" : "bg-gray-200"
+                        currentStep > s.num ? "bg-[#1e9df1]" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -434,7 +511,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
         <div className="p-6 sm:p-12 space-y-8 flex-1 overflow-y-auto max-h-[72vh] bg-white">
           
           {/* Top highlight bar */}
-          <div className="h-[3px] w-full bg-gradient-to-r from-[#ff385c] via-[#e00b41] to-amber-500 rounded-full -mt-4 mb-6 opacity-90" />
+          <div className="h-[3px] w-full bg-gradient-to-r from-[#1e9df1] via-[#1583cd] to-amber-500 rounded-full -mt-4 mb-6 opacity-90" />
 
           {errorMessage && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
@@ -448,7 +525,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
             <div className="space-y-6 animate-in fade-in-50">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight font-serif">
-                  Basic Information
+                  {isEditMode ? "Edit Basic Information" : "Basic Information"}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   Set up the core elements of your event brand identity.
@@ -466,7 +543,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     value={title}
                     onChange={(e) => handleTitleChange(e.target.value)}
                     placeholder="e.g. RotaSphere Global Tech Summit 2026"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                   />
                 </div>
 
@@ -480,7 +557,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     placeholder="rotasphere-global-tech-summit-2026"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all font-mono shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all font-mono shadow-sm"
                   />
                   <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                     Unique URL string: eventsphere.com/events/[slug]
@@ -498,7 +575,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="A concise, one-sentence description summarizing the event main theme."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                 />
                 <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                   Appears on the homepage event card grid (max 160 characters).
@@ -515,7 +592,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe details, schedules, keynote presenters, food offerings, networking schedules..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-3xl p-6 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all leading-relaxed shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-3xl p-6 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all leading-relaxed shadow-sm"
                 />
                 <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                   Explain all features in markdown format.
@@ -547,7 +624,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     </div>
                   </div>
 
-                  {/* Hidden file input */}
                   <input
                     type="file"
                     ref={bannerInputRef}
@@ -556,14 +632,13 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     className="hidden"
                   />
 
-                  {/* Upload from local device button */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => bannerInputRef.current?.click()}
                       className="w-full bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                     >
-                      <UploadCloud size={16} className="text-[#ff385c]" />
+                      <UploadCloud size={16} className="text-[#1e9df1]" />
                       <span>{bannerFileName ? "Change Banner from Device" : "Upload Banner from Device"}</span>
                     </button>
                   </div>
@@ -581,13 +656,12 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
                       EVENT CARD THUMBNAIL IMAGE *
                     </label>
-                    <span className="text-[10px] text-[#ff385c] font-bold">Local Device Upload</span>
+                    <span className="text-[10px] text-[#1e9df1] font-bold">Local Device Upload</span>
                   </div>
 
-                  {/* Thumbnail Preview Area & Drag/Drop Card */}
                   <div
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border-2 border-dashed border-gray-300 hover:border-[#ff385c] bg-gray-50/80 shadow-md group cursor-pointer transition-all flex flex-col items-center justify-center p-4"
+                    className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border-2 border-dashed border-gray-300 hover:border-[#1e9df1] bg-gray-50/80 shadow-md group cursor-pointer transition-all flex flex-col items-center justify-center p-4"
                   >
                     {thumbnailUrl ? (
                       <>
@@ -600,7 +674,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2 text-center p-4">
-                        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-[#ff385c] flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-[#1e9df1] flex items-center justify-center">
                           <UploadCloud size={24} />
                         </div>
                         <span className="text-xs font-bold text-gray-800">Choose thumbnail from your computer</span>
@@ -609,7 +683,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     )}
                   </div>
 
-                  {/* Hidden file input */}
                   <input
                     type="file"
                     ref={thumbnailInputRef}
@@ -618,11 +691,10 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     className="hidden"
                   />
 
-                  {/* Action button */}
                   <button
                     type="button"
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="w-full bg-[#ff385c]/10 hover:bg-[#ff385c]/15 text-[#ff385c] border border-[#ff385c]/30 rounded-2xl py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+                    className="w-full bg-[#1e9df1]/10 hover:bg-[#1e9df1]/15 text-[#1e9df1] border border-[#1e9df1]/30 rounded-2xl py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                   >
                     <FolderOpen size={16} />
                     <span>{thumbnailFileName ? "Select Different File from Device" : "Browse & Upload from Device"}</span>
@@ -656,9 +728,8 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                {/* Event Start Date */}
                 <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#ff385c]">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#1e9df1]">
                     EVENT START DATE &amp; TIME *
                   </label>
                   <div className="relative">
@@ -673,7 +744,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       className={`w-full bg-gray-50 border rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none transition-all shadow-sm ${
                         !startDate
                           ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
-                          : "border-gray-200 focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15"
+                          : "border-gray-200 focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15"
                       }`}
                     />
                   </div>
@@ -684,7 +755,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   )}
                 </div>
 
-                {/* Event End Date */}
                 <div>
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
                     EVENT END DATE &amp; TIME *
@@ -695,13 +765,12 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       required
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Timezone */}
               <div className="pt-2">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
                   TIMEZONE *
@@ -710,18 +779,15 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all cursor-pointer appearance-none shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all cursor-pointer appearance-none shadow-sm"
                   >
-                    <option value="Eastern Standard Time (EST) - UTC-5">Eastern Standard Time (EST) - UTC-5</option>
                     <option value="India Standard Time (IST) - UTC+05:30">India Standard Time (IST) - UTC+05:30</option>
+                    <option value="Eastern Standard Time (EST) - UTC-5">Eastern Standard Time (EST) - UTC-5</option>
                     <option value="Universal Coordinated Time (UTC) - UTC+0">Universal Coordinated Time (UTC) - UTC+0</option>
                     <option value="Pacific Standard Time (PST) - UTC-8">Pacific Standard Time (PST) - UTC-8</option>
                     <option value="Central European Time (CET) - UTC+1">Central European Time (CET) - UTC+1</option>
                   </select>
                 </div>
-                <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
-                  Global attendees will see event times aligned to this region.
-                </span>
               </div>
             </div>
           )}
@@ -744,28 +810,26 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   TICKET PRICE MODEL *
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Free Event Option */}
                   <button
                     type="button"
                     onClick={() => handlePriceModelChange("FREE")}
                     className={`p-6 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
                       priceModel === "FREE"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Ticket size={28} className={priceModel === "FREE" ? "text-[#ff385c]" : "text-gray-400"} />
+                    <Ticket size={28} className={priceModel === "FREE" ? "text-[#1e9df1]" : "text-gray-400"} />
                     <h4 className="text-base font-bold text-gray-900">Free Event</h4>
                     <p className="text-xs text-gray-500">No charges apply for passes</p>
                   </button>
 
-                  {/* Paid Tickets Option */}
                   <button
                     type="button"
                     onClick={() => handlePriceModelChange("PAID")}
                     className={`p-6 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
                       priceModel === "PAID"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
@@ -776,24 +840,172 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                 </div>
               </div>
 
+              {/* 🎟️ TICKET PASSES & TIER PRICING BUILDER */}
+              <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
+                  <div>
+                    <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                      <Ticket size={18} className="text-[#1e9df1]" />
+                      Ticket Passes &amp; Tier Pricing
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Configure Early Bird pricing, General Release passes, and VIP delegate tiers.
+                    </p>
+                  </div>
+
+                  {/* Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => addPresetTier("Early Bird Pass", "EARLY_BIRD", 199, 50, "Discounted early access pass")}
+                      className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold hover:bg-amber-100 transition-colors cursor-pointer"
+                    >
+                      + Early Bird (₹199)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addPresetTier("General Release Pass", "REGULAR", 499, 200, "Standard delegate pass")}
+                      className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold hover:bg-blue-100 transition-colors cursor-pointer"
+                    >
+                      + General Pass (₹499)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addPresetTier("VIP Delegate Pass", "VIP", 999, 25, "VIP seating + merchandise kit")}
+                      className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-bold hover:bg-purple-100 transition-colors cursor-pointer"
+                    >
+                      + VIP Pass (₹999)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tier Cards */}
+                <div className="space-y-4">
+                  {ticketTiers.map((tier, idx) => (
+                    <div key={idx} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg">
+                            Tier #{idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            required
+                            value={tier.name}
+                            onChange={(e) => updateTierField(idx, "name", e.target.value)}
+                            placeholder="e.g. Early Bird Pass, General Release..."
+                            className="font-bold text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-[#1e9df1] outline-none px-1 py-0.5 w-48 sm:w-64"
+                          />
+                        </div>
+
+                        {ticketTiers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTier(idx)}
+                            className="text-gray-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
+                            title="Delete this ticket tier"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        {/* Price INR */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                            Ticket Price (INR ₹)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              value={tier.price}
+                              onChange={(e) => updateTierField(idx, "price", parseFloat(e.target.value) || 0)}
+                              placeholder="0 for Free"
+                              className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Capacity */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                            Seats / Capacity
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={tier.totalCapacity}
+                            onChange={(e) => updateTierField(idx, "totalCapacity", parseInt(e.target.value) || 100)}
+                            placeholder="100"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1]"
+                          />
+                        </div>
+
+                        {/* Category */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                            Pass Category
+                          </label>
+                          <select
+                            value={tier.tierType}
+                            onChange={(e) => updateTierField(idx, "tierType", e.target.value as any)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] cursor-pointer"
+                          >
+                            <option value="EARLY_BIRD">Early Bird Pass</option>
+                            <option value="REGULAR">General Release Pass</option>
+                            <option value="VIP">VIP Pass</option>
+                            <option value="STUDENT">Student Pass</option>
+                            <option value="DONATION">Donation Pass</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Description / Perks */}
+                      <div>
+                        <input
+                          type="text"
+                          value={tier.description || ""}
+                          onChange={(e) => updateTierField(idx, "description", e.target.value)}
+                          placeholder="Perks description (e.g. Includes delegate badge, lunch kit & certificate)"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addNewTier}
+                  className="w-full bg-white hover:bg-gray-50 border border-dashed border-gray-300 hover:border-[#1e9df1] text-gray-700 hover:text-[#1e9df1] font-bold text-xs py-3 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                >
+                  <Plus size={16} /> Add Custom Ticket Pass Tier
+                </button>
+              </div>
+
               {/* 2. EVENT VISIBILITY */}
               <div className="space-y-3">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
                   EVENT VISIBILITY *
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Public Listing */}
                   <button
                     type="button"
                     onClick={() => setVisibility("PUBLIC")}
                     className={`p-5 rounded-full border text-left transition-all cursor-pointer flex items-center gap-4 px-6 ${
                       visibility === "PUBLIC"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#ff385c]/10 flex items-center justify-center flex-shrink-0">
-                      <Lock size={18} className={visibility === "PUBLIC" ? "text-[#ff385c]" : "text-gray-400"} />
+                    <div className="w-10 h-10 rounded-full bg-[#1e9df1]/10 flex items-center justify-center flex-shrink-0">
+                      <Lock size={18} className={visibility === "PUBLIC" ? "text-[#1e9df1]" : "text-gray-400"} />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-gray-900">Public Listing</h4>
@@ -801,18 +1013,17 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     </div>
                   </button>
 
-                  {/* Private Invite */}
                   <button
                     type="button"
                     onClick={() => setVisibility("PRIVATE")}
                     className={`p-5 rounded-full border text-left transition-all cursor-pointer flex items-center gap-4 px-6 ${
                       visibility === "PRIVATE"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      <Lock size={18} className={visibility === "PRIVATE" ? "text-[#ff385c]" : "text-gray-400"} />
+                      <Lock size={18} className={visibility === "PRIVATE" ? "text-[#1e9df1]" : "text-gray-400"} />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-gray-900">Private Invite</h4>
@@ -835,7 +1046,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     onChange={(e) => setHostingClub(e.target.value)}
                     list="clubs-datalist"
                     placeholder="Select host club name..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                   />
                   <Users size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <datalist id="clubs-datalist">
@@ -844,9 +1055,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     ))}
                   </datalist>
                 </div>
-                <span className="text-[11px] text-gray-500 px-3 block">
-                  Select the Rotaract Club hosting this event.
-                </span>
               </div>
 
               {/* 4. LOCATION DELIVERY TYPE */}
@@ -855,54 +1063,158 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                   LOCATION DELIVERY TYPE *
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* In-Person */}
                   <button
                     type="button"
                     onClick={() => setLocationDeliveryType("IN_PERSON")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "IN_PERSON"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <MapPin size={22} className={locationDeliveryType === "IN_PERSON" ? "text-[#ff385c]" : "text-gray-400"} />
+                    <MapPin size={22} className={locationDeliveryType === "IN_PERSON" ? "text-[#1e9df1]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">In-Person</h4>
                     <p className="text-[11px] text-gray-500">Physical venue location</p>
                   </button>
 
-                  {/* Online Virtual */}
                   <button
                     type="button"
                     onClick={() => setLocationDeliveryType("ONLINE")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "ONLINE"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Globe size={22} className={locationDeliveryType === "ONLINE" ? "text-[#ff385c]" : "text-gray-400"} />
+                    <Globe size={22} className={locationDeliveryType === "ONLINE" ? "text-[#1e9df1]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">Online Virtual</h4>
                     <p className="text-[11px] text-gray-500">Zoom, Meet, or streaming Link</p>
                   </button>
 
-                  {/* Hybrid format */}
                   <button
                     type="button"
                     onClick={() => setLocationDeliveryType("HYBRID")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "HYBRID"
-                        ? "bg-[#ff385c]/5 border-[#ff385c] ring-2 ring-[#ff385c]/20 shadow-sm"
+                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Sparkles size={22} className={locationDeliveryType === "HYBRID" ? "text-[#ff385c]" : "text-gray-400"} />
+                    <Sparkles size={22} className={locationDeliveryType === "HYBRID" ? "text-[#1e9df1]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">Hybrid format</h4>
                     <p className="text-[11px] text-gray-500">Both physical and streaming</p>
                   </button>
                 </div>
-                <span className="text-[11px] text-gray-500 px-3 block">
-                  If Online is selected, the venue details step is skipped.
-                </span>
+              </div>
+
+              {/* 5. TICKET POLICY — REFUNDS & TRANSFERS */}
+              <div className="p-6 bg-gray-50 border border-gray-200 rounded-3xl space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-gray-900">Ticket Policy</h4>
+                    <p className="text-xs text-gray-500">Control whether attendees can request refunds or transfer their passes to another person.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Refund Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setAllowRefunds(!allowRefunds)}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                      allowRefunds
+                        ? "bg-emerald-50 border-emerald-200 ring-1 ring-emerald-300/50"
+                        : "bg-gray-100 border-gray-200"
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className={`text-sm font-extrabold ${allowRefunds ? "text-emerald-700" : "text-gray-500"}`}>
+                        Refunds
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Attendees can request a refund
+                      </p>
+                    </div>
+                    {/* Toggle pill */}
+                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${allowRefunds ? "bg-emerald-500" : "bg-gray-300"}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${allowRefunds ? "translate-x-5" : ""}`} />
+                    </div>
+                  </button>
+
+                  {/* Transfer Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setAllowTransfer(!allowTransfer)}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                      allowTransfer
+                        ? "bg-emerald-50 border-emerald-200 ring-1 ring-emerald-300/50"
+                        : "bg-gray-100 border-gray-200"
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className={`text-sm font-extrabold ${allowTransfer ? "text-emerald-700" : "text-gray-500"}`}>
+                        Ticket Transfers
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Attendees can transfer to others
+                      </p>
+                    </div>
+                    {/* Toggle pill */}
+                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${allowTransfer ? "bg-emerald-500" : "bg-gray-300"}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${allowTransfer ? "translate-x-5" : ""}`} />
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 6. ORGANIZER DYNAMIC UPI PAYMENT RECEIVING ACCOUNT */}
+              <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-[#1e9df1] text-white flex items-center justify-center font-black">
+                      <QrCode size={16} />
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-gray-900">Organizer UPI Receiving Account</h4>
+                      <p className="text-xs text-gray-500">
+                        Dynamic UPI QR codes will be generated with this VPA for attendees to pay directly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                      OFFICIAL UPI ID / VPA *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      placeholder="e.g. rotaractclub@okaxis or 9876543210@paytm"
+                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] shadow-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                      PAYEE ACCOUNT NAME *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={upiPayeeName}
+                      onChange={(e) => setUpiPayeeName(e.target.value)}
+                      placeholder="e.g. Rotaract Club of Bengaluru"
+                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] shadow-sm"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -921,17 +1233,12 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
 
               {locationDeliveryType !== "ONLINE" ? (
                 <div className="space-y-6 pt-2">
-                  
-                  {/* ── GOOGLE MAPS AUTO-FILL BAR ───────────────────────── */}
                   <div className="p-5 bg-gradient-to-r from-rose-50/80 via-orange-50/50 to-amber-50/40 border border-rose-200/90 rounded-3xl space-y-3 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#ff385c] uppercase tracking-wider">
-                        <Sparkles size={14} className="text-[#ff385c]" />
-                        <span>Auto-Fill with Google Maps Link</span>
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-wider">
+                        <Sparkles size={14} className="text-[#1e9df1]" />
+                        <span>Auto-Fill with Google Maps Link or Place Name</span>
                       </div>
-                      <span className="text-[11px] text-gray-500 hidden sm:block font-medium">
-                        Paste link &amp; we&apos;ll auto-fill venue, city, state &amp; address
-                      </span>
                     </div>
 
                     <div className="flex items-center gap-2.5">
@@ -951,7 +1258,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                             }
                           }}
                           placeholder="Paste Google Maps link or type place name (e.g. NIMHANS Convention Centre)"
-                          className="w-full bg-white border border-rose-200 rounded-full pl-12 pr-6 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/20 transition-all font-mono shadow-sm"
+                          className="w-full bg-white border border-rose-200 rounded-full pl-12 pr-6 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/20 transition-all font-mono shadow-sm"
                         />
                       </div>
 
@@ -973,7 +1280,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     )}
                   </div>
 
-                  {/* Row 1: Venue Name & Directions */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
@@ -985,7 +1291,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={venueName}
                         onChange={(e) => setVenueName(e.target.value)}
                         placeholder="e.g. Moscone Convention Center"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -998,12 +1304,11 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={venueDirections}
                         onChange={(e) => setVenueDirections(e.target.value)}
                         placeholder="e.g. Enter through West Lobby building doors"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {/* Row 2: Country, State, City */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                       <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
@@ -1015,7 +1320,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
                         placeholder="United States"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1028,7 +1333,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={stateRegion}
                         onChange={(e) => setStateRegion(e.target.value)}
                         placeholder="California"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1042,12 +1347,11 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="San Francisco"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {/* Row 3: Street Address & Zip Code (Unequal columns) */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div className="md:col-span-8">
                       <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
@@ -1059,7 +1363,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={streetAddress}
                         onChange={(e) => setStreetAddress(e.target.value)}
                         placeholder="747 Howard St"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1073,7 +1377,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                         value={pincode}
                         onChange={(e) => setPincode(e.target.value)}
                         placeholder="94103"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] focus:ring-2 focus:ring-[#ff385c]/15 transition-all font-mono shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all font-mono shadow-sm"
                       />
                     </div>
                   </div>
@@ -1090,7 +1394,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       value={onlineMeetingUrl}
                       onChange={(e) => setOnlineMeetingUrl(e.target.value)}
                       placeholder="https://meet.google.com/xyz-abc or Zoom URL"
-                      className="w-full bg-white border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#ff385c]"
+                      className="w-full bg-white border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1]"
                     />
                   </div>
                 </div>
@@ -1110,7 +1414,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                 </p>
               </div>
 
-              {/* Row 1: Category & Max Attendees */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
@@ -1120,7 +1423,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] cursor-pointer appearance-none shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] cursor-pointer appearance-none shadow-sm"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -1144,18 +1447,14 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       value={capacity}
                       onChange={(e) => setCapacity(Number(e.target.value))}
                       placeholder="500"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                     />
                   </div>
-                  <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
-                    Limits total tickets that can be booked.
-                  </span>
                 </div>
               </div>
 
-              {/* Row 2: Search Tags & Topics */}
               <div className="pt-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#ff385c]">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#1e9df1]">
                   SEARCH TAGS &amp; TOPICS *
                 </label>
                 <div className="flex items-center gap-3">
@@ -1170,18 +1469,17 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       }
                     }}
                     placeholder="Type a tag (e.g. react, marketing, rock) and press Enter"
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#ff385c] shadow-sm"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                   />
                   <button
                     type="button"
                     onClick={handleAddTag}
-                    className="w-11 h-11 rounded-full bg-[#ff385c] hover:bg-[#e00b41] text-white flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer"
+                    className="w-11 h-11 rounded-full bg-[#1e9df1] hover:bg-[#1583cd] text-white flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer"
                   >
                     <Plus size={20} />
                   </button>
                 </div>
 
-                {/* Tags Pill List */}
                 {tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {tags.map((t) => (
@@ -1208,7 +1506,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                 )}
               </div>
 
-              {/* Row 3: Organizer Contact Email & Phone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
@@ -1221,8 +1518,8 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       required
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder="support@rotasphere.com"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] shadow-sm"
+                      placeholder="organizer@rotaract3192.org"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                     />
                   </div>
                 </div>
@@ -1237,8 +1534,8 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                       type="tel"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
-                      placeholder="+1 (555) 019-2834"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#ff385c] shadow-sm"
+                      placeholder="+91 9876543210"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                     />
                   </div>
                 </div>
@@ -1250,7 +1547,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
 
         {/* ── 3. WIZARD FOOTER NAVIGATION ────────────────────────────── */}
         <div className="bg-gray-50/80 border-t border-gray-100 px-8 sm:px-12 py-5 flex items-center justify-between">
-          {/* Bottom-Left: Back Pill Button */}
           {currentStep > 1 ? (
             <button
               type="button"
@@ -1263,7 +1559,6 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
             <div />
           )}
 
-          {/* Bottom-Right: Cancel Text + Next / Publish Event Pill Button */}
           <div className="flex items-center gap-6">
             <button
               type="button"
@@ -1277,7 +1572,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
               <button
                 type="button"
                 onClick={handleNext}
-                className="bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#ff385c]/30 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#1e9df1]/30 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
               >
                 Next <ArrowRight size={16} />
               </button>
@@ -1286,9 +1581,15 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess }: CreateEve
                 type="button"
                 onClick={handleFinalSubmit}
                 disabled={loading}
-                className="bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#ff385c]/30 flex items-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-105 active:scale-95"
+                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#1e9df1]/30 flex items-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-105 active:scale-95"
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <>Publish Event <Check size={16} strokeWidth={3} /></>}
+                {loading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    {isEditMode ? "Save Changes" : "Publish Event"} <Check size={16} strokeWidth={3} />
+                  </>
+                )}
               </button>
             )}
           </div>

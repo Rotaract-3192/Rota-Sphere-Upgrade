@@ -31,6 +31,13 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("/events");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
 
   let selectedTiers: SelectedTierInput[] = [];
   try {
@@ -126,9 +133,21 @@ function CheckoutContent() {
       <h1 className="text-display-lg font-medium text-ink mb-xl">Confirm & Pay</h1>
 
       {error && (
-        <div className="flex items-start gap-sm bg-error/10 border border-error/20 text-error rounded-sm p-md mb-lg">
-          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-          <p className="text-body-sm">{error}</p>
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 mb-6 space-y-2">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle size={20} className="flex-shrink-0 text-rose-600 mt-0.5" />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+          {error.toLowerCase().includes("authentication") && (
+            <div className="pt-2">
+              <a
+                href={`/sign-in?redirect_url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/events")}`}
+                className="inline-flex items-center gap-1.5 bg-[#ff385c] hover:bg-[#e00b41] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
+              >
+                Sign In Now →
+              </a>
+            </div>
+          )}
         </div>
       )}
 

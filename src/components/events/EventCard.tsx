@@ -81,7 +81,7 @@ export function EventCard({
         >
           <Heart
             size={15}
-            className={saved ? "fill-[#ff385c] text-[#ff385c]" : "text-white"}
+            className={saved ? "fill-[#1e9df1] text-[#1e9df1]" : "text-white"}
           />
         </button>
 

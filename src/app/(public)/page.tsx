@@ -1,19 +1,21 @@
 /**
- * RotaSphere — Cinematic Dark Landing Page
- * Inspired by high-end luxury event & experience showcase design.
- * Tailored specifically for District 3192 & Rotaract Platform.
+ * RotaSphere — Homepage
+ * Clean white + blue design consistent with the rest of the platform.
+ * Real-time stats fetched from DB.
  */
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { executeSql } from "@/lib/db/directDb";
 import { EventGrid, EventGridSkeleton } from "@/components/events/EventGrid";
+import { EventMapExplorer } from "@/components/events/EventMapExplorer";
 import { CategoryStrip } from "@/components/events/CategoryStrip";
 import { ContactForm } from "@/components/events/ContactForm";
 import {
   Sparkles, Calendar, MapPin, Award, ArrowRight,
-  Phone, Mail
+  Phone, Mail, ShieldCheck, Ticket, Users, QrCode,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -23,170 +25,191 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-const HERO_CARDS = [
-  {
-    title: "7+ Cities",
-    subtitle: "across District 3192",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    title: "365 Days",
-    subtitle: "of Impact & Service",
-    image: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    title: "10,000+",
-    subtitle: "Active Rotaractors",
-    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    title: "Leadership",
-    subtitle: "conclaves & retreats",
-    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    title: "Enjoy the Vibe",
-    subtitle: "fellowship & galas",
-    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
-  },
-];
-
-const TIMELINE_EVENTS = [
-  {
-    period: "Feb 18–20",
-    city: "Bengaluru",
-    title: "District Conference 2026 — Synergy",
-    desc: "3-day mega flagship convention, global keynotes & gala awards night.",
-    images: [
-      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&auto=format&fit=crop&q=80",
-    ],
-  },
-  {
-    period: "March 5–7",
-    city: "Surat & Vadodara",
-    title: "Youth Leadership Conclave & Trek",
-    desc: "Experiential outdoor leadership immersion and startup pitch competition.",
-    images: [
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400&auto=format&fit=crop&q=80",
-    ],
-  },
-  {
-    period: "April 12–14",
-    city: "Ahmedabad & Rajkot",
-    title: "Cultural Fiesta & Inter-Club Sports League",
-    desc: "Annual sports championship, arts showcase & district fellowship dinner.",
-    images: [
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&auto=format&fit=crop&q=80",
-    ],
-  },
-];
-
 const INCLUDED_FEATURES = [
   {
     icon: Sparkles,
     title: "World-Class Keynotes",
     desc: "Inspirational sessions with global leaders, founder-Rotaractors, and changemakers.",
+    color: "bg-blue-50 text-[#1e9df1]",
   },
   {
-    icon: Calendar,
+    icon: Ticket,
     title: "Verified Delegate Passes",
     desc: "Instant digital ticket confirmation with secure QR code verification.",
+    color: "bg-emerald-50 text-emerald-600",
   },
   {
     icon: MapPin,
     title: "Hospitality & Stay",
     desc: "Organized accommodations, airport transfers, and meals for outstation delegates.",
+    color: "bg-amber-50 text-amber-600",
   },
   {
     icon: Award,
     title: "Certificates & Kits",
     desc: "Exclusive Rotaract delegate merchandise, badges, and official certificates.",
+    color: "bg-purple-50 text-purple-600",
   },
 ];
 
-export default function HomePage() {
-  return (
-    <div className="bg-[#0b0d12] text-white min-h-screen font-sans selection:bg-[#ff385c] selection:text-white">
-      {/* ── 1. CINEMATIC HERO SECTION ───────────────────────────────────── */}
-      <section className="relative min-h-[90vh] flex flex-col justify-between overflow-hidden pt-6 pb-12 px-4 sm:px-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/20 via-[#0b0d12] to-[#0b0d12]">
-        
-        {/* Giant Translucent Background Title */}
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none select-none text-center w-full z-0 opacity-15">
-          <h1 className="text-[14vw] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-amber-100 to-transparent leading-none">
-            DISTRICT 3192
-          </h1>
-        </div>
+// Fetch real platform stats from DB
+async function getPlatformStats() {
+  try {
+    const [clubs, events, passes] = await Promise.all([
+      executeSql(`SELECT COUNT(*) as count FROM organizations WHERE status = 'ACTIVE';`),
+      executeSql(`SELECT COUNT(*) as count FROM saas_events WHERE status = 'PUBLISHED';`),
+      executeSql(`SELECT COUNT(*) as count FROM saas_tickets WHERE status = 'CONFIRMED';`),
+    ]);
 
-        {/* Hero Background Glow Atmosphere */}
+    return {
+      clubs: Number(clubs.data?.[0]?.count ?? 0),
+      events: Number(events.data?.[0]?.count ?? 0),
+      passes: Number(passes.data?.[0]?.count ?? 0),
+    };
+  } catch {
+    return { clubs: 0, events: 0, passes: 0 };
+  }
+}
+
+async function getMapEvents() {
+  try {
+    const { data } = await executeSql(`
+      SELECT e.*, 
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', t.id,
+              'name', t.name,
+              'price', t.price,
+              'is_active', t.is_active
+            )
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as saas_ticket_tiers
+      FROM saas_events e
+      LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
+      WHERE e.status = 'PUBLISHED' AND (e.deleted_at IS NULL)
+      GROUP BY e.id
+      ORDER BY e.start_date ASC
+      LIMIT 12;
+    `);
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const stats = await getPlatformStats();
+  const mapEvents = await getMapEvents();
+
+  const statItems = [
+    { icon: Users, value: stats.clubs > 0 ? `${stats.clubs}` : "—", label: "Registered Clubs" },
+    { icon: Calendar, value: stats.events > 0 ? `${stats.events}` : "—", label: "Published Events" },
+    { icon: Ticket, value: stats.passes > 0 ? `${stats.passes}` : "—", label: "Passes Issued" },
+    { icon: QrCode, value: "Instant", label: "Gate Verification" },
+  ];
+
+  return (
+    <div className="bg-white text-gray-900 min-h-screen font-sans">
+
+      {/* ── 1. HERO SECTION ─────────────────────────────────────────────── */}
+      <section className="relative bg-gray-900 text-white overflow-hidden">
+        {/* Background image */}
         <div className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"
-            alt="Atmosphere"
+            alt="District 3192 Events"
             fill
             priority
-            className="object-cover opacity-20 filter blur-xs"
+            className="object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0b0d12]/60 via-[#0b0d12]/80 to-[#0b0d12]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/60" />
         </div>
 
-        {/* Hero Header Content */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full pt-16 text-center">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight mb-6 max-w-4xl mx-auto leading-tight">
-            DISCOVER THE UNFORGETTABLE
-          </h2>
-          <p className="text-base sm:text-xl text-gray-300 max-w-2xl mx-auto font-light mb-12">
-            Service, Leadership, Fellowship & Growth. Seamlessly book tickets for flagship Rotaract conventions across Bengaluru, Surat, Ahmedabad, and beyond.
-          </p>
-        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+          <div className="max-w-2xl space-y-6">
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-white">
+              Discover <span className="text-[#1e9df1]">Verified</span> Events &amp; Masterclasses
+            </h1>
 
-        {/* Hero Floating Cards Carousel Row */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {HERO_CARDS.map((card, idx) => (
-              <div
-                key={idx}
-                className="group relative h-48 sm:h-56 rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50"
+            <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
+              Service, Leadership, Fellowship &amp; Growth. Seamlessly book tickets for flagship Rotaract conventions across Bengaluru, Surat, Ahmedabad, and beyond.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Link
+                href="/events"
+                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-sm px-7 py-3.5 rounded-2xl transition-all shadow-lg shadow-[#1e9df1]/30 hover:scale-105"
               >
-                <Image
-                  src={card.image}
-                  alt={card.title}
-                  fill
-                  className="object-cover opacity-60 group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
-                  <p className="text-lg font-bold text-white leading-tight">{card.title}</p>
-                  <p className="text-xs text-amber-300/90 font-medium">{card.subtitle}</p>
-                </div>
+                Explore Flagship Events
+              </Link>
+              <Link
+                href="/clubs"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm px-7 py-3.5 rounded-2xl transition-all backdrop-blur-sm"
+              >
+                Discover Clubs
+              </Link>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <ShieldCheck size={14} className="text-emerald-400" />
+                <span>Verified by District 3192</span>
               </div>
-            ))}
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <QrCode size={14} className="text-[#1e9df1]" />
+                <span>Instant QR Gate Pass</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <Ticket size={14} className="text-amber-400" />
+                <span>UPI Payments Accepted</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── 2. CATEGORY FILTER STRIP ───────────────────────────────────── */}
-      <section className="border-y border-white/10 bg-[#0e1118]">
+      {/* ── 2. REAL-TIME STATS BAR ────────────────────────────────────────── */}
+      <section className="border-b border-gray-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
+            {statItems.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} className="flex flex-col items-center justify-center gap-1 py-6 px-4 text-center">
+                  <Icon size={18} className="text-[#1e9df1] mb-1" />
+                  <span className="text-2xl font-black text-gray-900">{stat.value}</span>
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. CATEGORY FILTER STRIP ──────────────────────────────────────── */}
+      <section className="border-b border-gray-100 bg-gray-50">
         <Suspense fallback={<div className="h-16" />}>
           <CategoryStrip />
         </Suspense>
       </section>
 
-      {/* ── 3. FEATURED EVENTS SHOWCASE ────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+      {/* ── 4. FEATURED EVENTS SHOWCASE ───────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-2">
               <Calendar size={14} /> Upcoming Flagship Events
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              FEATURED CONVENTIONS
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Featured Conventions
             </h2>
           </div>
           <Link
             href="/events"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1e9df1] hover:text-[#1583cd] transition-colors"
           >
             Explore all events <ArrowRight size={16} />
           </Link>
@@ -197,86 +220,30 @@ export default function HomePage() {
         </Suspense>
       </section>
 
-      {/* ── 4. ABOUT THE EXPERIENCE & TIMELINE ──────────────────────────── */}
-      <section className="relative py-24 px-4 sm:px-8 bg-gradient-to-b from-[#0b0d12] via-[#0f131c] to-[#0b0d12] border-t border-white/10">
+      {/* ── INTERACTIVE EVENT MAP & VENUE DISCOVERY ─────────────────────── */}
+      <section className="bg-gray-100/60 border-y border-gray-200 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Section Divider Header */}
-          <div className="flex items-center gap-4 mb-16 text-center justify-center">
-            <div className="h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent flex-1" />
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-amber-300 uppercase tracking-widest px-4">
-              ABOUT THE ROTASPHERE JOURNEY
-            </h2>
-            <div className="h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent flex-1" />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Left Narrative */}
-            <div className="lg:col-span-5 space-y-6">
-              <h3 className="text-3xl font-bold text-white leading-tight">
-                Designed for Young Changemakers Across District 3192.
-              </h3>
-              <p className="text-base text-gray-300 leading-relaxed font-light">
-                We&apos;ve curated seamless, memorable itineraries for youth leaders across <span className="text-amber-400 font-semibold">Bengaluru, Surat, Ahmedabad, Vadodara, and Rajkot</span>.
-              </p>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                No need to worry about booking confusion, ticketing delays, or gate entries. Everything is centralized on RotaSphere so you can focus on making an impact and enjoying the journey.
-              </p>
-
-              <div className="pt-4 border-t border-white/10 flex items-center gap-6">
-                <div>
-                  <p className="text-3xl font-black text-amber-400">100%</p>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider">Verified Events</p>
-                </div>
-                <div className="w-px h-10 bg-white/10" />
-                <div>
-                  <p className="text-3xl font-black text-amber-400">50+</p>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider">Active Clubs</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Interactive Timeline Path */}
-            <div className="lg:col-span-7 space-y-8 relative pl-6 border-l-2 border-amber-500/30">
-              {TIMELINE_EVENTS.map((item, i) => (
-                <div key={i} className="relative group">
-                  {/* Timeline Node Dot */}
-                  <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-amber-400 border-4 border-[#0b0d12] shadow-md shadow-amber-400/50 group-hover:scale-125 transition-transform" />
-
-                  <div className="bg-white/5 border border-white/10 hover:border-amber-400/50 rounded-2xl p-6 backdrop-blur-md transition-all duration-300">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                        {item.period} · {item.city}
-                      </span>
-                    </div>
-
-                    <h4 className="text-xl font-bold text-white mb-2">{item.title}</h4>
-                    <p className="text-sm text-gray-300 mb-4">{item.desc}</p>
-
-                    {/* Timeline photos */}
-                    <div className="flex items-center gap-3">
-                      {item.images.map((img, imgIdx) => (
-                        <div key={imgIdx} className="relative w-24 h-16 rounded-lg overflow-hidden border border-white/10">
-                          <Image src={img} alt={item.title} fill className="object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <EventMapExplorer
+            events={mapEvents}
+            title="Interactive Event Map & Venue Discovery"
+            subtitle="Locate Rotaract conferences, conventions, and youth festivals across District 3192 on the map."
+          />
         </div>
       </section>
 
-      {/* ── 5. WHAT'S INCLUDED DELEGATE CARDS ──────────────────────────── */}
-      <section className="py-24 px-4 sm:px-8 bg-[#0b0d12]">
+      {/* ── 5. WHAT'S INCLUDED ────────────────────────────────────────────── */}
+      <section className="bg-gray-50 border-t border-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-16 text-center justify-center">
-            <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent flex-1" />
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-widest px-4">
-              WHAT&apos;S INCLUDED
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-3">
+              <Sparkles size={14} /> Delegate Experience
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              What&apos;s Included
             </h2>
-            <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent flex-1" />
+            <p className="text-gray-600 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
+              Every RotaSphere pass comes with a premium delegate experience built for Rotaract leaders.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -285,13 +252,13 @@ export default function HomePage() {
               return (
                 <div
                   key={idx}
-                  className="bg-white/5 border border-white/10 hover:border-amber-400/50 rounded-2xl p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1"
+                  className="bg-white border border-gray-100 hover:border-[#1e9df1]/30 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 group"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-amber-400/10 text-amber-400 flex items-center justify-center mb-4">
-                    <Icon size={24} />
+                  <div className={`w-12 h-12 rounded-2xl ${feat.color} flex items-center justify-center mb-4`}>
+                    <Icon size={22} />
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">{feat.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed font-light">{feat.desc}</p>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">{feat.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{feat.desc}</p>
                 </div>
               );
             })}
@@ -299,55 +266,107 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 6. INTERACTIVE CONTACT & INQUIRY FORM ────────────────────── */}
-      <section className="relative py-24 px-4 sm:px-8 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-amber-950/30 via-[#0b0d12] to-[#0b0d12] border-t border-white/10">
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="bg-white/5 border border-white/15 rounded-3xl p-8 sm:p-12 backdrop-blur-xl shadow-2xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              
-              <div className="lg:col-span-5 space-y-4">
-                <h3 className="text-3xl font-extrabold text-white">
-                  Want to host or have questions?
-                </h3>
-                <p className="text-sm text-gray-300 font-light leading-relaxed">
-                  Leave a request and our District Team will reach out to you within 24 hours to assist with club registrations, event hosting, or ticket inquiries.
-                </p>
-                <div className="space-y-2 pt-2 text-xs text-amber-300">
-                  <p className="flex items-center gap-2"><Mail size={14} /> support@rotasphere.in</p>
-                  <p className="flex items-center gap-2"><Phone size={14} /> District 3192 Helpline</p>
+      {/* ── 6. ABOUT & TIMELINE ───────────────────────────────────────────── */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-3">
+              <Calendar size={14} /> The Rotasphere Journey
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              About the Experience
+            </h2>
+            <p className="text-gray-600 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
+              Curated itineraries for youth leaders across Bengaluru, Surat, Ahmedabad, Vadodara, and Rajkot.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            {/* Left Narrative */}
+            <div className="lg:col-span-4 space-y-6">
+              <h3 className="text-2xl font-bold text-gray-900 leading-tight">
+                Designed for Young Changemakers Across District 3192.
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                No booking confusion, ticketing delays, or gate entry issues. Everything is centralized on RotaSphere so you can focus on making an impact.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="bg-blue-50 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-[#1e9df1]">
+                    {stats.events > 0 ? stats.events : "—"}
+                  </p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Published Events</p>
+                </div>
+                <div className="bg-emerald-50 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-emerald-600">
+                    {stats.clubs > 0 ? stats.clubs : "—"}
+                  </p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Active Clubs</p>
                 </div>
               </div>
+            </div>
 
-              {/* Inquiry Form Client Component */}
-              <ContactForm />
+            {/* Right Timeline */}
+            <div className="lg:col-span-8 space-y-6 relative pl-6 border-l-2 border-[#1e9df1]/20">
+              {mapEvents.slice(0, 4).map((item: any, i: number) => (
+                <div key={item.id || i} className="relative group">
+                  {/* Timeline dot */}
+                  <div className="absolute -left-[31px] top-5 w-4 h-4 rounded-full bg-[#1e9df1] border-4 border-white shadow-md group-hover:scale-125 transition-transform" />
 
+                  <div className="bg-gray-50 border border-gray-100 hover:border-[#1e9df1]/30 rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <span className="text-xs font-bold text-[#1e9df1] uppercase tracking-wider">
+                        {new Date(item.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} · {item.city || "Karnataka"}
+                      </span>
+                    </div>
+                    <h4 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h4>
+                    <p className="text-sm text-gray-500 mb-4 line-clamp-2">{item.summary || item.description || "Official Rotaract District 3192 event."}</p>
+
+                    {item.cover_image_url && (
+                      <div className="relative w-32 h-20 rounded-xl overflow-hidden border border-gray-200">
+                        <Image src={item.cover_image_url} alt={item.title} fill className="object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 7. CINEMATIC FOOTER ─────────────────────────────────────────── */}
-      <footer className="bg-black border-t border-white/10 py-12 px-4 sm:px-8 text-sm text-gray-400">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-amber-400 tracking-wider uppercase">ROTASPHERE</span>
-            <span>·</span>
-            <span>District 3192</span>
-          </div>
+      {/* ── 7. CONTACT / INQUIRY FORM ─────────────────────────────────────── */}
+      <section className="bg-gray-50 border-t border-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white border border-gray-100 rounded-3xl p-8 sm:p-12 shadow-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+              <div className="lg:col-span-5 space-y-4">
+                <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-1">
+                  <Mail size={14} /> Get in Touch
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+                  Want to host or have questions?
+                </h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Leave a request and our District Team will reach out within 24 hours to assist with club registrations, event hosting, or ticket inquiries.
+                </p>
+                <div className="space-y-2 pt-2 text-xs text-gray-600">
+                  <p className="flex items-center gap-2">
+                    <Mail size={14} className="text-[#1e9df1]" /> support@rotasphere.in
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Phone size={14} className="text-[#1e9df1]" /> District 3192 Helpline
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-6 text-xs text-gray-400">
-            <Link href="/about" className="hover:text-white transition-colors">About</Link>
-            <Link href="/events" className="hover:text-white transition-colors">Events</Link>
-            <Link href="/experiences" className="hover:text-white transition-colors">Experiences</Link>
-            <Link href="/clubs" className="hover:text-white transition-colors">Clubs</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <ContactForm />
+            </div>
           </div>
-
-          <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Rotaract District 3192. All rights reserved.
-          </p>
         </div>
-      </footer>
+      </section>
+
     </div>
   );
 }

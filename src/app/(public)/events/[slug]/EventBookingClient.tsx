@@ -1,12 +1,15 @@
 "use client";
 
 /**
- * Event Booking Client Card
- * Shows available ticket tiers, countdown, and opens Checkout Modal.
+ * Event Booking Client Component
+ * Works seamlessly on mobile and desktop.
+ * - Always shows the clean booking card on the page.
+ * - Provides a floating bottom action bar on mobile for instant registration.
+ * - Opens CheckoutModal reliably with z-[9999] layer depth.
  */
 
 import { useState } from "react";
-import { Ticket, Sparkles, ShieldCheck, Share2, Bookmark, Calendar, ArrowRight, Heart } from "lucide-react";
+import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
@@ -22,23 +25,49 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Find lowest price
+  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name));
+  const generalTiers = tiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
+  const otherTiers = tiers.filter(
+    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
+  );
+
+  const isEarlyBirdAvailable =
+    earlyBirdTiers.length > 0 &&
+    earlyBirdTiers.some((t) => (t.total_capacity - t.sold_count) > 0);
+
+  const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
+
   const prices = tiers.map((t) => Number(t.price));
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const isFree = minPrice === 0;
 
-  function handleShare() {
+  function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (navigator.share) {
+        navigator.share({ title: event.title, url: window.location.href }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     }
+  }
+
+  function handleBookmark(e: React.MouseEvent) {
+    e.stopPropagation();
+    setIsSaved((prev) => !prev);
+  }
+
+  function handleOpenCheckout(e: React.MouseEvent) {
+    e.stopPropagation();
+    setModalOpen(true);
   }
 
   return (
     <>
-      <div className="sticky top-24 bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-        
+      {/* ── MAIN BOOKING CARD (Visible on both mobile & desktop) ────────────── */}
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 lg:sticky lg:top-24">
         {/* Price Header */}
         <div className="flex items-baseline justify-between border-b border-gray-100 pb-5">
           <div>
@@ -60,40 +89,148 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
             {tiers.length === 0 ? (
               <p className="text-xs text-gray-500 italic">No tickets announced yet.</p>
             ) : (
-              tiers.map((tier) => {
-                const remaining = tier.total_capacity - tier.sold_count;
-                return (
-                  <div
-                    key={tier.id}
-                    className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{tier.name}</p>
-                      <p className="text-[11px] text-gray-500">{remaining} seats left</p>
-                    </div>
-                    <span className="text-sm font-extrabold text-[#ff385c]">
-                      {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
+              <>
+                {/* 1. Early Bird Tiers */}
+                {earlyBirdTiers.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-block">
+                      🔥 Early Bird Release
                     </span>
+                    {earlyBirdTiers.map((tier) => {
+                      const remaining = tier.total_capacity - tier.sold_count;
+                      const isSoldOut = remaining <= 0;
+                      return (
+                        <div
+                          key={tier.id}
+                          className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <p className="text-[11px] text-gray-500">{isSoldOut ? "Sold Out" : `${remaining} seats left`}</p>
+                          </div>
+                          <span className="text-sm font-extrabold text-[#ff385c]">
+                            {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })
+                )}
+
+                {/* 2. Dropdown for General Release Passes */}
+                {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
+                      className="w-full px-3.5 py-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 transition-colors"
+                    >
+                      <span className="text-xs font-bold text-gray-900">
+                        General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
+                      </span>
+                      <span className="text-xs font-extrabold text-[#ff385c] flex items-center gap-1">
+                        {showGeneralDropdown ? (
+                          <>Hide <ChevronUp size={14} /></>
+                        ) : (
+                          <>View <ChevronDown size={14} /></>
+                        )}
+                      </span>
+                    </button>
+
+                    {showGeneralDropdown && (
+                      <div className="p-2 border-t border-gray-200 space-y-2 bg-white">
+                        {generalTiers.map((tier) => {
+                          const remaining = tier.total_capacity - tier.sold_count;
+                          return (
+                            <div
+                              key={tier.id}
+                              className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
+                            >
+                              <div>
+                                <p className="text-xs font-bold text-gray-900">{tier.name}</p>
+                                <p className="text-[10px] text-gray-500">{remaining} seats left</p>
+                              </div>
+                              <span className="text-xs font-extrabold text-[#ff385c]">
+                                {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. If NO Early Bird exists, render General Tiers normally */}
+                {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
+                  <div className="space-y-2">
+                    {generalTiers.map((tier) => {
+                      const remaining = tier.total_capacity - tier.sold_count;
+                      return (
+                        <div
+                          key={tier.id}
+                          className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <p className="text-[11px] text-gray-500">{remaining} seats left</p>
+                          </div>
+                          <span className="text-sm font-extrabold text-[#ff385c]">
+                            {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 4. VIP & Other Tiers */}
+                {otherTiers.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    {earlyBirdTiers.length > 0 && (
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full inline-block">
+                        ⭐ Special &amp; VIP Passes
+                      </span>
+                    )}
+                    {otherTiers.map((tier) => {
+                      const remaining = tier.total_capacity - tier.sold_count;
+                      return (
+                        <div
+                          key={tier.id}
+                          className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <p className="text-[11px] text-gray-500">{remaining} seats left</p>
+                          </div>
+                          <span className="text-sm font-extrabold text-[#ff385c]">
+                            {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Action Button */}
         <button
-          onClick={() => setModalOpen(true)}
-          className="w-full bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02]"
+          type="button"
+          onClick={handleOpenCheckout}
+          className="w-full bg-[#ff385c] hover:bg-[#e00b41] active:bg-[#c0002e] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
         >
-          <Ticket size={20} /> Register & Buy Tickets
+          <Ticket size={20} /> Register &amp; Buy Tickets
         </button>
 
         {/* Utilities: Share & Wishlist */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
           <button
-            onClick={() => setIsSaved(!isSaved)}
-            className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+            type="button"
+            onClick={handleBookmark}
+            className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer touch-manipulation ${
               isSaved ? "bg-rose-50 border-rose-200 text-rose-600" : "border-gray-200 text-gray-700 hover:bg-gray-50"
             }`}
           >
@@ -102,8 +239,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
           </button>
 
           <button
+            type="button"
             onClick={handleShare}
-            className="flex-1 py-2.5 px-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="flex-1 py-2.5 px-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer touch-manipulation"
           >
             <Share2 size={15} />
             {copied ? "Link Copied!" : "Share Event"}
@@ -116,7 +254,37 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
         </div>
       </div>
 
-      {/* Checkout Modal */}
+      {/* ── MOBILE FLOATING BOTTOM BAR (below lg breakpoint) ──────────────── */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl px-4 py-3 flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passes From</p>
+          <p className="text-lg font-extrabold text-gray-900 leading-tight">
+            {isFree ? "Free Entry" : `₹${minPrice}`}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleBookmark}
+          className={`p-3 rounded-2xl border text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer touch-manipulation ${
+            isSaved ? "bg-rose-50 border-rose-200 text-rose-600" : "border-gray-200 text-gray-600"
+          }`}
+          aria-label="Bookmark event"
+        >
+          <Heart size={18} className={isSaved ? "fill-rose-600 text-rose-600" : ""} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleOpenCheckout}
+          className="bg-[#ff385c] active:bg-[#c0002e] text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer touch-manipulation"
+        >
+          <Ticket size={18} />
+          Register &amp; Buy
+        </button>
+      </div>
+
+      {/* Checkout Modal (rendered with z-[9999] high priority) */}
       <CheckoutModal
         event={event}
         tiers={tiers}

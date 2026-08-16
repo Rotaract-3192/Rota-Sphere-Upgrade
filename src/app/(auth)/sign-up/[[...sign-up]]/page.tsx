@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, ArrowRight, Shield } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -32,10 +33,21 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-[#0b0d12] text-white flex flex-col justify-center items-center px-4 py-12">
       <div className="flex flex-col items-center mb-6 text-center">
-        <Link href="/" className="font-bold text-3xl tracking-tight text-[#ff385c] mb-2 hover:opacity-90 transition-opacity">
-          RotaSphere
+        <Link href="/" className="flex flex-col items-center gap-2 group">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg bg-white p-1 group-hover:scale-105 transition-transform">
+            <Image
+              src="/brand/logo.png"
+              alt="Rotaract District 3192 Ticketing"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <span className="font-black text-2xl tracking-tight text-white">
+            Rota<span className="text-[#3b82f6]">Sphere</span>
+          </span>
         </Link>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
           <Sparkles size={13} /> District 3192 Registration
         </div>
       </div>

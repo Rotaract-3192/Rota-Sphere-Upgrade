@@ -7,9 +7,16 @@
  */
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Open_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans-open",
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,6 +51,21 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+  appleWebApp: {
+    title: "RotaSphere",
+    statusBarStyle: "default",
+    capable: true,
+  },
 };
 
 export default function RootLayout({
@@ -58,8 +80,8 @@ export default function RootLayout({
     (envKey?.startsWith("pk_test_") || envKey?.startsWith("pk_live_"));
 
   const content = (
-    <html lang="en" className={inter.variable}>
-      <body className="antialiased bg-canvas text-ink font-sans">
+    <html lang="en" className={`${openSans.variable} ${inter.variable}`} suppressHydrationWarning>
+      <body className="antialiased bg-canvas text-ink font-sans" suppressHydrationWarning>
         {children}
       </body>
     </html>

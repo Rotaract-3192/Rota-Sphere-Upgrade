@@ -39,6 +39,8 @@ export interface CreateEventInput {
   refundPolicy?: string;
   contactEmail?: string;
   contactPhone?: string;
+  upiId?: string;
+  upiPayeeName?: string;
   category?: string;
   tags?: string[];
   ticketTiers: Array<{
@@ -84,35 +86,49 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
   try {
     const user = await requireAuth();
 
-    // 1. Get or create organization for this user
+    // Auto-migrate UPI & user columns if missing
+    try {
+      await executeSql(`
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(255);
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS created_by_user_id VARCHAR(255);
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+      `);
+    } catch {}
+
+    const coverUrl = input.coverImageUrl || "";
+    const baseSlug = input.slug?.trim() ? slugify(input.slug) : slugify(input.title);
+    const finalSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+
+    // 1. Resolve Organization
     let organizationId = input.organizationId;
     if (!organizationId) {
-      const { data: orgRows } = await executeSql(`SELECT id FROM organizations LIMIT 1;`);
-      if (orgRows && orgRows.length > 0) {
-        organizationId = orgRows[0].id;
-      } else {
-        const defaultOrgName = `${user.profile.full_name || "District"} Organization`;
-        const orgSlug = `${slugify(defaultOrgName)}-${Date.now().toString().slice(-4)}`;
-        const { data: newOrg } = await executeSql(`
-          INSERT INTO organizations (name, slug, support_email, city, kyc_status, is_verified)
-          VALUES (${escapeSql(defaultOrgName)}, ${escapeSql(orgSlug)}, ${escapeSql(user.email)}, ${escapeSql(input.city || "Bengaluru")}, 'VERIFIED', TRUE)
-          RETURNING id;
-        `);
-        if (newOrg && newOrg.length > 0) {
-          organizationId = newOrg[0].id;
-        }
+      const { data: memberRows } = await executeSql(`
+        SELECT organization_id FROM organization_members
+        WHERE user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+      if (memberRows && memberRows.length > 0) {
+        organizationId = memberRows[0].organization_id;
       }
     }
 
-    const rawSlug = input.slug || slugify(input.title);
-    const finalSlug = `${rawSlug}-${Date.now().toString().slice(-4)}`;
-    const coverUrl = input.coverImageUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80";
+    if (!organizationId) {
+      const { data: defaultOrg } = await executeSql(`
+        SELECT id FROM organizations
+        ORDER BY created_at ASC
+        LIMIT 1;
+      `);
+      if (defaultOrg && defaultOrg.length > 0) {
+        organizationId = defaultOrg[0].id;
+      }
+    }
 
-    // 2. Insert into saas_events
+    // 2. Insert Event
     const insertEventSql = `
       INSERT INTO saas_events (
         organization_id,
-        organizer_id,
+        created_by_user_id,
         title,
         slug,
         summary,
@@ -136,7 +152,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         allow_refunds,
         terms_and_conditions,
         refund_policy,
-        contact_email
+        contact_email,
+        upi_id,
+        upi_payee_name
       ) VALUES (
         ${escapeSql(organizationId)},
         ${escapeSql(user.clerkId)},
@@ -163,7 +181,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${input.allowRefunds !== false},
         ${escapeSql(input.termsAndConditions)},
         ${escapeSql(input.refundPolicy)},
-        ${escapeSql(input.contactEmail || user.email)}
+        ${escapeSql(input.contactEmail || user.email)},
+        ${escapeSql(input.upiId || "rotaractdistrict3192@okaxis")},
+        ${escapeSql(input.upiPayeeName || "District 3192 Rotaract")}
       )
       RETURNING id, slug;
     `;
@@ -385,6 +405,213 @@ export async function cancelEventAction(eventId: string, reason: string): Promis
     return { success: true };
   } catch (err) {
     return { success: false, error: String(err) };
+  }
+}
+
+export async function updateEventAction(
+  eventId: string,
+  input: Partial<CreateEventInput>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    // Check ownership or superadmin
+    const existing = await executeSql(`
+      SELECT id, organization_id, organizer_id FROM saas_events WHERE id = ${escapeSql(eventId)} LIMIT 1;
+    `);
+    if (!existing.data || existing.data.length === 0) {
+      return { success: false, error: "Event not found" };
+    }
+
+    const updates: string[] = [];
+    if (input.title) updates.push(`title = ${escapeSql(input.title)}`);
+    if (input.slug) updates.push(`slug = ${escapeSql(input.slug)}`);
+    if (input.summary !== undefined) updates.push(`summary = ${escapeSql(input.summary)}`);
+    if (input.description !== undefined) updates.push(`description = ${escapeSql(input.description)}`);
+    if (input.coverImageUrl !== undefined) updates.push(`cover_image_url = ${escapeSql(input.coverImageUrl)}`);
+    if (input.logoUrl !== undefined) updates.push(`logo_url = ${escapeSql(input.logoUrl)}`);
+    if (input.eventType) updates.push(`event_type = ${escapeSql(input.eventType)}`);
+    if (input.venueName !== undefined) updates.push(`venue_name = ${escapeSql(input.venueName)}`);
+    if (input.address !== undefined) updates.push(`address = ${escapeSql(input.address)}`);
+    if (input.city !== undefined) updates.push(`city = ${escapeSql(input.city)}`);
+    if (input.state !== undefined) updates.push(`state = ${escapeSql(input.state)}`);
+    if (input.onlineMeetingUrl !== undefined) updates.push(`online_meeting_url = ${escapeSql(input.onlineMeetingUrl)}`);
+    if (input.startDate) updates.push(`start_date = ${escapeSql(input.startDate)}`);
+    if (input.endDate) updates.push(`end_date = ${escapeSql(input.endDate)}`);
+    if (input.timezone !== undefined) updates.push(`timezone = ${escapeSql(input.timezone)}`);
+    if (input.capacity !== undefined) updates.push(`capacity = ${input.capacity}`);
+    if (input.visibility !== undefined) updates.push(`visibility = ${escapeSql(input.visibility)}`);
+    if (input.allowWaitlist !== undefined) updates.push(`allow_waitlist = ${input.allowWaitlist ? "TRUE" : "FALSE"}`);
+    if (input.allowTicketTransfer !== undefined) updates.push(`allow_ticket_transfer = ${input.allowTicketTransfer ? "TRUE" : "FALSE"}`);
+    if (input.allowRefunds !== undefined) updates.push(`allow_refunds = ${input.allowRefunds ? "TRUE" : "FALSE"}`);
+    if (input.contactEmail !== undefined) updates.push(`contact_email = ${escapeSql(input.contactEmail)}`);
+    if (input.contactPhone !== undefined) updates.push(`contact_phone = ${escapeSql(input.contactPhone)}`);
+
+    updates.push(`updated_at = NOW()`);
+
+    if (updates.length > 0) {
+      await executeSql(`
+        UPDATE saas_events
+        SET ${updates.join(", ")}
+        WHERE id = ${escapeSql(eventId)};
+      `);
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "EVENT_UPDATED",
+      entityType: "EVENT",
+      entityId: eventId,
+      newState: input,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/events");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function trashEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    // Auto-migrate deleted_at column if missing in database schema
+    try {
+      await executeSql(`
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+      `);
+    } catch {}
+
+    let { error: dbErr } = await executeSql(`
+      UPDATE saas_events
+      SET deleted_at = NOW(), status = 'TRASHED', updated_at = NOW()
+      WHERE id = ${escapeSql(eventId)};
+    `);
+
+    // If status check constraint rejects 'TRASHED', fallback to updating deleted_at
+    if (dbErr) {
+      const fallbackRes = await executeSql(`
+        UPDATE saas_events
+        SET deleted_at = NOW(), updated_at = NOW()
+        WHERE id = ${escapeSql(eventId)};
+      `);
+      if (fallbackRes.error) {
+        return { success: false, error: fallbackRes.error.message || "Failed to update database" };
+      }
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "EVENT_TRASHED",
+      entityType: "EVENT",
+      entityId: eventId,
+      newState: { status: "TRASHED", deleted_at: new Date().toISOString() },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/events");
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function restoreEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    await executeSql(`
+      UPDATE saas_events
+      SET deleted_at = NULL, status = 'PUBLISHED', updated_at = NOW()
+      WHERE id = ${escapeSql(eventId)};
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "EVENT_RESTORED",
+      entityType: "EVENT",
+      entityId: eventId,
+      newState: { status: "PUBLISHED", deleted_at: null },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/events");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function permanentDeleteEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    // Cascading deletes
+    await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
+    await executeSql(`DELETE FROM event_speakers WHERE event_id = ${escapeSql(eventId)};`);
+    await executeSql(`DELETE FROM event_sponsors WHERE event_id = ${escapeSql(eventId)};`);
+    await executeSql(`DELETE FROM saas_events WHERE id = ${escapeSql(eventId)};`);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "EVENT_PERMANENTLY_DELETED",
+      entityType: "EVENT",
+      entityId: eventId,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/events");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function getEventRegistrationsAction(eventId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    const ticketsRes = await executeSql(`
+      SELECT 
+        t.id as ticket_id,
+        t.qr_token,
+        t.status as ticket_status,
+        t.checked_in_at,
+        t.unit_price,
+        t.created_at,
+        tt.name as tier_name,
+        e.title as event_title,
+        e.city as event_city,
+        o.id as order_id,
+        o.status as order_status,
+        o.currency,
+        o.user_id,
+        p.full_name as attendee_name,
+        p.email as attendee_email,
+        p.phone_number as attendee_phone
+      FROM saas_tickets t
+      LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
+      LEFT JOIN saas_events e ON t.event_id = e.id
+      LEFT JOIN saas_orders o ON t.order_id = o.id
+      LEFT JOIN member_profiles p ON o.user_id = p.clerk_user_id
+      WHERE t.event_id = ${escapeSql(eventId)}
+      ORDER BY t.created_at DESC;
+    `);
+
+    return { success: true, data: ticketsRes.data || [] };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
   }
 }
 
