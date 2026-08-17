@@ -31,6 +31,7 @@ import {
   ExternalLink,
   Plus,
   X,
+  Camera,
   Loader2,
   ArrowUpRight,
   LogOut,
@@ -65,6 +66,8 @@ import {
   togglePlatformFeatureFlagAction,
   setEventStatusAction,
   createOrganizationAction,
+  approveOrganizerAccessRequestAction,
+  rejectOrganizerAccessRequestAction,
 } from "@/app/actions/adminActions";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 
@@ -77,6 +80,7 @@ interface SuperAdminProps {
   initialCheckInLogs?: any[];
   initialAuditLogs: any[];
   initialFeatureFlags: any[];
+  initialOrganizerRequests?: any[];
 }
 
 function downloadCsv(filename: string, rows: Record<string, any>[]) {
@@ -129,9 +133,10 @@ export function SuperAdminDashboardClient({
   initialCheckInLogs = [],
   initialAuditLogs,
   initialFeatureFlags,
+  initialOrganizerRequests = [],
 }: SuperAdminProps) {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "upi" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
+    "overview" | "requests" | "upi" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
   >("overview");
 
   const [organizations, setOrganizations] = useState(initialOrganizations);
@@ -139,8 +144,37 @@ export function SuperAdminDashboardClient({
   const [featureFlags, setFeatureFlags] = useState(initialFeatureFlags);
   const [orders, setOrders] = useState(initialOrders);
   const [tickets, setTickets] = useState(initialTickets);
+  const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
   const [checkIns] = useState(initialCheckInLogs);
   const [auditLogs] = useState(initialAuditLogs);
+  const [organizerRequests, setOrganizerRequests] = useState(initialOrganizerRequests);
+  const [reqProcessingId, setReqProcessingId] = useState<string | null>(null);
+
+  async function handleApproveRequest(requestId: string) {
+    setReqProcessingId(requestId);
+    const res = await approveOrganizerAccessRequestAction(requestId);
+    setReqProcessingId(null);
+    if (res.success) {
+      setOrganizerRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: "APPROVED" } : r))
+      );
+    } else {
+      alert(res.error || "Failed to approve request");
+    }
+  }
+
+  async function handleRejectRequest(requestId: string) {
+    setReqProcessingId(requestId);
+    const res = await rejectOrganizerAccessRequestAction(requestId);
+    setReqProcessingId(null);
+    if (res.success) {
+      setOrganizerRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: "REJECTED" } : r))
+      );
+    } else {
+      alert(res.error || "Failed to reject request");
+    }
+  }
 
   // Filters & State
   const [searchQuery, setSearchQuery] = useState("");
@@ -491,6 +525,7 @@ export function SuperAdminDashboardClient({
           <nav className="flex-1 px-3 py-4 space-y-1">
             {[
               { id: "overview",  label: "Overview 🏠",            icon: Activity,     count: null },
+              { id: "requests",  label: "Host Access Requests 👑", icon: Users,        count: organizerRequests.filter((r: any) => r.status === "PENDING").length },
               { id: "upi",      label: "UPI Payments 💳",         icon: QrCode,       count: pendingUpiOrders.length },
               { id: "kyc",      label: "Club Roster 🏛️",          icon: Building,     count: pendingKycCount },
               { id: "events",   label: "All Events 📅",           icon: Calendar,     count: events.length },
@@ -501,7 +536,7 @@ export function SuperAdminDashboardClient({
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              const isUrgent = tab.id === "upi" && pendingUpiOrders.length > 0;
+              const isUrgent = (tab.id === "upi" && pendingUpiOrders.length > 0) || (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
               return (
                 <button
                   key={tab.id}
@@ -866,6 +901,115 @@ export function SuperAdminDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
+            TAB: ORGANIZER / HOST ACCESS REQUESTS
+            ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "requests" && (
+          <div className="space-y-6 animate-in fade-in-50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black text-gray-900">Organizer &amp; Host Access Requests</h2>
+                <p className="text-xs text-gray-500">
+                  Review and grant event publishing privileges to Rotaract Club officers.
+                </p>
+              </div>
+            </div>
+
+            {organizerRequests.length === 0 ? (
+              <div className="p-12 bg-white rounded-3xl border border-gray-200 text-center space-y-3">
+                <Users size={36} className="text-gray-400 mx-auto" />
+                <h3 className="text-base font-bold text-gray-800">No Access Requests Submitted</h3>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  When attendees apply to host events for their Rotaract clubs, their applications will appear here for admin approval.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-gray-600">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="px-6 py-4">Applicant</th>
+                        <th className="px-6 py-4">Club Name &amp; Designation</th>
+                        <th className="px-6 py-4">Proposed Event Details</th>
+                        <th className="px-6 py-4">Applied Date</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 font-medium">
+                      {organizerRequests.map((req: any) => {
+                        const isPending = req.status === "PENDING";
+                        const isApproved = req.status === "APPROVED";
+                        const isProcessing = reqProcessingId === req.id;
+
+                        return (
+                          <tr key={req.id} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="font-extrabold text-gray-900">{req.user_name}</p>
+                              <p className="text-[11px] text-gray-500 font-mono">{req.user_email}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-gray-900">{req.club_name}</p>
+                              <p className="text-[11px] text-[#1e9df1] font-extrabold">{req.position}</p>
+                            </td>
+                            <td className="px-6 py-4 max-w-xs">
+                              <p className="text-xs text-gray-800 line-clamp-2">{req.reason}</p>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-[11px] text-gray-500">
+                              {new Date(req.created_at).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                  isPending
+                                    ? "bg-amber-50 text-amber-800 border-amber-300 font-black animate-pulse"
+                                    : isApproved
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                }`}
+                              >
+                                ● {req.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                              {isPending && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isProcessing}
+                                    onClick={() => handleApproveRequest(req.id)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                    Grant Organizer Access
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isProcessing}
+                                    onClick={() => handleRejectRequest(req.id)}
+                                    className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <XCircle size={14} /> Reject
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
             TAB 2: DYNAMIC UPI PAYMENTS & UTR VERIFICATION HUB
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "upi" && (
@@ -979,20 +1123,31 @@ export function SuperAdminDashboardClient({
 
                             <td className="px-6 py-4">
                               {ord.upi_transaction_id ? (
-                                <div className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
-                                  <span className="font-mono font-extrabold text-gray-900 text-xs">{ord.upi_transaction_id}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyUtrText(ord.upi_transaction_id)}
-                                    className="text-gray-400 hover:text-gray-700 cursor-pointer"
-                                    title="Copy UTR"
-                                  >
-                                    {copiedUtr === ord.upi_transaction_id ? (
-                                      <Check size={12} className="text-emerald-600" />
-                                    ) : (
-                                      <Copy size={12} />
-                                    )}
-                                  </button>
+                                <div className="space-y-1">
+                                  <div className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
+                                    <span className="font-mono font-extrabold text-gray-900 text-xs">{ord.upi_transaction_id}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyUtrText(ord.upi_transaction_id)}
+                                      className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                                      title="Copy UTR"
+                                    >
+                                      {copiedUtr === ord.upi_transaction_id ? (
+                                        <Check size={12} className="text-emerald-600" />
+                                      ) : (
+                                        <Copy size={12} />
+                                      )}
+                                    </button>
+                                  </div>
+                                  {isPending && (ord.payment_proof_url || ord.upi_receipt_url || ord.upi_screenshot_url) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setProofModalOrder(ord)}
+                                      className="text-[11px] text-[#1e9df1] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                                    >
+                                      <Camera size={12} /> View Payment Photo Proof
+                                    </button>
+                                  )}
                                 </div>
                               ) : (
                                 <span className="text-[11px] text-gray-400 italic">Free Order / No UTR</span>
@@ -1023,11 +1178,18 @@ export function SuperAdminDashboardClient({
                                 <>
                                   <button
                                     type="button"
-                                    disabled={isProcessing}
-                                    onClick={() => handleApprovePayment(ord.id)}
+                                    disabled={verifyingOrderId === ord.id}
+                                    onClick={() => {
+                                      const proofUrl = ord.payment_proof_url || ord.upi_receipt_url || ord.upi_screenshot_url;
+                                      if (proofUrl) {
+                                        setProofModalOrder(ord);
+                                      } else {
+                                        handleApprovePayment(ord.id);
+                                      }
+                                    }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
                                   >
-                                    {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                                    {verifyingOrderId === ord.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={13} />}
                                     Approve Pass
                                   </button>
 
@@ -1884,7 +2046,102 @@ export function SuperAdminDashboardClient({
         events={events.map((e) => ({ id: e.id, title: e.title }))}
         isSuperAdmin={true}
       />
+
+      {/* ── SUPER ADMIN INTERACTIVE PHOTO REVIEW & APPROVAL MODAL ─────── */}
+      {proofModalOrder && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in-50">
+          <div className="relative max-w-3xl w-full bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-left">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#1e9df1] block">
+                  District Super Admin • Verify Payment Screenshot
+                </span>
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  Order Ref: <span className="font-mono text-base">{proofModalOrder.order_number}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProofModalOrder(null)}
+                className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Delegate & Payment Meta */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Delegate Name</span>
+                <span className="font-bold text-gray-900 block truncate">{proofModalOrder.customer_name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Amount Paid</span>
+                <span className="font-extrabold text-emerald-700 block">₹{proofModalOrder.total_amount}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Entered UTR ID</span>
+                <span className="font-mono font-bold text-gray-900 block truncate bg-white border border-gray-200 px-1.5 py-0.5 rounded-md">
+                  {proofModalOrder.upi_transaction_id || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Submitted Email</span>
+                <span className="font-bold text-gray-600 block truncate">{proofModalOrder.customer_email}</span>
+              </div>
+            </div>
+
+            {/* Payment Receipt Image Viewport */}
+            <div className="max-h-[55vh] overflow-y-auto rounded-2xl border border-gray-300 bg-gray-950 p-3 flex flex-col items-center justify-center">
+              {proofModalOrder.payment_proof_url || proofModalOrder.upi_receipt_url || proofModalOrder.upi_screenshot_url ? (
+                <img
+                  src={proofModalOrder.payment_proof_url || proofModalOrder.upi_receipt_url || proofModalOrder.upi_screenshot_url}
+                  alt="Delegate Payment Receipt Screenshot"
+                  className="max-w-full h-auto max-h-[50vh] rounded-xl object-contain shadow-lg"
+                />
+              ) : (
+                <div className="p-12 text-center text-gray-400 space-y-2">
+                  <Camera size={32} className="mx-auto text-gray-600" />
+                  <p className="text-xs font-bold">No receipt screenshot photo was attached by attendee.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Bar */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100">
+              <span className="text-xs text-gray-500 font-medium">
+                Verify that the 12-digit UTR and amount on the screenshot match your bank account statement.
+              </span>
+              <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProofModalOrder(null);
+                    setRejectModalOrder(proofModalOrder);
+                  }}
+                  className="flex-1 sm:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-5 py-3 rounded-2xl transition-all cursor-pointer text-center"
+                >
+                  Reject Payment
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleApprovePayment(proofModalOrder.id);
+                    setProofModalOrder(null);
+                  }}
+                  disabled={verifyingOrderId === proofModalOrder.id}
+                  className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-center"
+                >
+                  <CheckCircle2 size={16} /> Confirm Photo &amp; Approve Pass
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+    </div>
+  </div>
   );
 }

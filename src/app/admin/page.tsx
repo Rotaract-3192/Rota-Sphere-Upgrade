@@ -62,6 +62,11 @@ export default async function AdminPage() {
   const { data: flagsData } = await executeSql(`SELECT * FROM platform_feature_flags ORDER BY name;`);
   const featureFlags = flagsData || [];
 
+  const { data: organizerReqsData } = await executeSql(`
+    SELECT * FROM organizer_access_requests ORDER BY created_at DESC LIMIT 100;
+  `).catch(() => ({ data: [] }));
+  const organizerRequests = organizerReqsData || [];
+
   return (
     <SuperAdminDashboardClient
       user={user}
@@ -72,6 +77,7 @@ export default async function AdminPage() {
       initialCheckInLogs={checkInLogs}
       initialAuditLogs={auditLogs}
       initialFeatureFlags={featureFlags}
+      initialOrganizerRequests={organizerRequests}
     />
   );
 }

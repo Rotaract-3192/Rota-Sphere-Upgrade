@@ -48,38 +48,42 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
   const { data: events } = await executeSql(sql);
 
-  // Fetch categories
+  // Fetch only categories that have active published events
   const { data: categories } = await executeSql(`
-    SELECT * FROM event_categories ORDER BY display_order ASC;
+    SELECT DISTINCT c.id, c.name, c.display_order
+    FROM event_categories c
+    INNER JOIN saas_events e ON (c.id::text = e.category_id OR c.slug = e.category_id)
+    WHERE e.status = 'PUBLISHED'
+    ORDER BY c.display_order ASC;
   `);
 
   return (
     <main className="min-h-screen bg-gray-50 pb-20">
       {/* ── HERO DISCOVERY BANNER ────────────────────────────────────── */}
-      <section className="bg-gray-900 text-white py-14 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <section className="bg-gray-900 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-6 relative z-10">
           <div className="space-y-3 max-w-2xl">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-[#60a5fa] flex items-center gap-1.5">
               <Sparkles size={14} /> District 3192 Ticketing Engine
             </span>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-              Discover Verified Events &amp; Masterclasses
+              Discover Verified Events &amp; Passes
             </h1>
             <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-              Secure entry passes for youth festivals, leadership conferences, cultural nights, and sports tournaments.
+              Secure entry passes for flagship Rotaract conferences, cultural nights, and community initiatives.
             </p>
           </div>
 
           {/* Search Bar */}
           <form method="GET" action="/events" className="max-w-2xl flex gap-2">
             <div className="relative flex-1">
-              <Search size={18} className="absolute left-4 top-3.5 text-gray-400" />
+              <Search size={16} className="absolute left-4 top-3.5 text-gray-400" />
               <input
                 type="text"
                 name="q"
                 defaultValue={q}
-                placeholder="Search conferences, festivals, cities..."
-                className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-amber-400"
+                placeholder="Search events, clubs, cities..."
+                className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-[#1e9df1]"
               />
             </div>
             <button
@@ -90,28 +94,30 @@ export default async function EventsPage({ searchParams }: PageProps) {
             </button>
           </form>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            <Link
-              href="/events"
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-                !category ? "bg-amber-400 text-gray-950" : "bg-white/10 text-gray-300 hover:bg-white/20"
-              }`}
-            >
-              All Events
-            </Link>
-            {(categories || []).map((cat: any) => (
+          {/* Category Filter Pills (Only rendered if specific event categories exist) */}
+          {categories && categories.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
               <Link
-                key={cat.id}
-                href={`/events?category=${cat.id}`}
+                href="/events"
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-                  category === cat.id ? "bg-amber-400 text-gray-950" : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  !category ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
                 }`}
               >
-                {cat.name}
+                All Events
               </Link>
-            ))}
-          </div>
+              {categories.map((cat: any) => (
+                <Link
+                  key={cat.id}
+                  href={`/events?category=${cat.id}`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                    category === cat.id ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  }`}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

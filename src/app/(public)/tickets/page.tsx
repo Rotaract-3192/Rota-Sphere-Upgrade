@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Ticket as TicketIcon } from "lucide-react";
 import { UserTicketsClient } from "./UserTicketsClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "My Tickets & Passes | RotaSphere SaaS",
   description: "View and manage your confirmed event tickets, QR code tokens, and transfers.",
@@ -14,6 +17,7 @@ export default async function MyTicketsPage() {
   let tickets: any[] = [];
 
   if (user?.clerkId) {
+    const userEmailEscaped = user.email ? `'${user.email.replace(/'/g, "''")}'` : "NULL";
     const { data: ticketsData } = await executeSql(`
       SELECT t.*,
         json_build_object(
@@ -32,7 +36,7 @@ export default async function MyTicketsPage() {
       FROM saas_tickets t
       LEFT JOIN saas_events e ON t.event_id = e.id
       LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
-      WHERE t.owner_user_id = '${user.clerkId}'
+      WHERE (t.owner_user_id = '${user.clerkId}' OR t.attendee_email = ${userEmailEscaped})
       ORDER BY t.created_at DESC;
     `);
 

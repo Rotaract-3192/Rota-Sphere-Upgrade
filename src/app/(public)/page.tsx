@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { executeSql } from "@/lib/db/directDb";
-import { EventGrid, EventGridSkeleton } from "@/components/events/EventGrid";
+import { ServerEventGrid, EventGridSkeleton } from "@/components/events/EventGrid";
 import { EventMapExplorer } from "@/components/events/EventMapExplorer";
 import { CategoryStrip } from "@/components/events/CategoryStrip";
 import { ContactForm } from "@/components/events/ContactForm";
@@ -216,7 +216,7 @@ export default async function HomePage() {
         </div>
 
         <Suspense fallback={<EventGridSkeleton count={8} />}>
-          <EventGrid limit={8} />
+          <ServerEventGrid limit={8} />
         </Suspense>
       </section>
 

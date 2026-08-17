@@ -1,33 +1,34 @@
 import Link from "next/link";
-import { Search, Home } from "lucide-react";
+import { Search, Home, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-[75vh] flex items-center justify-center px-base py-section bg-canvas text-center">
-      <div className="max-w-md w-full">
-        <div className="w-16 h-16 rounded-full bg-surface-soft text-muted flex items-center justify-center mx-auto mb-lg">
-          <Search size={32} strokeWidth={1.5} />
+    <div className="min-h-[75vh] flex items-center justify-center p-6 bg-gray-50 text-center">
+      <div className="w-full max-w-md mx-auto bg-white border border-gray-200 rounded-3xl p-8 sm:p-10 shadow-xl flex flex-col items-center justify-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#1e9df1] flex items-center justify-center mx-auto shadow-inner shrink-0">
+          <Search size={32} />
         </div>
-        <h1 className="text-display-xl font-bold text-ink mb-xs">404</h1>
-        <h2 className="text-display-sm font-semibold text-ink mb-sm">Page not found</h2>
-        <p className="text-body-md text-muted mb-xl">
-          The page or event you are looking for doesn&apos;t exist or has been moved.
-        </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-sm">
+        <div className="w-full text-center space-y-2">
+          <span className="text-4xl font-black text-gray-900 block tracking-tight">404</span>
+          <h1 className="text-xl font-bold text-gray-900 block text-center w-full">Page Not Found</h1>
+          <p className="text-xs sm:text-sm text-gray-500 w-full max-w-xs mx-auto text-center block leading-relaxed">
+            The page or event pass you are looking for doesn&apos;t exist or has been moved.
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Link
             href="/events"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-xs bg-brand hover:bg-brand-active text-on-primary font-medium text-btn-md px-lg py-sm rounded-sm transition-colors"
+            className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
           >
-            <Search size={16} />
-            Explore events
+            <Search size={15} /> Explore Events
           </Link>
           <Link
             href="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-xs border border-hairline text-ink hover:bg-surface-soft font-medium text-btn-md px-lg py-sm rounded-sm transition-colors"
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-3 px-5 rounded-2xl transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
           >
-            <Home size={16} />
-            Back to home
+            <Home size={15} /> Back to Home
           </Link>
         </div>
       </div>

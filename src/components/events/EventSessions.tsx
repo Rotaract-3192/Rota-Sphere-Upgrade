@@ -14,34 +14,34 @@ export function EventSessions({ sessions }: EventSessionsProps) {
   if (!sessions || sessions.length === 0) return null;
 
   return (
-    <div className="space-y-md">
+    <div className="space-y-3">
       {sessions.map((session) => (
         <div
           key={session.id}
-          className="border border-hairline rounded-sm p-base bg-surface-soft/40 hover:bg-surface-soft transition-colors"
+          className="border border-gray-200 rounded-2xl p-4 sm:p-5 bg-gray-50/50 hover:bg-gray-100/50 transition-colors space-y-2"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-xs mb-xs">
-            <h3 className="text-title-md font-semibold text-ink">{session.title}</h3>
-            <span className="flex items-center gap-xxs text-caption-sm text-muted font-medium bg-canvas border border-hairline px-sm py-xxs rounded-full w-fit">
-              <Clock size={12} strokeWidth={1.5} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-sm sm:text-base font-bold text-gray-900">{session.title}</h3>
+            <span className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold bg-white border border-gray-200 px-3 py-1 rounded-full w-fit">
+              <Clock size={12} className="text-[#1e9df1]" />
               {formatTime(session.start_time)} - {formatTime(session.end_time)}
             </span>
           </div>
 
           {session.description && (
-            <p className="text-body-sm text-body mb-sm">{session.description}</p>
+            <p className="text-xs text-gray-600 leading-relaxed">{session.description}</p>
           )}
 
-          <div className="flex flex-wrap gap-md text-caption-sm text-muted">
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-1">
             {session.speaker && (
-              <span className="flex items-center gap-xxs">
-                <User size={13} strokeWidth={1.5} />
+              <span className="flex items-center gap-1.5 font-medium">
+                <User size={13} className="text-gray-400" />
                 {session.speaker}
               </span>
             )}
             {session.location && (
-              <span className="flex items-center gap-xxs">
-                <MapPin size={13} strokeWidth={1.5} />
+              <span className="flex items-center gap-1.5 font-medium">
+                <MapPin size={13} className="text-gray-400" />
                 {session.location}
               </span>
             )}

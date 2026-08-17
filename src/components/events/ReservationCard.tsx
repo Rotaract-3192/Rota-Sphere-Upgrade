@@ -79,36 +79,36 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
     const isSoldOut = available <= 0;
 
     return (
-      <div key={tier.id} className="border border-hairline rounded-sm p-md">
-        <div className="flex items-start justify-between gap-sm">
+      <div key={tier.id} className="border border-gray-200 rounded-2xl p-4 bg-white space-y-2">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-title-md font-semibold text-ink">{tier.name}</p>
-            <p className="text-body-sm text-muted">{formatPrice(tier.price)}</p>
+            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+            <p className="text-xs font-mono font-semibold text-[#1e9df1]">{formatPrice(tier.price)}</p>
             {tier.description && (
-              <p className="text-body-sm text-muted mt-xxs line-clamp-2">{tier.description}</p>
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{tier.description}</p>
             )}
             {available < 20 && !isSoldOut && (
-              <p className="text-body-sm text-error mt-xxs">Only {available} left</p>
+              <p className="text-xs font-bold text-amber-600 mt-1">Only {available} left</p>
             )}
-            {isSoldOut && <p className="text-body-sm text-error mt-xxs">Sold out</p>}
+            {isSoldOut && <p className="text-xs font-bold text-rose-600 mt-1">Sold out</p>}
           </div>
 
           {!isSoldOut && (
-            <div className="flex items-center gap-xs flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
+                type="button"
                 onClick={() => setQty(tier.id, qty - 1)}
                 disabled={qty === 0}
-                className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors cursor-pointer"
-                aria-label={`Remove one ${tier.name}`}
+                className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                −
+                -
               </button>
-              <span className="w-6 text-center text-body-sm font-semibold text-ink">{qty}</span>
+              <span className="w-6 text-center text-xs font-bold text-gray-900">{qty}</span>
               <button
+                type="button"
                 onClick={() => setQty(tier.id, qty + 1)}
-                disabled={qty >= Math.min(available, tier.maximum_quantity)}
-                className="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-ink disabled:opacity-40 hover:border-border-strong transition-colors cursor-pointer"
-                aria-label={`Add one ${tier.name}`}
+                disabled={qty >= Math.min(available, 10)}
+                className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 +
               </button>
@@ -152,33 +152,32 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
 
   return (
     <div
-      className="bg-canvas border border-hairline rounded-card p-lg"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-7 shadow-lg space-y-6"
       aria-label="Reserve tickets"
     >
       {/* Price display */}
-      <div className="mb-base">
-        <span className="text-display-md font-bold text-ink">{minPrice}</span>
+      <div className="space-y-0.5">
+        <span className="text-3xl font-black text-gray-900">{minPrice}</span>
         {parseFloat(tiers[0]?.price ?? "0") > 0 && (
-          <span className="text-body-sm text-muted"> / ticket</span>
+          <span className="text-xs text-gray-500 font-medium"> / ticket</span>
         )}
       </div>
 
       {/* Registration close indicator */}
       {event.registration_close_at && isRegistrationOpen && (
-        <div className="flex items-center gap-xs text-body-sm text-muted mb-base">
-          <Clock size={14} strokeWidth={1.5} />
-          Closes {new Date(event.registration_close_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+        <div className="flex items-center gap-2 text-xs text-amber-700 font-bold bg-amber-50 p-3 rounded-2xl border border-amber-200">
+          <Clock size={14} className="text-amber-600 shrink-0" />
+          <span>Closes {new Date(event.registration_close_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
         </div>
       )}
 
       {/* Tier selection */}
       {isRegistrationOpen && publicTiers.length > 0 && (
-        <div className="space-y-sm mb-base">
+        <div className="space-y-3">
           {/* 1. Early Bird Tiers */}
           {earlyBirdTiers.length > 0 && (
-            <div className="space-y-xs">
-              <span className="text-[10px] font-bold text-[#1e9df1] uppercase tracking-wider block">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-[#1e9df1] uppercase tracking-wider block">
                 Early Bird Release
               </span>
               {earlyBirdTiers.map(renderTierCard)}
@@ -187,26 +186,26 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
 
           {/* 2. Dropdown for General Release Passes */}
           {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
-            <div className="border border-hairline rounded-sm overflow-hidden bg-surface-soft">
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50">
               <button
                 type="button"
                 onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
-                className="w-full px-md py-sm flex items-center justify-between text-left cursor-pointer hover:bg-canvas transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100 transition-colors"
               >
-                <span className="text-body-sm font-semibold text-ink">
+                <span className="text-xs font-bold text-gray-900">
                   General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
                 </span>
-                <span className="text-caption-sm font-semibold text-[#1e9df1] flex items-center gap-xxs">
+                <span className="text-xs font-bold text-[#1e9df1] flex items-center gap-1">
                   {showGeneralDropdown ? (
-                    <>Hide <ChevronUp size={12} /></>
+                    <>Hide <ChevronUp size={14} /></>
                   ) : (
-                    <>View <ChevronDown size={12} /></>
+                    <>View <ChevronDown size={14} /></>
                   )}
                 </span>
               </button>
 
               {showGeneralDropdown && (
-                <div className="p-xs border-t border-hairline space-y-xs bg-canvas">
+                <div className="p-3 border-t border-gray-200 space-y-2 bg-white">
                   {generalTiers.map(renderTierCard)}
                 </div>
               )}
@@ -215,16 +214,16 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
 
           {/* 3. If NO Early Bird exists, render General Tiers normally */}
           {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
-            <div className="space-y-xs">
+            <div className="space-y-2">
               {generalTiers.map(renderTierCard)}
             </div>
           )}
 
           {/* 4. VIP & Other Tiers */}
           {otherTiers.length > 0 && (
-            <div className="space-y-xs pt-xxs">
+            <div className="space-y-2 pt-1">
               {earlyBirdTiers.length > 0 && (
-                <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">
+                <span className="text-[10px] font-black text-purple-600 uppercase tracking-wider block">
                   Special &amp; VIP Passes
                 </span>
               )}
@@ -236,9 +235,9 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
 
       {/* Total */}
       {totalTickets > 0 && total > 0 && (
-        <div className="flex items-center justify-between text-body-sm text-muted mb-base border-t border-hairline pt-sm">
+        <div className="flex items-center justify-between text-xs text-gray-600 border-t border-gray-200 pt-4">
           <span>{totalTickets} ticket{totalTickets > 1 ? "s" : ""}</span>
-          <span className="text-ink font-semibold">₹{total.toLocaleString("en-IN")}</span>
+          <span className="text-gray-900 font-extrabold text-sm">₹{total.toLocaleString("en-IN")}</span>
         </div>
       )}
 
@@ -247,29 +246,20 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
         <button
           onClick={handleReserve}
           disabled={totalTickets === 0 || loading}
-          className="w-full bg-brand hover:bg-brand-active disabled:bg-brand-disabled text-on-primary font-medium text-btn-md py-sm rounded-sm transition-colors duration-150 focus-visible:outline-2"
+          className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
         >
-          {loading ? "Processing…" : totalTickets === 0 ? "Select tickets" : "Reserve"}
+          {loading ? "Processing…" : totalTickets === 0 ? "Select Tickets Above" : "Book Passes Now"}
         </button>
       ) : isClosed ? (
-        <div className="text-center">
-          <p className="text-body-sm text-muted">Registration is closed</p>
-          {event.enable_waitlist && (
-            <button className="mt-sm w-full border border-ink text-ink font-medium text-btn-md py-sm rounded-sm hover:bg-surface-soft transition-colors">
-              Join waitlist
-            </button>
-          )}
+        <div className="text-center py-2">
+          <p className="text-xs font-bold text-gray-500">Registration is closed</p>
         </div>
       ) : (
-        <div className="flex items-center gap-xs text-body-sm text-muted">
-          <AlertCircle size={14} strokeWidth={1.5} />
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-500 font-medium py-2">
+          <AlertCircle size={15} />
           Registration not yet open
         </div>
       )}
-
-      <p className="text-caption-sm text-muted text-center mt-sm">
-        You won&apos;t be charged yet
-      </p>
     </div>
   );
 }

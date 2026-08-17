@@ -151,33 +151,33 @@ function CheckoutContent() {
         </div>
       )}
 
-      <div className="bg-canvas border border-hairline rounded-card p-xl mb-xl shadow-card space-y-md">
-        <h2 className="text-title-md font-semibold text-ink">Order Summary</h2>
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 mb-6 shadow-sm space-y-4 text-gray-900">
+        <h2 className="text-lg font-black text-gray-900">Order Summary</h2>
 
-        <div className="space-y-sm border-y border-hairline py-md">
+        <div className="space-y-2 border-y border-gray-200 py-4 text-xs font-semibold">
           {selectedTiers.map((item, idx) => (
-            <div key={idx} className="flex justify-between text-body-md text-ink">
+            <div key={idx} className="flex justify-between text-gray-800">
               <span>{item.quantity}× Ticket Tier</span>
-              <span className="font-semibold">Selected</span>
+              <span className="font-bold text-[#1e9df1]">Selected</span>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-between items-center text-title-md font-bold text-ink">
+        <div className="flex justify-between items-center text-sm font-bold text-gray-900">
           <span>Total</span>
           <span>Calculated at Checkout</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-xs text-caption-sm text-muted mb-xl">
-        <ShieldCheck size={16} className="text-brand" />
-        <span>Encrypted SSL payment powered by Razorpay. 100% Secure.</span>
+      <div className="flex items-center gap-2 text-xs text-gray-500 mb-6">
+        <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+        <span>Direct UPI Payment to Rotaract District 3192. 100% Direct Non-Profit Settlement.</span>
       </div>
 
       <button
         onClick={handleCheckout}
         disabled={loading}
-        className="w-full bg-brand hover:bg-brand-active disabled:bg-brand-disabled text-on-primary font-medium text-btn-md py-md rounded-sm transition-colors shadow-card flex items-center justify-center gap-xs"
+        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
       >
         <Lock size={16} />
         {loading ? "Processing..." : "Complete Registration"}

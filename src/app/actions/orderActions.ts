@@ -20,6 +20,7 @@ export interface CheckoutAttendeeItem {
   name: string;
   email: string;
   phone?: string;
+  customAnswers?: Record<string, any>;
 }
 
 export interface CreateCheckoutInput {
@@ -30,6 +31,7 @@ export interface CreateCheckoutInput {
   customerEmail?: string;
   customerPhone?: string;
   upiTransactionId?: string;
+  paymentProofUrl?: string;
   idempotencyKey?: string;
   customAnswers?: Record<string, any>;
 }
@@ -77,7 +79,7 @@ async function ensureUpiColumns() {
   } catch (_) { /* ignore if already exists */ }
 
   try {
-    // Drop the old status CHECK constraint that blocks PENDING_VERIFICATION / PAYMENT_REJECTED
+    // Drop the old status CHECK constraint that blocks PENDING_VERIFICATION / PAYMENT_REJECTED on orders
     await executeSql(`
       ALTER TABLE saas_orders
         DROP CONSTRAINT IF EXISTS saas_orders_status_check;
@@ -94,6 +96,40 @@ async function ensureUpiColumns() {
         ));
     `);
   } catch (_) { /* ignore if constraint already updated */ }
+
+  try {
+    // Drop the old status CHECK constraint that blocks PENDING_VERIFICATION / PAYMENT_REJECTED on tickets
+    await executeSql(`
+      ALTER TABLE saas_tickets
+        DROP CONSTRAINT IF EXISTS saas_tickets_status_check;
+      ALTER TABLE saas_tickets
+        ADD CONSTRAINT saas_tickets_status_check CHECK (status IN (
+          'ISSUED',
+          'CONFIRMED',
+          'PENDING_VERIFICATION',
+          'PAYMENT_REJECTED',
+          'USED',
+          'CANCELLED',
+          'REFUNDED',
+          'REFUND_REQUESTED'
+        ));
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS custom_answers JSONB DEFAULT '{}'::jsonb;
+    `);
+  } catch (_) { /* ignore if constraint already updated */ }
+}
+
+export async function getEventCustomQuestionsAction(eventId: string) {
+  try {
+    const { data: questions } = await executeSql(`
+      SELECT id, question_text, question_type, options, is_required, display_order
+      FROM event_custom_questions
+      WHERE event_id = ${escapeSql(eventId)}
+      ORDER BY display_order ASC, created_at ASC;
+    `);
+    return { success: true, questions: questions || [] };
+  } catch (err: any) {
+    return { success: false, questions: [], error: err?.message || String(err) };
+  }
 }
 
 
@@ -170,6 +206,24 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       subtotal += Number(tier.price) * requestedCount;
     }
 
+    // 2.5 Duplicate UTR Prevention Check
+    const cleanUtr = input.upiTransactionId?.trim();
+    if (cleanUtr && cleanUtr.length >= 6) {
+      const { data: existingUtr } = await executeSql(`
+        SELECT id, order_number FROM saas_orders
+        WHERE LOWER(TRIM(upi_transaction_id)) = ${escapeSql(cleanUtr.toLowerCase())}
+          AND status IN ('PENDING_VERIFICATION', 'PAID')
+        LIMIT 1;
+      `);
+
+      if (existingUtr && existingUtr.length > 0) {
+        return {
+          success: false,
+          error: `Duplicate UTR Detected: The UTR/UPI reference "${cleanUtr}" has already been submitted for order #${existingUtr[0].order_number}. Duplicate UTR numbers cannot be re-used. Please check your UPI receipt for your unique reference number.`,
+        };
+      }
+    }
+
     // 3. Apply Coupon if provided
     let discountAmount = 0;
     let validCouponId: string | null = null;
@@ -244,6 +298,8 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
         status,
         payment_gateway,
         upi_transaction_id,
+        upi_receipt_url,
+        payment_proof_url,
         upi_payee_id,
         idempotency_key
       ) VALUES (
@@ -266,6 +322,8 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
         ${escapeSql(orderStatus)},
         ${escapeSql(paymentGateway)},
         ${escapeSql(input.upiTransactionId?.trim() || null)},
+        ${escapeSql(input.paymentProofUrl || null)},
+        ${escapeSql(input.paymentProofUrl || null)},
         ${escapeSql(targetUpiId)},
         ${escapeSql(input.idempotencyKey)}
       )
@@ -298,7 +356,9 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           attendee_email,
           attendee_phone,
           qr_token,
-          status
+          status,
+          payment_proof_url,
+          custom_answers
         ) VALUES (
           ${escapeSql(ticketCode)},
           ${escapeSql(orderId)},
@@ -309,7 +369,9 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           ${escapeSql(attendee.email)},
           ${escapeSql(attendee.phone)},
           ${escapeSql(qrToken)},
-          ${escapeSql(ticketStatus)}
+          ${escapeSql(ticketStatus)},
+          ${escapeSql(input.paymentProofUrl || null)},
+          ${escapeSql(JSON.stringify(attendee.customAnswers || {}))}
         )
         RETURNING id, ticket_code, qr_token;
       `;

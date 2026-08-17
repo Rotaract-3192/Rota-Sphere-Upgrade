@@ -28,9 +28,12 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Camera,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
-import { createCheckoutOrderAction } from "@/app/actions/orderActions";
+import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import Link from "next/link";
 import Image from "next/image";
@@ -91,21 +94,36 @@ export function CheckoutModal({
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
-  // Attendees list - Keep empty by default as requested
+  // Custom questions state
+  const [customQuestions, setCustomQuestions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen && event?.id) {
+      getEventCustomQuestionsAction(event.id).then((res) => {
+        if (res.success && res.questions) {
+          setCustomQuestions(res.questions);
+        }
+      });
+    }
+  }, [isOpen, event?.id]);
+
+  // Attendees list
   const [attendees, setAttendees] = useState<
-    Array<{ tierId: string; name: string; email: string; phone: string }>
+    Array<{ tierId: string; name: string; email: string; phone: string; customAnswers?: Record<string, any> }>
   >([
     {
       tierId: tiers[0]?.id || "",
       name: "",
       email: "",
       phone: "",
+      customAnswers: {},
     },
   ]);
 
   // UPI Payment State
   const [upiQrDataUrl, setUpiQrDataUrl] = useState<string>("");
   const [upiTransactionId, setUpiTransactionId] = useState("");
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
 
@@ -174,7 +192,7 @@ export function CheckoutModal({
     setSelectedCounts(newCounts);
 
     // Rebuild attendee slots while preserving what user typed
-    const newAttendees: Array<{ tierId: string; name: string; email: string; phone: string }> = [];
+    const newAttendees: Array<{ tierId: string; name: string; email: string; phone: string; customAnswers?: Record<string, any> }> = [];
     let prevIndex = 0;
     tiers.forEach((t) => {
       const count = newCounts[t.id] || 0;
@@ -185,11 +203,12 @@ export function CheckoutModal({
           name: existing?.name || "",
           email: existing?.email || "",
           phone: existing?.phone || "",
+          customAnswers: existing?.customAnswers || {},
         });
         prevIndex++;
       }
     });
-    setAttendees(newAttendees.length > 0 ? newAttendees : [{ tierId: tiers[0]?.id || "", name: "", email: "", phone: "" }]);
+    setAttendees(newAttendees.length > 0 ? newAttendees : [{ tierId: tiers[0]?.id || "", name: "", email: "", phone: "", customAnswers: {} }]);
   }
 
   function handleApplyCoupon() {
@@ -225,6 +244,12 @@ export function CheckoutModal({
         setErrorMessage(`Please fill out Name and Email for Attendee #${i + 1}`);
         return;
       }
+      for (const q of customQuestions) {
+        if (q.is_required && !attendees[i].customAnswers?.[q.id]?.toString().trim()) {
+          setErrorMessage(`Please answer "${q.question_text}" for Attendee #${i + 1}`);
+          return;
+        }
+      }
     }
 
     setErrorMessage(null);
@@ -247,6 +272,7 @@ export function CheckoutModal({
       name: a.name.trim(),
       email: a.email.trim(),
       phone: a.phone.trim() || undefined,
+      customAnswers: a.customAnswers || {},
     }));
 
     const res = await createCheckoutOrderAction({
@@ -257,6 +283,7 @@ export function CheckoutModal({
       customerEmail: attendees[0]?.email,
       customerPhone: attendees[0]?.phone,
       upiTransactionId: utrNumber.trim() || undefined,
+      paymentProofUrl: paymentProofUrl || undefined,
     });
 
     setLoading(false);
@@ -330,28 +357,30 @@ export function CheckoutModal({
 
         {/* ── 1. GATED STATE: NOT LOGGED IN ─────────────────────────────── */}
         {!userEmail ? (
-          <div className="p-8 sm:p-12 text-center space-y-6">
-            <div className="w-16 h-16 bg-blue-50 text-[#1e9df1] rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6">
+            <div className="w-16 h-16 bg-blue-50 text-[#1e9df1] rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
               <Lock size={32} />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight">Sign In to Book Passes</h3>
-              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+            <div className="w-full text-center space-y-2">
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight text-center w-full block">
+                Sign In to Book Passes
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 text-center w-full max-w-md mx-auto block leading-relaxed">
                 To issue your encrypted digital QR entry passes, save your tickets, and manage transfers, you must sign in to your RotaSphere account.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 max-w-sm mx-auto">
+            <div className="w-full max-w-sm mx-auto flex flex-col sm:flex-row gap-3 pt-2">
               <Link
                 href={`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`}
-                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
               >
                 Sign In to Continue <ArrowRight size={15} />
               </Link>
               <Link
                 href={`/sign-up?redirect_url=${encodeURIComponent(currentUrl)}`}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center cursor-pointer"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center cursor-pointer text-center"
               >
                 Create Account
               </Link>
@@ -359,28 +388,31 @@ export function CheckoutModal({
           </div>
         ) : checkoutStep === "SUCCESS" ? (
           /* ── 2. SUCCESS CONFIRMATION STATE ─────────────────────────────── */
-          <div className="p-8 sm:p-10 text-center space-y-6 overflow-y-auto">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
               <CheckCircle2 size={36} />
             </div>
-            <div className="space-y-3">
-              <h3 className="text-2xl font-black text-gray-900">
+
+            <div className="w-full text-center space-y-3 block">
+              <h3 className="text-2xl font-black text-gray-900 text-center w-full block">
                 {completedOrder?.isFree ? "Registration Confirmed!" : "UPI Payment Submitted!"}
               </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-600 text-center w-full max-w-md mx-auto block leading-relaxed">
                 {completedOrder?.isFree
                   ? "Your complimentary entry pass has been issued and is available in your passes dashboard."
                   : `Your UTR reference (${upiTransactionId || "Submitted"}) has been dispatched to the event organizer for verification. Passes will be confirmed once approved.`}
               </p>
-              <div className="mt-3 inline-block bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-700">
-                Order Ref: {completedOrder?.orderNumber}
+              <div className="pt-2 w-full flex justify-center">
+                <span className="inline-block bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-700 text-center">
+                  Order Ref: {completedOrder?.orderNumber}
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 max-w-xs mx-auto">
+            <div className="w-full max-w-sm mx-auto pt-2 flex items-center justify-center">
               <Link
                 href="/tickets"
-                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center block"
               >
                 View My Passes &amp; Status <ArrowRight size={15} />
               </Link>
@@ -453,23 +485,21 @@ export function CheckoutModal({
               </div>
 
               {/* Payee Info */}
-              <div className="w-full max-w-sm bg-white p-3 rounded-2xl border border-gray-200 text-xs">
-                <div className="space-y-0.5 min-w-0">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Organizer UPI ID (VPA)</span>
-                  <span className="font-mono font-bold text-gray-900 truncate block">{targetUpiId}</span>
-                  <span className="text-[10px] text-gray-500 truncate block">Payee: {targetPayeeName}</span>
-                </div>
+              <div className="w-full bg-white p-3.5 rounded-2xl border border-gray-200 text-xs text-center space-y-1 block">
+                <span className="text-[10px] text-gray-400 font-bold uppercase w-full block text-center">Organizer UPI ID (VPA)</span>
+                <span className="font-mono font-bold text-gray-900 w-full block text-center truncate">{targetUpiId}</span>
+                <span className="text-[10px] text-gray-500 w-full block text-center truncate">Payee: {targetPayeeName}</span>
               </div>
             </div>
 
-            {/* Step 2: UTR Reference Form */}
-            <div className="space-y-3 p-5 bg-blue-50/60 border border-blue-200/80 rounded-3xl">
+            {/* Step 2: UTR Reference Form & Payment Screenshot Upload */}
+            <div className="space-y-4 p-5 bg-blue-50/60 border border-blue-200/80 rounded-3xl">
               <div className="space-y-1">
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 flex items-center gap-1.5">
-                  <Clock size={15} className="text-[#1e9df1]" />
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 flex items-center gap-1.5 w-full">
+                  <Clock size={15} className="text-[#1e9df1] shrink-0" />
                   Enter 12-Digit UPI Reference / UTR Number *
                 </label>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 w-full block leading-relaxed">
                   After completing the payment in GPay/PhonePe/Paytm, paste your 12-digit UTR/Txn Reference number below.
                 </p>
               </div>
@@ -484,8 +514,65 @@ export function CheckoutModal({
                   setUpiTransactionId(e.target.value);
                   setErrorMessage(null);
                 }}
-                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10"
+                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10 block"
               />
+
+              {/* Prominent Payment Screenshot Attachment Field */}
+              <div className="pt-3 space-y-2 border-t border-blue-200">
+                <label className="block text-xs font-extrabold text-gray-900 flex items-center justify-between w-full">
+                  <span className="flex items-center gap-1.5">
+                    <Camera size={15} className="text-[#1e9df1] shrink-0" />
+                    Attach Payment Screenshot Proof (Recommended)
+                  </span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
+                    GPay / PhonePe / Paytm
+                  </span>
+                </label>
+
+                {paymentProofUrl ? (
+                  <div className="p-3 bg-white rounded-2xl border border-gray-200 flex items-center justify-between gap-3 shadow-xs w-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img src={paymentProofUrl} alt="Receipt Preview" className="w-14 h-14 rounded-xl object-cover border border-gray-200 shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-gray-900 block truncate">Payment Screenshot Attached</span>
+                        <span className="text-[11px] text-emerald-600 font-extrabold block">✓ Ready for Instant Verification</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProofUrl("")}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full border-2 border-dashed border-blue-300 hover:border-[#1e9df1] bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 group text-center space-y-1">
+                    <Upload size={22} className="text-[#1e9df1] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-extrabold text-gray-900 group-hover:text-[#1e9df1] transition-colors block w-full text-center">
+                      Click to Upload Payment Receipt Screenshot
+                    </span>
+                    <span className="text-[10px] text-gray-500 block w-full text-center">PNG, JPG, or WebP screenshot from GPay / PhonePe / Paytm</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === "string") {
+                              setPaymentProofUrl(reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Navigation / Submit Buttons */}
@@ -814,6 +901,50 @@ export function CheckoutModal({
                           className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1e9df1]"
                         />
                       </div>
+
+                      {/* Event Custom Registration Questions */}
+                      {customQuestions.length > 0 && (
+                        <div className="pt-2 border-t border-gray-200/60 space-y-2.5">
+                          <span className="text-[10px] font-extrabold uppercase text-gray-500 tracking-wider block">
+                            Registration Questions
+                          </span>
+                          {customQuestions.map((q) => (
+                            <div key={q.id} className="space-y-1 text-left">
+                              <label className="block text-[11px] font-bold text-gray-700">
+                                {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
+                              </label>
+                              {q.question_type === "dropdown" ? (
+                                <select
+                                  value={att.customAnswers?.[q.id] || ""}
+                                  onChange={(e) => {
+                                    const updated = [...attendees];
+                                    updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                    setAttendees(updated);
+                                  }}
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                                >
+                                  <option value="">Select an option...</option>
+                                  {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
+                                    <option key={optIdx} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder={q.question_text}
+                                  value={att.customAnswers?.[q.id] || ""}
+                                  onChange={(e) => {
+                                    const updated = [...attendees];
+                                    updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                    setAttendees(updated);
+                                  }}
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -848,13 +979,25 @@ export function CheckoutModal({
             {/* Price Breakdown */}
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2 text-xs">
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal ({totalTicketCount} tickets)</span>
+                <span>Subtotal ({totalTicketCount} ticket{totalTicketCount > 1 ? "s" : ""})</span>
                 <span className="font-semibold">₹{fees.subtotal.toFixed(2)}</span>
               </div>
               {couponApplied && (
                 <div className="flex justify-between text-emerald-600 font-bold">
                   <span>Promo Discount ({discountPercent}%)</span>
                   <span>-₹{fees.discount.toFixed(2)}</span>
+                </div>
+              )}
+              {fees.convenienceFee > 0 && (
+                <div className="flex justify-between text-gray-500">
+                  <span>Platform &amp; Booking Fee</span>
+                  <span className="font-medium">+₹{fees.convenienceFee.toFixed(2)}</span>
+                </div>
+              )}
+              {fees.tax > 0 && (
+                <div className="flex justify-between text-gray-500">
+                  <span>GST (18% on booking fee)</span>
+                  <span className="font-medium">+₹{fees.tax.toFixed(2)}</span>
                 </div>
               )}
               <div className="pt-2 border-t border-gray-200 flex justify-between text-sm font-black text-gray-900">

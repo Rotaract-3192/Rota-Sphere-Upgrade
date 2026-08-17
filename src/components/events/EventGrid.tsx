@@ -5,9 +5,8 @@
 
 import { executeSql } from "@/lib/db/directDb";
 import { EventCard } from "./EventCard";
-import type { Event, TicketTier } from "@/types/database";
 
-interface EventWithPrice {
+export interface EventWithPrice {
   id: string;
   slug: string;
   title: string;
@@ -21,7 +20,8 @@ interface EventWithPrice {
   capacity: number;
 }
 
-interface EventGridProps {
+export interface EventGridProps {
+  events?: any[];
   initialEvents?: any[];
   category?: string;
   city?: string;
@@ -30,83 +30,34 @@ interface EventGridProps {
   limit?: number;
 }
 
-async function fetchEvents(filters: EventGridProps): Promise<EventWithPrice[]> {
-  if (filters.initialEvents && filters.initialEvents.length > 0) {
-    return filters.initialEvents.map((evt) => {
-      const tiers = evt.saas_ticket_tiers || evt.rotasphere_ticket_tiers || [];
-      const prices = tiers.map((t: any) => Number(t.price));
-      const minPrice = prices.length > 0 ? Math.min(...prices) : null;
-      const hasFreeTickets = prices.some((p: number) => p === 0);
+export function formatEvents(rawEvents: any[]): EventWithPrice[] {
+  if (!rawEvents || !Array.isArray(rawEvents)) return [];
 
-      return {
-        id: evt.id,
-        slug: evt.slug,
-        title: evt.title,
-        category: evt.category || evt.category_id,
-        thumbnail_url: evt.cover_image_url || evt.thumbnail_url,
-        city: evt.city,
-        start_date: evt.start_date,
-        minPrice,
-        hasFreeTickets,
-        sold_count: evt.sold_count || 0,
-        capacity: evt.capacity || 100,
-      };
-    });
-  }
+  return rawEvents.map((evt) => {
+    const tiers = evt.saas_ticket_tiers || evt.rotasphere_ticket_tiers || [];
+    const prices = Array.isArray(tiers) ? tiers.map((t: any) => Number(t.price)) : [];
+    const validPrices = prices.filter((p: number) => !isNaN(p));
+    const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
+    const hasFreeTickets = validPrices.some((p: number) => p === 0);
 
-  try {
-    const limitCount = filters.limit ?? 12;
-    const sql = `
-      SELECT e.*,
-        COALESCE(
-          json_agg(
-            json_build_object(
-              'id', t.id,
-              'name', t.name,
-              'price', t.price,
-              'is_active', t.is_active
-            )
-          ) FILTER (WHERE t.id IS NOT NULL),
-          '[]'
-        ) as saas_ticket_tiers
-      FROM saas_events e
-      LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-      WHERE e.status = 'PUBLISHED'
-      GROUP BY e.id
-      ORDER BY e.start_date ASC
-      LIMIT ${limitCount};
-    `;
-
-    const { data: saasData } = await executeSql(sql);
-
-    if (saasData && saasData.length > 0) {
-      return saasData.map((evt: any) => {
-        const activeTiers = (evt.saas_ticket_tiers || []).filter((t: any) => t.is_active !== false);
-        const prices = activeTiers.map((t: any) => Number(t.price));
-        const minPrice = prices.length > 0 ? Math.min(...prices) : null;
-        return {
-          id: evt.id,
-          slug: evt.slug,
-          title: evt.title,
-          category: evt.category_id,
-          thumbnail_url: evt.cover_image_url,
-          city: evt.city,
-          start_date: evt.start_date,
-          minPrice,
-          hasFreeTickets: prices.some((p: number) => p === 0),
-          capacity: evt.capacity || 100,
-        };
-      });
-    }
-
-    return [];
-  } catch {
-    return [];
-  }
+    return {
+      id: evt.id,
+      slug: evt.slug,
+      title: evt.title,
+      category: evt.category || evt.category_id,
+      thumbnail_url: evt.cover_image_url || evt.thumbnail_url || null,
+      city: evt.city || null,
+      start_date: evt.start_date,
+      minPrice,
+      hasFreeTickets,
+      sold_count: evt.sold_count || 0,
+      capacity: evt.capacity || 100,
+    };
+  });
 }
 
-export async function EventGrid(props: EventGridProps) {
-  const events = await fetchEvents(props);
+export function EventGrid(props: EventGridProps) {
+  const events = formatEvents(props.events || props.initialEvents || []);
 
   if (events.length === 0) {
     return (
@@ -138,6 +89,37 @@ export async function EventGrid(props: EventGridProps) {
       ))}
     </div>
   );
+}
+
+export async function ServerEventGrid(props: EventGridProps) {
+  try {
+    const limitCount = props.limit ?? 12;
+    const sql = `
+      SELECT e.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', t.id,
+              'name', t.name,
+              'price', t.price,
+              'is_active', t.is_active
+            )
+          ) FILTER (WHERE t.id IS NOT NULL),
+          '[]'
+        ) as saas_ticket_tiers
+      FROM saas_events e
+      LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
+      WHERE e.status = 'PUBLISHED'
+      GROUP BY e.id
+      ORDER BY e.start_date ASC
+      LIMIT ${limitCount};
+    `;
+
+    const { data: saasData } = await executeSql(sql);
+    return <EventGrid events={saasData || []} />;
+  } catch {
+    return <EventGrid events={[]} />;
+  }
 }
 
 export function EventGridSkeleton({ count = 8 }: { count?: number }) {

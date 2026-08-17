@@ -202,3 +202,85 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
     return { success: false, error: err?.message || String(err) };
   }
 }
+
+export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumber: string, paymentProofUrl?: string) {
+  try {
+    const user = await requireAuth();
+
+    const cleanUtr = newUtrNumber.trim();
+    if (!cleanUtr) {
+      return { success: false, error: "Please enter a valid 12-digit UTR reference ID" };
+    }
+
+    const { data: ticketRows } = await executeSql(`
+      SELECT t.id, t.order_id, t.status
+      FROM saas_tickets t
+      WHERE t.id = ${escapeSql(ticketId)}
+      LIMIT 1;
+    `);
+
+    if (!ticketRows || ticketRows.length === 0) {
+      return { success: false, error: "Ticket not found" };
+    }
+
+    const ticket = ticketRows[0];
+
+    // Check for duplicate UTR across other active/pending orders
+    const { data: existingUtr } = await executeSql(`
+      SELECT o.id, o.order_number FROM saas_orders o
+      WHERE LOWER(TRIM(o.upi_transaction_id)) = ${escapeSql(cleanUtr.toLowerCase())}
+        AND o.id != ${escapeSql(ticket.order_id || "")}
+        AND o.status IN ('PENDING_VERIFICATION', 'PAID')
+      LIMIT 1;
+    `);
+
+    if (existingUtr && existingUtr.length > 0) {
+      return {
+        success: false,
+        error: `Duplicate UTR Detected: The UTR reference "${cleanUtr}" has already been submitted for order #${existingUtr[0].order_number}. Duplicate UTR numbers cannot be used.`,
+      };
+    }
+
+    const proofSql = paymentProofUrl ? escapeSql(paymentProofUrl) : "NULL";
+
+    // Update order UTR reference & screenshot proof and reset status to PENDING_VERIFICATION
+    if (ticket.order_id) {
+      await executeSql(`
+        UPDATE saas_orders
+        SET upi_transaction_id = ${escapeSql(cleanUtr)},
+            upi_receipt_url = COALESCE(${proofSql}, upi_receipt_url),
+            payment_proof_url = COALESCE(${proofSql}, payment_proof_url),
+            status = 'PENDING_VERIFICATION',
+            payment_rejection_reason = NULL,
+            updated_at = NOW()
+        WHERE id = ${escapeSql(ticket.order_id)};
+      `);
+    }
+
+    await executeSql(`
+      UPDATE saas_tickets
+      SET status = 'PENDING_VERIFICATION',
+          payment_proof_url = COALESCE(${proofSql}, payment_proof_url),
+          updated_at = NOW()
+      WHERE id = ${escapeSql(ticket.id)};
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: "customer",
+      actorEmail: user.email,
+      action: "UPI_TRANSACTION_RESUBMITTED",
+      entityType: "TICKET",
+      entityId: ticketId,
+      newState: { newUtrNumber: cleanUtr, status: "PENDING_VERIFICATION" },
+    });
+
+    revalidatePath("/tickets");
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}

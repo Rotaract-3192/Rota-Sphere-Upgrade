@@ -82,6 +82,29 @@ function escapeSql(str: string | null | undefined): string {
   return `'${String(str).replace(/'/g, "''")}'`;
 }
 
+async function resolveCategoryId(categoryInput?: string): Promise<string | null> {
+  if (!categoryInput || !categoryInput.trim()) return null;
+  const inputStr = categoryInput.trim();
+
+  // If it's already a valid UUID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inputStr)) {
+    return inputStr;
+  }
+
+  const { data } = await executeSql(`
+    SELECT id FROM event_categories 
+    WHERE name ILIKE ${escapeSql(inputStr)} OR slug ILIKE ${escapeSql(slugify(inputStr))}
+    LIMIT 1;
+  `);
+
+  if (data && data.length > 0) {
+    return data[0].id;
+  }
+
+  const { data: fallback } = await executeSql(`SELECT id FROM event_categories LIMIT 1;`);
+  return fallback?.[0]?.id || null;
+}
+
 export async function createEventAction(input: CreateEventInput): Promise<{ success: boolean; eventId?: string; slug?: string; error?: string }> {
   try {
     const user = await requireAuth();
@@ -92,13 +115,25 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(255);
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS created_by_user_id VARCHAR(255);
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS organizer_id VARCHAR(255);
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50);
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
       `);
     } catch {}
 
     const coverUrl = input.coverImageUrl || "";
-    const baseSlug = input.slug?.trim() ? slugify(input.slug) : slugify(input.title);
-    const finalSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    const userSlug = input.slug?.trim() ? slugify(input.slug) : slugify(input.title);
+
+    // Check if slug already exists in DB
+    const { data: existingSlug } = await executeSql(`
+      SELECT id FROM saas_events WHERE slug = ${escapeSql(userSlug)} LIMIT 1;
+    `);
+
+    const finalSlug = existingSlug && existingSlug.length > 0
+      ? `${userSlug}-${Date.now().toString().slice(-4)}`
+      : userSlug;
+
+    const categoryId = await resolveCategoryId(input.category);
 
     // 1. Resolve Organization
     let organizationId = input.organizationId;
@@ -128,7 +163,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
     const insertEventSql = `
       INSERT INTO saas_events (
         organization_id,
+        organizer_id,
         created_by_user_id,
+        category_id,
         title,
         slug,
         summary,
@@ -153,11 +190,14 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         terms_and_conditions,
         refund_policy,
         contact_email,
+        contact_phone,
         upi_id,
         upi_payee_name
       ) VALUES (
         ${escapeSql(organizationId)},
         ${escapeSql(user.clerkId)},
+        ${escapeSql(user.clerkId)},
+        ${escapeSql(categoryId)},
         ${escapeSql(input.title)},
         ${escapeSql(finalSlug)},
         ${escapeSql(input.summary)},
@@ -182,6 +222,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.termsAndConditions)},
         ${escapeSql(input.refundPolicy)},
         ${escapeSql(input.contactEmail || user.email)},
+        ${escapeSql(input.contactPhone)},
         ${escapeSql(input.upiId || "rotaractdistrict3192@okaxis")},
         ${escapeSql(input.upiPayeeName || "District 3192 Rotaract")}
       )
@@ -446,6 +487,15 @@ export async function updateEventAction(
     if (input.allowRefunds !== undefined) updates.push(`allow_refunds = ${input.allowRefunds ? "TRUE" : "FALSE"}`);
     if (input.contactEmail !== undefined) updates.push(`contact_email = ${escapeSql(input.contactEmail)}`);
     if (input.contactPhone !== undefined) updates.push(`contact_phone = ${escapeSql(input.contactPhone)}`);
+    if (input.upiId !== undefined) updates.push(`upi_id = ${escapeSql(input.upiId)}`);
+    if (input.upiPayeeName !== undefined) updates.push(`upi_payee_name = ${escapeSql(input.upiPayeeName)}`);
+
+    if (input.category) {
+      const categoryId = await resolveCategoryId(input.category);
+      if (categoryId) {
+        updates.push(`category_id = ${escapeSql(categoryId)}`);
+      }
+    }
 
     updates.push(`updated_at = NOW()`);
 
@@ -455,6 +505,46 @@ export async function updateEventAction(
         SET ${updates.join(", ")}
         WHERE id = ${escapeSql(eventId)};
       `);
+    }
+
+    // Update Ticket Tiers if provided
+    if (input.ticketTiers && input.ticketTiers.length > 0) {
+      await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
+      for (const tier of input.ticketTiers) {
+        const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
+        const tierSql = `
+          INSERT INTO saas_ticket_tiers (
+            event_id,
+            name,
+            description,
+            tier_type,
+            price,
+            total_capacity,
+            sold_count,
+            reserved_count,
+            sales_start,
+            sales_end,
+            benefits,
+            is_active,
+            is_visible
+          ) VALUES (
+            ${escapeSql(eventId)},
+            ${escapeSql(tier.name)},
+            ${escapeSql(tier.description)},
+            ${escapeSql(tier.tierType || "REGULAR")},
+            ${tier.price || 0},
+            ${tier.totalCapacity || 100},
+            0,
+            0,
+            ${escapeSql(tier.salesStart || new Date().toISOString())},
+            ${escapeSql(tier.salesEnd || input.endDate || new Date().toISOString())},
+            '${benefitsJson}'::jsonb,
+            TRUE,
+            TRUE
+          );
+        `;
+        await executeSql(tierSql);
+      }
     }
 
     await logAuditAction({
@@ -585,26 +675,28 @@ export async function getEventRegistrationsAction(eventId: string): Promise<{ su
     const ticketsRes = await executeSql(`
       SELECT 
         t.id as ticket_id,
+        t.ticket_code,
         t.qr_token,
         t.status as ticket_status,
         t.checked_in_at,
-        t.unit_price,
         t.created_at,
+        t.attendee_name,
+        t.attendee_email,
+        t.attendee_phone,
+        t.custom_answers,
         tt.name as tier_name,
+        tt.price as unit_price,
         e.title as event_title,
         e.city as event_city,
         o.id as order_id,
+        o.order_number,
         o.status as order_status,
-        o.currency,
-        o.user_id,
-        p.full_name as attendee_name,
-        p.email as attendee_email,
-        p.phone_number as attendee_phone
+        o.upi_transaction_id,
+        o.currency
       FROM saas_tickets t
       LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
       LEFT JOIN saas_events e ON t.event_id = e.id
       LEFT JOIN saas_orders o ON t.order_id = o.id
-      LEFT JOIN member_profiles p ON o.user_id = p.clerk_user_id
       WHERE t.event_id = ${escapeSql(eventId)}
       ORDER BY t.created_at DESC;
     `);

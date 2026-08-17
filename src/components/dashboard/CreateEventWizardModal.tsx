@@ -169,8 +169,22 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
       setCountry(eventToEdit.country || "India");
       setOnlineMeetingUrl(eventToEdit.online_meeting_url || "");
       setContactEmail(eventToEdit.contact_email || "support@rotasphere.com");
-      setContactPhone(eventToEdit.contact_phone || "+1 (555) 019-2834");
+      setContactPhone(eventToEdit.contact_phone || "");
       setVisibility(eventToEdit.visibility || "PUBLIC");
+      if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
+      if (eventToEdit.upi_payee_name) setUpiPayeeName(eventToEdit.upi_payee_name);
+      if (eventToEdit.category_id || eventToEdit.category) setCategory(eventToEdit.category || eventToEdit.category_id);
+      if (eventToEdit.saas_ticket_tiers && Array.isArray(eventToEdit.saas_ticket_tiers) && eventToEdit.saas_ticket_tiers.length > 0) {
+        setTicketTiers(
+          eventToEdit.saas_ticket_tiers.map((t: any) => ({
+            name: t.name,
+            tierType: t.tier_type || "REGULAR",
+            price: Number(t.price) || 0,
+            totalCapacity: t.total_capacity || 100,
+            description: t.description || "",
+          }))
+        );
+      }
       setLocationDeliveryType(
         eventToEdit.event_type === "ONLINE"
           ? "ONLINE"
@@ -180,6 +194,16 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
       );
     }
   }, [eventToEdit]);
+
+  // Auto-sync overall event capacity with the sum of ticket pass tier seats
+  useEffect(() => {
+    if (ticketTiers && ticketTiers.length > 0) {
+      const sumTierCapacity = ticketTiers.reduce((sum, tier) => sum + (Number(tier.totalCapacity) || 0), 0);
+      if (sumTierCapacity > 0) {
+        setCapacity(sumTierCapacity);
+      }
+    }
+  }, [ticketTiers]);
 
   if (!isOpen) return null;
 
@@ -235,9 +259,9 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
   function handlePriceModelChange(model: "FREE" | "PAID") {
     setPriceModel(model);
     if (model === "FREE") {
-      setTicketTiers([
-        { name: "Complimentary Pass", tierType: "COMPLIMENTARY", price: 0, totalCapacity: capacity, description: "Free delegate entry" },
-      ]);
+      setTicketTiers((prev) =>
+        prev.map((t) => ({ ...t, price: 0 }))
+      );
     } else {
       setTicketTiers([
         { name: "Early Bird Pass", tierType: "EARLY_BIRD", price: 199, totalCapacity: 100, description: "Discounted early access pass" },
@@ -248,20 +272,27 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
   }
 
   function addNewTier() {
+    const defaultPrice = priceModel === "FREE" ? 0 : 499;
     setTicketTiers([
       ...ticketTiers,
-      { name: `Pass Tier #${ticketTiers.length + 1}`, tierType: "REGULAR", price: 499, totalCapacity: 100, description: "" },
+      { name: `Pass Tier #${ticketTiers.length + 1}`, tierType: "REGULAR", price: defaultPrice, totalCapacity: 100, description: "" },
     ]);
   }
 
   function addPresetTier(name: string, tierType: TicketTierType, price: number, totalCapacity: number, description: string) {
+    if (price > 0 && priceModel === "FREE") {
+      setPriceModel("PAID");
+    }
     setTicketTiers([
       ...ticketTiers,
-      { name, tierType, price, totalCapacity, description },
+      { name, tierType, price: priceModel === "FREE" ? 0 : price, totalCapacity, description },
     ]);
   }
 
   function updateTierField(index: number, field: string, value: any) {
+    if (field === "price" && Number(value) > 0 && priceModel === "FREE") {
+      setPriceModel("PAID");
+    }
     setTicketTiers((prev) =>
       prev.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier))
     );
@@ -374,6 +405,8 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
         contactPhone,
         upiId: upiId.trim() || "rotaractdistrict3192@okaxis",
         upiPayeeName: upiPayeeName.trim() || "District 3192 Rotaract",
+        category,
+        tags: finalTags,
         ticketTiers,
       };
 
@@ -922,13 +955,20 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
                               type="number"
                               min="0"
                               step="1"
-                              required
-                              value={tier.price}
+                              disabled={priceModel === "FREE"}
+                              value={priceModel === "FREE" ? 0 : tier.price}
                               onChange={(e) => updateTierField(idx, "price", parseFloat(e.target.value) || 0)}
                               placeholder="0 for Free"
-                              className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1]"
+                              className={`w-full border rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none transition-all ${
+                                priceModel === "FREE"
+                                  ? "bg-gray-100/80 border-gray-200 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-50 border-gray-200 focus:bg-white focus:border-[#1e9df1]"
+                              }`}
                             />
                           </div>
+                          {priceModel === "FREE" && (
+                            <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Free Event (₹0)</span>
+                          )}
                         </div>
 
                         {/* Capacity */}
@@ -1450,6 +1490,9 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
                       className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
                     />
                   </div>
+                  <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
+                    Overall event cap (auto-synced from total ticket tier seats: {ticketTiers.reduce((acc, t) => acc + (Number(t.totalCapacity) || 0), 0)} seats).
+                  </span>
                 </div>
               </div>
 

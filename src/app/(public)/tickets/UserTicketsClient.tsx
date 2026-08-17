@@ -31,8 +31,14 @@ import {
   Maximize2,
   ZoomIn,
   AlertCircle,
+  Lock,
+  Camera,
+  Upload,
+  Trash2,
+  Eye,
+  FileImage,
 } from "lucide-react";
-import { transferUserTicketAction, requestTicketRefundAction } from "@/app/actions/attendeeActions";
+import { transferUserTicketAction, requestTicketRefundAction, resubmitUpiTransactionAction } from "@/app/actions/attendeeActions";
 
 interface UserTicketsClientProps {
   initialTickets: any[];
@@ -81,6 +87,37 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundMessage, setRefundMessage] = useState<string | null>(null);
 
+  // UTR Re-submission State
+  const [utrModalOpen, setUtrModalOpen] = useState(false);
+  const [utrTicket, setUtrTicket] = useState<any | null>(null);
+  const [utrInput, setUtrInput] = useState("");
+  const [utrProofUrl, setUtrProofUrl] = useState("");
+  const [utrLoading, setUtrLoading] = useState(false);
+  const [utrMessage, setUtrMessage] = useState<string | null>(null);
+
+  async function handleUtrSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!utrTicket || !utrInput.trim()) return;
+
+    setUtrLoading(true);
+    setUtrMessage(null);
+
+    const res = await resubmitUpiTransactionAction(utrTicket.id, utrInput.trim(), utrProofUrl || undefined);
+    setUtrLoading(false);
+
+    if (res.success) {
+      setUtrMessage("UTR reference updated successfully! Verification in progress.");
+      setTimeout(() => {
+        setUtrModalOpen(false);
+        setUtrMessage(null);
+        setUtrInput("");
+        window.location.reload();
+      }, 1500);
+    } else {
+      setUtrMessage(res.error || "Failed to update UTR reference");
+    }
+  }
+
   // ─── HIGH-RES CANVAS TICKET DOWNLOADER ──────────────────────────────────────
   async function handleDownloadTicket(ticket: any) {
     setDownloadingId(ticket.id);
@@ -128,98 +165,6 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.roundRect(0, 0, width, 20, [36, 36, 0, 0]);
       ctx.fill();
 
-      // Official Logo on Ticket Badge
-      try {
-        const logoImg = new window.Image();
-        logoImg.src = "/brand/logo.png";
-        await new Promise((res) => {
-          logoImg.onload = res;
-          logoImg.onerror = res;
-        });
-        if (logoImg.complete && logoImg.naturalWidth > 0) {
-          ctx.drawImage(logoImg, width - 200, 35, 140, 140);
-        }
-      } catch (err) {
-        console.error("Logo drawing error:", err);
-      }
-
-      // 2. Header Branding
-      ctx.fillStyle = "#0052ff";
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillText("DISTRICT 3192 OFFICIAL DELEGATE PASS", 60, 75);
-
-      ctx.fillStyle = "#0f172a";
-      ctx.font = "bold 34px sans-serif";
-      const title = event?.title || "Rotaract District Flagship Event";
-      ctx.fillText(title.length > 30 ? title.slice(0, 28) + "..." : title, 60, 130);
-
-      // Ticket Code pill
-      ctx.fillStyle = "#fef2f2";
-      ctx.beginPath();
-      ctx.roundRect(60, 155, 260, 42, 12);
-      ctx.fill();
-      ctx.strokeStyle = "#fecaca";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(60, 155, 260, 42, 12);
-      ctx.stroke();
-
-      ctx.fillStyle = "#e11d48";
-      ctx.font = "bold 20px monospace";
-      ctx.fillText(ticket.ticket_code, 75, 184);
-
-      // Tier Badge
-      const tierName = (tier?.name || "GENERAL ADMISSION").toUpperCase();
-      ctx.fillStyle = "#fef3c7";
-      ctx.beginPath();
-      ctx.roundRect(335, 155, ctx.measureText(tierName).width + 36, 42, 12);
-      ctx.fill();
-      ctx.fillStyle = "#92400e";
-      ctx.font = "bold 16px sans-serif";
-      ctx.fillText(tierName, 353, 182);
-
-      // 3. Event Details (Date & Venue)
-      ctx.fillStyle = "#64748b";
-      ctx.font = "bold 14px sans-serif";
-      ctx.fillText("DATE & TIME", 60, 245);
-      ctx.fillStyle = "#1e293b";
-      ctx.font = "bold 20px sans-serif";
-      const eventDate = event?.start_date
-        ? new Date(event.start_date).toLocaleDateString("en-IN", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-        : "Confirmed Schedule";
-      ctx.fillText(eventDate, 60, 275);
-
-      ctx.fillStyle = "#64748b";
-      ctx.font = "bold 14px sans-serif";
-      ctx.fillText("VENUE & LOCATION", 60, 335);
-      ctx.fillStyle = "#1e293b";
-      ctx.font = "bold 20px sans-serif";
-      const venue = event?.venue_name ? `${event.venue_name}, ${event.city}` : event?.city || "District 3192";
-      ctx.fillText(venue.length > 34 ? venue.slice(0, 32) + "..." : venue, 60, 365);
-
-      // 4. Attendee Details
-      ctx.fillStyle = "#f1f5f9";
-      ctx.beginPath();
-      ctx.roundRect(60, 420, 680, 140, 20);
-      ctx.fill();
-
-      ctx.fillStyle = "#64748b";
-      ctx.font = "bold 13px sans-serif";
-      ctx.fillText("REGISTERED DELEGATE", 90, 460);
-
-      ctx.fillStyle = "#0f172a";
-      ctx.font = "bold 24px sans-serif";
-      ctx.fillText(ticket.attendee_name || "Delegate", 90, 495);
-
-      ctx.fillStyle = "#475569";
-      ctx.font = "16px sans-serif";
-      ctx.fillText(ticket.attendee_email || "", 90, 528);
-
       // 5. Vertical Perforation Line
       ctx.setLineDash([8, 8]);
       ctx.strokeStyle = "#cbd5e1";
@@ -230,12 +175,26 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 6. Right Side - Scannable QR Code & Security Stamp
+      // 6. Right Side Stub - Logo & Header
+      try {
+        const logoImg = new window.Image();
+        logoImg.src = "/brand/logo.png";
+        await new Promise((res) => {
+          logoImg.onload = res;
+          logoImg.onerror = res;
+        });
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+          ctx.drawImage(logoImg, 940, 40, 110, 110);
+        }
+      } catch (err) {
+        console.error("Logo drawing error:", err);
+      }
+
       ctx.fillStyle = "#64748b";
       ctx.font = "bold 13px sans-serif";
-      ctx.fillText("GATE SCANNER PASS", 860, 85);
+      ctx.fillText("GATE SCANNER PASS", 860, 180);
 
-      // Load QR Image
+      // Load QR Image (Positioned below header & logo)
       const qrImg = new window.Image();
       qrImg.src = qrDataUrl;
 
@@ -244,15 +203,15 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           // White card backdrop for QR
           ctx.fillStyle = "#ffffff";
           ctx.beginPath();
-          ctx.roundRect(850, 110, 290, 290, 24);
+          ctx.roundRect(850, 205, 290, 290, 24);
           ctx.fill();
           ctx.strokeStyle = "#cbd5e1";
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.roundRect(850, 110, 290, 290, 24);
+          ctx.roundRect(850, 205, 290, 290, 24);
           ctx.stroke();
 
-          ctx.drawImage(qrImg, 865, 125, 260, 260);
+          ctx.drawImage(qrImg, 865, 220, 260, 260);
           resolve();
         };
         qrImg.onerror = () => resolve();
@@ -261,11 +220,11 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       // QR Security Token & Instructions
       ctx.fillStyle = "#64748b";
       ctx.font = "14px monospace";
-      ctx.fillText(ticket.qr_token ? `${ticket.qr_token.slice(0, 18)}...` : ticket.ticket_code, 860, 440);
+      ctx.fillText(ticket.qr_token ? `${ticket.qr_token.slice(0, 18)}...` : ticket.ticket_code, 860, 530);
 
       ctx.fillStyle = "#059669";
       ctx.font = "bold 13px sans-serif";
-      ctx.fillText("● ENCRYPTED QR TOKEN", 860, 475);
+      ctx.fillText("● ENCRYPTED QR TOKEN", 860, 560);
 
       // Bottom Security Footer
       ctx.fillStyle = "#94a3b8";
@@ -344,18 +303,26 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
   if (tickets.length === 0) {
     return (
-      <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl p-8 bg-white space-y-4 shadow-xs">
-        <TicketIcon className="mx-auto text-gray-300" size={48} />
-        <h3 className="text-xl font-bold text-gray-900">No Tickets Booked Yet</h3>
-        <p className="text-sm text-gray-500 max-w-md mx-auto">
-          Explore upcoming conferences, festivals, and workshops across District 3192 and book your entry passes.
-        </p>
-        <Link
-          href="/events"
-          className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-        >
-          Explore Events
-        </Link>
+      <div className="w-full text-center py-16 sm:py-20 border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 bg-white shadow-xs flex flex-col items-center justify-center gap-6">
+        <div className="w-16 h-16 rounded-full bg-blue-50 text-[#1e9df1] flex items-center justify-center mx-auto shadow-inner shrink-0">
+          <TicketIcon size={32} />
+        </div>
+        <div className="w-full max-w-md mx-auto text-center space-y-2">
+          <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight w-full block text-center">
+            No Tickets Booked Yet
+          </h3>
+          <p className="text-xs sm:text-sm text-gray-500 leading-relaxed w-full max-w-md mx-auto block text-center">
+            Explore upcoming conferences, festivals, and workshops across District 3192 and book your entry passes.
+          </p>
+        </div>
+        <div className="pt-2 w-full text-center flex justify-center">
+          <Link
+            href="/events"
+            className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer active:scale-95 text-center"
+          >
+            Explore Events
+          </Link>
+        </div>
       </div>
     );
   }
@@ -368,9 +335,10 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
         {tickets.map((ticket) => {
           const event = ticket.saas_events;
           const tier = ticket.saas_ticket_tiers;
+          const isApproved = ticket.status === "ISSUED" || ticket.status === "CONFIRMED";
           const isUsed = ticket.status === "USED";
           const isRefundRequested = ticket.status === "REFUND_REQUESTED";
-          const isPendingVerification = ticket.status === "PENDING_VERIFICATION";
+          const isPendingVerification = ticket.status === "PENDING_VERIFICATION" || ticket.status === "PENDING" || !isApproved;
           const isPaymentRejected = ticket.status === "PAYMENT_REJECTED";
           const isCancelled = ticket.status === "CANCELLED" || ticket.status === "REFUNDED" || isPaymentRejected;
           const isDownloading = downloadingId === ticket.id;
@@ -404,7 +372,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
                   <span
                     className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
-                      isPendingVerification
+                      !isApproved && !isPaymentRejected
                         ? "bg-amber-50 text-amber-800 border-amber-300 font-extrabold"
                         : isPaymentRejected
                         ? "bg-rose-50 text-rose-700 border-rose-200 font-extrabold"
@@ -417,7 +385,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                         : "bg-emerald-50 text-emerald-700 border-emerald-200"
                     }`}
                   >
-                    ● {isPendingVerification ? "PENDING UPI APPROVAL" : isPaymentRejected ? "PAYMENT REJECTED" : isRefundRequested ? "REFUND PENDING" : ticket.status}
+                    ● {!isApproved && !isPaymentRejected ? "PENDING UPI APPROVAL" : isPaymentRejected ? "PAYMENT REJECTED" : isRefundRequested ? "REFUND PENDING" : ticket.status}
                   </span>
                 </div>
 
@@ -442,33 +410,59 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 </div>
 
                 {/* Pending UPI Verification Banner */}
-                {isPendingVerification && (
-                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-1 text-xs text-amber-900">
-                    <div className="flex items-center gap-1.5 font-extrabold">
-                      <AlertCircle size={15} className="text-amber-600" />
-                      <span>Payment Verification in Progress</span>
+                {!isApproved && !isPaymentRejected && (
+                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2 text-xs text-amber-900">
+                    <div className="flex items-center justify-between font-extrabold">
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle size={15} className="text-amber-600" />
+                        <span>Payment Verification in Progress</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUtrTicket(ticket);
+                          setUtrInput("");
+                          setUtrModalOpen(true);
+                        }}
+                        className="text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                      >
+                        Update UTR
+                      </button>
                     </div>
-                    <p className="text-[11px] text-amber-800">
-                      Your 12-digit UTR reference has been submitted. Once the organizer verifies your payment, your pass will be confirmed and the scannable gate QR will activate.
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Your 12-digit UTR reference has been submitted. Once verified by the host organizer, your pass will be confirmed.
                     </p>
                   </div>
                 )}
 
                 {/* Payment Rejected Banner */}
                 {isPaymentRejected && (
-                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-1 text-xs text-rose-900">
-                    <div className="flex items-center gap-1.5 font-extrabold">
-                      <X size={15} className="text-rose-600" />
-                      <span>Payment Not Verified</span>
+                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2 text-xs text-rose-900">
+                    <div className="flex items-center justify-between font-extrabold">
+                      <div className="flex items-center gap-1.5">
+                        <X size={15} className="text-rose-600" />
+                        <span>Payment Not Verified</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUtrTicket(ticket);
+                          setUtrInput("");
+                          setUtrModalOpen(true);
+                        }}
+                        className="text-[11px] bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                      >
+                        Re-enter UTR
+                      </button>
                     </div>
-                    <p className="text-[11px] text-rose-800">
-                      The organizer was unable to verify this transaction reference. Please contact support or book a new pass.
+                    <p className="text-[11px] text-rose-800 leading-relaxed">
+                      The organizer was unable to verify your previous transaction. Click above to re-enter your correct 12-digit UTR ID.
                     </p>
                   </div>
                 )}
 
-                {/* Scannable Attendee & Crystal-Clear QR Box */}
-                {!isPendingVerification && !isPaymentRejected && (
+                {/* Scannable Attendee & Crystal-Clear QR Box (ONLY FOR APPROVED TICKETS) */}
+                {isApproved && (
                   <div className="p-4 sm:p-5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between gap-4">
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <p className="text-xs font-bold text-gray-900 truncate">{ticket.attendee_name || "Delegate"}</p>
@@ -506,32 +500,40 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   </div>
                 )}
 
-                {/* Download Pass Action Button */}
-                <div className="pt-1 flex items-center gap-2">
-                  <button
-                    onClick={() => handleDownloadTicket(ticket)}
-                    disabled={isDownloading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md shadow-[#1e9df1]/20 cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" /> Generating Pass...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={15} /> Download Pass
-                      </>
-                    )}
-                  </button>
+                {/* Download Pass & Gate Scanner Buttons (STRICTLY ONLY FOR APPROVED TICKETS) */}
+                {isApproved ? (
+                  <div className="pt-1 flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadTicket(ticket)}
+                      disabled={isDownloading}
+                      className="flex-1 flex items-center justify-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md shadow-[#1e9df1]/20 cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" /> Generating Pass...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={15} /> Download Pass
+                        </>
+                      )}
+                    </button>
 
-                  <button
-                    onClick={() => setQrModalTicket(ticket)}
-                    className="w-11 h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl flex items-center justify-center transition-colors cursor-pointer"
-                    title="Open Large QR Code"
-                  >
-                    <QrCode size={18} />
-                  </button>
-                </div>
+                    <button
+                      onClick={() => setQrModalTicket(ticket)}
+                      className="w-11 h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl flex items-center justify-center transition-colors cursor-pointer"
+                      title="Open Large QR Code"
+                    >
+                      <QrCode size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <div className="w-full bg-gray-100 text-gray-400 font-bold text-xs py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200">
+                      <Lock size={14} className="text-gray-400" /> Gate QR &amp; Pass Locked Until Payment Verified
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Bar */}
@@ -541,7 +543,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     setSelectedTicket(ticket);
                     setTransferModalOpen(true);
                   }}
-                  disabled={isUsed || isCancelled || isRefundRequested}
+                  disabled={isPendingVerification || isPaymentRejected || isUsed || isCancelled || isRefundRequested}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-gray-900 disabled:opacity-40 cursor-pointer"
                 >
                   <Send size={14} /> Transfer Pass
@@ -552,7 +554,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     setSelectedTicket(ticket);
                     setRefundModalOpen(true);
                   }}
-                  disabled={isUsed || isCancelled || isRefundRequested}
+                  disabled={isPendingVerification || isPaymentRejected || isUsed || isCancelled || isRefundRequested}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 disabled:opacity-40 cursor-pointer"
                 >
                   <RotateCcw size={14} /> {isRefundRequested ? "Refund Pending" : "Request Refund"}
@@ -798,6 +800,145 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {refundLoading ? <Loader2 size={14} className="animate-spin" /> : "Submit Request"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── UPDATE UTR MODAL ──────────────────────────────────────────── */}
+      {utrModalOpen && utrTicket && (
+        <div
+          onClick={() => setUtrModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: "480px" }}
+            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                  PAYMENT VERIFICATION
+                </span>
+                <h3 className="text-xl font-black text-gray-900">Update UPI UTR Reference</h3>
+                <p className="text-xs text-gray-500 font-mono">Pass: {utrTicket.ticket_code}</p>
+              </div>
+              <button
+                onClick={() => setUtrModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {utrMessage && (
+              <div
+                className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+                  utrMessage.includes("success")
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                    : "bg-rose-50 text-rose-800 border border-rose-200"
+                }`}
+              >
+                <CheckCircle2 size={16} />
+                <span>{utrMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUtrSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  12-Digit UPI Transaction / UTR Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={32}
+                  placeholder="e.g. 421893821034"
+                  value={utrInput}
+                  onChange={(e) => setUtrInput(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                />
+              </div>
+
+              {/* Payment Screenshot Proof Upload */}
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera size={14} className="text-[#1e9df1]" />
+                    Upload Payment Receipt Screenshot (Optional)
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-normal">GPay / PhonePe / Paytm</span>
+                </label>
+
+                {utrProofUrl ? (
+                  <div className="p-2.5 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img src={utrProofUrl} alt="Receipt Preview" className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-gray-900 block truncate">Payment Screenshot Attached</span>
+                        <span className="text-[10px] text-emerald-600 font-bold block">✓ Ready for Instant Verification</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUtrProofUrl("")}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full border-2 border-dashed border-gray-200 hover:border-[#1e9df1] bg-gray-50/50 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/20 group text-center space-y-1">
+                    <Upload size={18} className="text-gray-400 group-hover:text-[#1e9df1] transition-colors" />
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-[#1e9df1] transition-colors">
+                      Click to upload payment screenshot
+                    </span>
+                    <span className="text-[10px] text-gray-400">PNG, JPG or WebP</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === "string") {
+                              setUtrProofUrl(reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/80 flex items-start gap-2.5 text-xs text-blue-900">
+                <AlertCircle size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed text-[11px]">
+                  Submitting your updated 12-digit UTR ID and screenshot will send your transaction back to the host organizer for immediate verification.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUtrModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={utrLoading || !utrInput.trim()}
+                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {utrLoading ? <Loader2 size={14} className="animate-spin" /> : "Submit UTR"}
                 </button>
               </div>
             </form>
