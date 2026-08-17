@@ -133,7 +133,7 @@ export default async function EventDetailPage({ params }: PageProps) {
 
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300 font-medium">
             <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-[#ff385c]" />
+              <Calendar size={18} className="text-[#1e9df1]" />
               <span>{formattedDate}</span>
             </div>
             <div className="flex items-center gap-2">

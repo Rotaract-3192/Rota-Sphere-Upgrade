@@ -55,12 +55,15 @@ const BANNER_PRESETS = [
 ];
 
 const ROTARACT_CLUBS = [
-  "Rotaract Club of Bangalore",
-  "Rotaract Club of Bangalore Junction",
-  "Rotaract Club of Surat West",
-  "Rotaract Club of Ahmedabad Greater",
-  "Rotaract Club of Vadodara Midtown",
-  "Rotaract Club of Rajkot Youth",
+  "Rotaract Club of Bengaluru Central",
+  "Rotaract Club of Bangalore West",
+  "Rotaract Club of Koramangala",
+  "Rotaract Club of Indiranagar",
+  "Rotaract Club of Whitefield",
+  "Rotaract Club of Yelahanka",
+  "Rotaract Club of Tumakuru",
+  "Rotaract Club of Kolar Silk City",
+  "Rotaract Club of BMSCE",
   "Rotaract Club of PES University",
   "Rotaract Club of RVCE",
   "Rotaract District 3192 Council",

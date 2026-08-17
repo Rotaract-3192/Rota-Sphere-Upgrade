@@ -46,7 +46,7 @@ const EXPERIENCES: ExperienceItem[] = [
   {
     id: "exp-3",
     title: "Eco-Innovation & Social Impact Hackathon",
-    location: "IIM Ahmedabad Campus",
+    location: "IIM Bangalore Campus, Bannerghatta",
     rating: 4.88,
     reviews: 47,
     image: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&auto=format&fit=crop&q=80",
@@ -63,7 +63,7 @@ export default function ExperiencesPage() {
         
         {/* Header */}
         <div className="max-w-2xl space-y-3 mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] text-xs font-extrabold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#1e9df1] border border-blue-200 text-xs font-extrabold uppercase tracking-wider">
             <Sparkles size={12} /> CURATED IMMERSIONS
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
@@ -100,14 +100,14 @@ export default function ExperiencesPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span className="flex items-center gap-1">
-                      <MapPin size={12} className="text-[#ff385c]" /> {exp.location}
+                      <MapPin size={12} className="text-[#1e9df1]" /> {exp.location}
                     </span>
                     <span className="flex items-center gap-1 font-bold text-gray-900">
                       <Star size={13} className="fill-amber-400 text-amber-400" /> {exp.rating} ({exp.reviews})
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-gray-900 leading-snug group-hover:text-[#ff385c] transition-colors">
+                  <h3 className="text-base font-bold text-gray-900 leading-snug group-hover:text-[#1e9df1] transition-colors">
                     {exp.title}
                   </h3>
 
@@ -124,7 +124,7 @@ export default function ExperiencesPage() {
 
                   <Link
                     href="/events"
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#ff385c] hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#1e9df1] hover:underline"
                   >
                     View Details <ArrowRight size={13} />
                   </Link>
@@ -133,7 +133,6 @@ export default function ExperiencesPage() {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );

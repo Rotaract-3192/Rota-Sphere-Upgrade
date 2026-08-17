@@ -12,49 +12,73 @@ const CLUBS = [
     name: "Rotaract Club of Bengaluru Central",
     city: "Bengaluru",
     district: "District 3192",
-    members: "75+ Active Members",
-    eventsCount: 28,
+    members: "95+ Active Members",
+    eventsCount: 32,
     charterYear: "2018",
   },
   {
-    name: "Rotaract Club of Surat Metro",
-    city: "Surat",
+    name: "Rotaract Club of Bangalore West",
+    city: "Bengaluru",
     district: "District 3192",
-    members: "80+ Active Members",
-    eventsCount: 22,
+    members: "85+ Active Members",
+    eventsCount: 26,
     charterYear: "2019",
   },
   {
-    name: "Rotaract Club of Ahmedabad Youth",
-    city: "Ahmedabad",
+    name: "Rotaract Club of Koramangala",
+    city: "Koramangala, Bengaluru",
     district: "District 3192",
-    members: "60+ Active Members",
-    eventsCount: 19,
+    members: "70+ Active Members",
+    eventsCount: 22,
     charterYear: "2020",
   },
   {
-    name: "Rotaract Club of Vadodara Heritage",
-    city: "Vadodara",
+    name: "Rotaract Club of Indiranagar",
+    city: "Indiranagar, Bengaluru",
     district: "District 3192",
-    members: "55+ Active Members",
-    eventsCount: 16,
+    members: "65+ Active Members",
+    eventsCount: 19,
     charterYear: "2021",
   },
   {
-    name: "Rotaract Club of Rajkot Royals",
-    city: "Rajkot",
+    name: "Rotaract Club of Tumakuru",
+    city: "Tumakuru",
     district: "District 3192",
-    members: "48+ Active Members",
+    members: "60+ Active Members",
+    eventsCount: 17,
+    charterYear: "2021",
+  },
+  {
+    name: "Rotaract Club of Whitefield",
+    city: "Whitefield, Bengaluru",
+    district: "District 3192",
+    members: "55+ Active Members",
+    eventsCount: 15,
+    charterYear: "2022",
+  },
+  {
+    name: "Rotaract Club of Yelahanka",
+    city: "Yelahanka, Bengaluru",
+    district: "District 3192",
+    members: "50+ Active Members",
     eventsCount: 14,
     charterYear: "2022",
   },
   {
-    name: "Rotaract Club of Gandhinagar Capital",
-    city: "Gandhinagar",
+    name: "Rotaract Club of Kolar Silk City",
+    city: "Kolar",
     district: "District 3192",
-    members: "42+ Active Members",
-    eventsCount: 11,
+    members: "45+ Active Members",
+    eventsCount: 12,
     charterYear: "2023",
+  },
+  {
+    name: "Rotaract Club of BMSCE",
+    city: "Basavanagudi, Bengaluru",
+    district: "District 3192",
+    members: "110+ Institutional Members",
+    eventsCount: 35,
+    charterYear: "2017",
   },
 ];
 
@@ -65,14 +89,14 @@ export default function ClubsPage() {
         
         {/* Header */}
         <div className="max-w-2xl space-y-3 mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] text-xs font-extrabold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#1e9df1] border border-blue-200 text-xs font-extrabold uppercase tracking-wider">
             <Award size={12} /> DISTRICT 3192 NETWORK
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
             Rotaract Clubs Directory
           </h1>
           <p className="text-sm sm:text-base text-gray-600 font-normal leading-relaxed">
-            Discover charter Rotaract clubs in District 3192, explore their ongoing projects, and register for their events.
+            Discover charter Rotaract clubs in District 3192, explore their ongoing community projects, and register for their events.
           </p>
         </div>
 
@@ -96,7 +120,7 @@ export default function ClubsPage() {
                 </h2>
 
                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <MapPin size={12} className="text-[#ff385c]" /> {club.city}, {club.district}
+                  <MapPin size={12} className="text-[#1e9df1]" /> {club.city}, {club.district}
                 </p>
               </div>
 
@@ -105,7 +129,7 @@ export default function ClubsPage() {
                   <Users size={14} className="text-gray-400" /> {club.members}
                 </span>
                 <span className="flex items-center gap-1.5 font-bold text-gray-900">
-                  <Calendar size={14} className="text-[#ff385c]" /> {club.eventsCount} events
+                  <Calendar size={14} className="text-[#1e9df1]" /> {club.eventsCount} events
                 </span>
               </div>
             </div>

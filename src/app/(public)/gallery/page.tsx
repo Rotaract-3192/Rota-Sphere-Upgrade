@@ -3,7 +3,7 @@
 /**
  * Gallery Page — District 3192 Moments & Memories
  * Fully mobile-responsive photography showcase for Rotaract events.
- * Styled in the website's clean white / #ff385c aesthetic.
+ * Styled in the website's clean white / #1e9df1 aesthetic.
  */
 
 import { useState } from "react";
@@ -36,7 +36,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     id: "gal-2",
     title: "Youth Leadership Conclave & Trek",
     category: "leadership",
-    city: "Surat",
+    city: "Nandi Hills, Bengaluru",
     date: "Jan 2026",
     imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&auto=format&fit=crop&q=80",
     likes: 98,
@@ -56,7 +56,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     id: "gal-4",
     title: "Green Earth Mega Tree Plantation Drive",
     category: "service",
-    city: "Ahmedabad",
+    city: "Tumakuru",
     date: "Nov 2025",
     imageUrl: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&auto=format&fit=crop&q=80",
     likes: 176,
@@ -66,7 +66,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     id: "gal-5",
     title: "Inter-Club Sports League Championship",
     category: "sports",
-    city: "Vadodara",
+    city: "Kolar",
     date: "Oct 2025",
     imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80",
     likes: 134,
@@ -127,7 +127,7 @@ export default function GalleryPage() {
       {/* ── 1. MOBILE-OPTIMIZED HERO HEADER ───────────────────────────── */}
       <section className="py-10 sm:py-16 md:py-20 px-4 sm:px-6 md:px-8 text-center bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] text-[11px] sm:text-xs font-extrabold uppercase tracking-widest">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1e9df1]/10 text-[#1e9df1] text-[11px] sm:text-xs font-extrabold uppercase tracking-widest">
             <Sparkles size={13} /> District 3192 Visual Archives
           </div>
           
@@ -153,7 +153,7 @@ export default function GalleryPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`shrink-0 px-4 py-2 sm:px-5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer touch-manipulation active:scale-95 ${
                   active
-                    ? "bg-[#ff385c] text-white shadow-md shadow-[#ff385c]/20"
+                    ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/20"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -169,7 +169,7 @@ export default function GalleryPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
         {filteredItems.length === 0 ? (
           <div className="w-full max-w-xl mx-auto text-center py-16 sm:py-20 border border-gray-200 rounded-3xl bg-white p-6 sm:p-8 shadow-xs">
-            <Sparkles className="mx-auto text-[#ff385c] mb-3" size={32} />
+            <Sparkles className="mx-auto text-[#1e9df1] mb-3" size={32} />
             <h3 className="text-base sm:text-lg font-bold text-gray-900">No moments in this category yet</h3>
             <p className="text-xs sm:text-sm text-gray-500 w-full max-w-md mx-auto mt-2 leading-relaxed">
               Event photos and highlights from District 3192 will appear here once uploaded.
@@ -210,7 +210,7 @@ export default function GalleryPage() {
                       <button
                         onClick={(e) => toggleLike(item.id, e)}
                         className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-sm ${
-                          isLiked ? "bg-[#ff385c] text-white" : "bg-white/90 text-gray-700"
+                          isLiked ? "bg-[#1e9df1] text-white" : "bg-white/90 text-gray-700"
                         }`}
                         aria-label="Like moment"
                       >
@@ -230,11 +230,11 @@ export default function GalleryPage() {
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-2.5">
                     <div>
                       <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                        <span className="text-[#ff385c]">{item.category}</span>
+                        <span className="text-[#1e9df1]">{item.category}</span>
                         <span>·</span>
                         <span className="flex items-center gap-1"><MapPin size={11} /> {item.city}</span>
                       </div>
-                      <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug group-hover:text-[#ff385c] transition-colors">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug group-hover:text-[#1e9df1] transition-colors">
                         {item.title}
                       </h3>
                     </div>
@@ -244,7 +244,7 @@ export default function GalleryPage() {
                         <Calendar size={13} className="text-gray-400" /> {item.date}
                       </span>
                       <span className="flex items-center gap-1 text-gray-700 font-bold">
-                        <Heart size={13} className={isLiked ? "text-[#ff385c] fill-[#ff385c]" : "text-gray-400"} />
+                        <Heart size={13} className={isLiked ? "text-[#1e9df1] fill-[#1e9df1]" : "text-gray-400"} />
                         {likesCount}
                       </span>
                     </div>
@@ -288,7 +288,7 @@ export default function GalleryPage() {
             <div className="w-full md:w-2/5 p-5 sm:p-6 md:p-8 flex flex-col justify-between space-y-4 sm:space-y-6">
               <div className="space-y-3 sm:space-y-4">
                 <div className="hidden sm:flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#ff385c]/10 text-[#ff385c] tracking-wider">
+                  <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#1e9df1]/10 text-[#1e9df1] tracking-wider">
                     {activeItem.category}
                   </span>
                   <button
@@ -311,7 +311,7 @@ export default function GalleryPage() {
                   <div className="flex items-center justify-between text-gray-500">
                     <span className="font-semibold">Location:</span>
                     <span className="font-bold text-gray-900 flex items-center gap-1">
-                      <MapPin size={13} className="text-[#ff385c]" /> {activeItem.city}
+                      <MapPin size={13} className="text-[#1e9df1]" /> {activeItem.city}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-gray-500">
@@ -326,7 +326,7 @@ export default function GalleryPage() {
                   onClick={(e) => toggleLike(activeItem.id, e)}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer active:scale-95 touch-manipulation ${
                     likedMap[activeItem.id]
-                      ? "bg-[#ff385c] text-white shadow-md shadow-[#ff385c]/20"
+                      ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/20"
                       : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                   }`}
                 >

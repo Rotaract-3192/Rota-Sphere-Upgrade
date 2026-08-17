@@ -104,7 +104,7 @@ function CheckoutContent() {
         },
       },
       theme: {
-        color: "#ff385c",
+        color: "#1e9df1",
       },
     };
 
@@ -142,7 +142,7 @@ function CheckoutContent() {
             <div className="pt-2">
               <a
                 href={`/sign-in?redirect_url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/events")}`}
-                className="inline-flex items-center gap-1.5 bg-[#ff385c] hover:bg-[#e00b41] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
               >
                 Sign In Now →
               </a>

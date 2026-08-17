@@ -66,7 +66,7 @@ export default function SignUpPage() {
                 headerTitle: "text-white text-xl font-bold",
                 headerSubtitle: "text-gray-400 text-sm",
                 socialButtonsBlockButton: "bg-white/10 border-white/15 text-white hover:bg-white/15",
-                formButtonPrimary: "bg-[#ff385c] hover:bg-[#e00b41] text-white font-semibold text-sm rounded-xl py-3",
+                formButtonPrimary: "bg-[#1e9df1] hover:bg-[#1583cd] text-white font-semibold text-sm rounded-xl py-3",
                 footerActionLink: "text-amber-400 hover:text-amber-300 font-semibold",
                 formFieldInput: "bg-black/50 border-white/15 text-white rounded-xl",
                 formFieldLabel: "text-gray-300 text-xs font-semibold uppercase tracking-wider",

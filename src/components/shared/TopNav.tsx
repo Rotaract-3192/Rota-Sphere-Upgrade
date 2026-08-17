@@ -189,7 +189,7 @@ export function TopNav() {
                     ].join(" ")}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon size={18} className={active ? "text-[#ff385c]" : "text-gray-400"} />
+                      <Icon size={18} className={active ? "text-[#1e9df1]" : "text-gray-400"} />
                       <span>{label}</span>
                     </div>
                     {isNew && (

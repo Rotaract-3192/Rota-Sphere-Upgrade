@@ -134,7 +134,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-              Service, Leadership, Fellowship &amp; Growth. Seamlessly book tickets for flagship Rotaract conventions across Bengaluru, Surat, Ahmedabad, and beyond.
+              Service, Leadership, Fellowship &amp; Growth. Seamlessly book tickets for flagship Rotaract conventions across Bengaluru, Tumakuru, Kolar, and beyond.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -277,7 +277,7 @@ export default async function HomePage() {
               About the Experience
             </h2>
             <p className="text-gray-600 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
-              Curated itineraries for youth leaders across Bengaluru, Surat, Ahmedabad, Vadodara, and Rajkot.
+              Curated itineraries for youth leaders across Bengaluru, Tumakuru, Kolar, and Chikkaballapura.
             </p>
           </div>
 

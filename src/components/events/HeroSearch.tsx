@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Calendar, Ticket } from "lucide-react";
 
-const CITIES = ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Gandhinagar", "Anand", "Bengaluru"];
+const CITIES = ["Bengaluru", "Koramangala", "Indiranagar", "Whitefield", "Tumakuru", "Kolar", "Yelahanka"];
 
 export function HeroSearch() {
   const router = useRouter();

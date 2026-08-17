@@ -108,7 +108,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                             <p className="text-sm font-bold text-gray-900">{tier.name}</p>
                             <p className="text-[11px] text-gray-500">{isSoldOut ? "Sold Out" : `${remaining} seats left`}</p>
                           </div>
-                          <span className="text-sm font-extrabold text-[#ff385c]">
+                          <span className="text-sm font-extrabold text-[#1e9df1]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
                           </span>
                         </div>
@@ -128,7 +128,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                       <span className="text-xs font-bold text-gray-900">
                         General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
                       </span>
-                      <span className="text-xs font-extrabold text-[#ff385c] flex items-center gap-1">
+                      <span className="text-xs font-extrabold text-[#1e9df1] flex items-center gap-1">
                         {showGeneralDropdown ? (
                           <>Hide <ChevronUp size={14} /></>
                         ) : (
@@ -150,7 +150,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                 <p className="text-xs font-bold text-gray-900">{tier.name}</p>
                                 <p className="text-[10px] text-gray-500">{remaining} seats left</p>
                               </div>
-                              <span className="text-xs font-extrabold text-[#ff385c]">
+                              <span className="text-xs font-extrabold text-[#1e9df1]">
                                 {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
                               </span>
                             </div>
@@ -175,7 +175,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                             <p className="text-sm font-bold text-gray-900">{tier.name}</p>
                             <p className="text-[11px] text-gray-500">{remaining} seats left</p>
                           </div>
-                          <span className="text-sm font-extrabold text-[#ff385c]">
+                          <span className="text-sm font-extrabold text-[#1e9df1]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
                           </span>
                         </div>
@@ -203,7 +203,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                             <p className="text-sm font-bold text-gray-900">{tier.name}</p>
                             <p className="text-[11px] text-gray-500">{remaining} seats left</p>
                           </div>
-                          <span className="text-sm font-extrabold text-[#ff385c]">
+                          <span className="text-sm font-extrabold text-[#1e9df1]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
                           </span>
                         </div>
@@ -220,7 +220,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
         <button
           type="button"
           onClick={handleOpenCheckout}
-          className="w-full bg-[#ff385c] hover:bg-[#e00b41] active:bg-[#c0002e] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+          className="w-full bg-[#1e9df1] hover:bg-[#1583cd] active:bg-[#0052ff] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
         >
           <Ticket size={20} /> Register &amp; Buy Tickets
         </button>
@@ -277,7 +277,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
         <button
           type="button"
           onClick={handleOpenCheckout}
-          className="bg-[#ff385c] active:bg-[#c0002e] text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer touch-manipulation"
+          className="bg-[#1e9df1] hover:bg-[#1583cd] active:bg-[#0052ff] text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer touch-manipulation"
         >
           <Ticket size={18} />
           Register &amp; Buy

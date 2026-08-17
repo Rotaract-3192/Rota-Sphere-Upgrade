@@ -603,7 +603,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
             <div className="space-y-1">
               <p className="text-base font-black text-gray-900">{qrModalTicket.attendee_name || "Delegate"}</p>
-              <p className="text-xs font-mono font-bold text-[#ff385c]">{qrModalTicket.ticket_code}</p>
+              <p className="text-xs font-mono font-bold text-[#1e9df1]">{qrModalTicket.ticket_code}</p>
               <p className="text-xs text-gray-500">{qrModalTicket.saas_events?.title}</p>
             </div>
 
@@ -613,7 +613,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
             <button
               onClick={() => handleDownloadTicket(qrModalTicket)}
-              className="w-full bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <Download size={14} /> Download Pass Badge
             </button>
@@ -634,7 +634,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ff385c]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
                   PASS REASSIGNMENT
                 </span>
                 <h3 className="text-xl font-black text-gray-900">Transfer Ticket Pass</h3>
@@ -672,7 +672,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="e.g. Rahul Sharma"
                   value={transferName}
                   onChange={(e) => setTransferName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#ff385c]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
                 />
               </div>
 
@@ -686,7 +686,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="rahul@rotaract.org"
                   value={transferEmail}
                   onChange={(e) => setTransferEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#ff385c]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
                 />
               </div>
 
@@ -699,7 +699,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="+91 98765 43210"
                   value={transferPhone}
                   onChange={(e) => setTransferPhone(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#ff385c]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
                 />
               </div>
 
@@ -714,7 +714,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 <button
                   type="submit"
                   disabled={transferLoading}
-                  className="flex-1 bg-[#ff385c] hover:bg-[#e00b41] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {transferLoading ? <Loader2 size={14} className="animate-spin" /> : "Transfer Now"}
                 </button>
@@ -775,7 +775,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="Please state why you are requesting a refund (e.g. scheduling conflict, emergency)..."
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-900 outline-none focus:border-[#ff385c]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
                 />
               </div>
 
