@@ -23,14 +23,14 @@ export default function ContactPage() {
     <main className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <section className="bg-gray-900 text-white py-14 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
-        <div className="max-w-3xl mx-auto space-y-4 relative z-10 flex flex-col items-center justify-center">
-          <span className="text-xs font-black uppercase tracking-widest text-[#60a5fa] inline-flex items-center justify-center gap-1.5">
+        <div className="w-full max-w-3xl mx-auto space-y-4 relative z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#60a5fa] text-xs font-black uppercase tracking-widest">
             <Mail size={14} /> District Secretariat
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight w-full text-center block">
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
             Contact District 3192 Support
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 w-full max-w-xl mx-auto text-center block leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
             Have a question about event passes, UPI payment verification, or organizer access? Our District Secretariat team is here to assist you.
           </p>
         </div>

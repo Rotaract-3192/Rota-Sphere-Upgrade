@@ -58,6 +58,7 @@ import {
   Smartphone,
   Check,
   Megaphone,
+  Menu,
 } from "lucide-react";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import {
@@ -69,6 +70,13 @@ import {
   approveOrganizerAccessRequestAction,
   rejectOrganizerAccessRequestAction,
 } from "@/app/actions/adminActions";
+import {
+  createDistrictClubAction,
+  updateDistrictClubAction,
+  deleteDistrictClubAction,
+  seedDistrictClubsAction,
+  getDistrictClubsAction,
+} from "@/app/actions/clubActions";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 
 interface SuperAdminProps {
@@ -138,6 +146,7 @@ export function SuperAdminDashboardClient({
   const [activeTab, setActiveTab] = useState<
     "overview" | "requests" | "upi" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
   >("overview");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [organizations, setOrganizations] = useState(initialOrganizations);
   const [events, setEvents] = useState(initialEvents);
@@ -197,9 +206,28 @@ export function SuperAdminDashboardClient({
   const [selectedAuditLog, setSelectedAuditLog] = useState<any | null>(null);
   const [copiedPayload, setCopiedPayload] = useState(false);
 
-  // New Organization Modal State
+  // New & Edit Club Management State
   const [isAddOrgOpen, setIsAddOrgOpen] = useState(false);
+  const [isEditClubOpen, setIsEditClubOpen] = useState(false);
+  const [editingClub, setEditingClub] = useState<any | null>(null);
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+  
+  const [clubForm, setClubForm] = useState({
+    id: "",
+    name: "",
+    zone: "Taranga",
+    clubType: "Community Based",
+    partnerClub: "",
+    contactEmail: "",
+    presidentName: "",
+    presidentPhone: "",
+    presidentEmail: "",
+  });
+  const [clubSaving, setClubSaving] = useState(false);
+  const [clubError, setClubError] = useState<string | null>(null);
+  const [syncingClubs, setSyncingClubs] = useState(false);
+  const [selectedZoneFilter, setSelectedZoneFilter] = useState<string>("ALL");
+
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
   const [newOrgDistrict, setNewOrgDistrict] = useState("District 3192");
@@ -464,6 +492,151 @@ export function SuperAdminDashboardClient({
     }
   }
 
+  function handleOpenAddClub() {
+    setEditingClub(null);
+    setClubForm({
+      id: "",
+      name: "",
+      zone: "Taranga",
+      clubType: "Community Based",
+      partnerClub: "",
+      contactEmail: "",
+      presidentName: "",
+      presidentPhone: "",
+      presidentEmail: "",
+    });
+    setClubError(null);
+    setIsEditClubOpen(true);
+  }
+
+  function handleOpenEditClub(club: any) {
+    setEditingClub(club);
+    setClubForm({
+      id: club.id,
+      name: club.name,
+      zone: club.zone || "Taranga",
+      clubType: club.club_type || "Community Based",
+      partnerClub: club.partner_club || "",
+      contactEmail: club.contact_email || "",
+      presidentName: club.president_name || "",
+      presidentPhone: club.president_phone || "",
+      presidentEmail: club.president_email || "",
+    });
+    setClubError(null);
+    setIsEditClubOpen(true);
+  }
+
+  async function handleSaveClubSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clubForm.name.trim()) return;
+
+    setClubSaving(true);
+    setClubError(null);
+
+    if (editingClub) {
+      const res = await updateDistrictClubAction(editingClub.id, {
+        name: clubForm.name.trim(),
+        zone: clubForm.zone,
+        clubType: clubForm.clubType,
+        partnerClub: clubForm.partnerClub.trim(),
+        contactEmail: clubForm.contactEmail.trim(),
+        presidentName: clubForm.presidentName.trim(),
+        presidentPhone: clubForm.presidentPhone.trim(),
+        presidentEmail: clubForm.presidentEmail.trim(),
+      });
+
+      setClubSaving(false);
+      if (res.success) {
+        setOrganizations((prev) =>
+          prev.map((o) =>
+            o.id === editingClub.id
+              ? {
+                  ...o,
+                  name: clubForm.name.trim(),
+                  zone: clubForm.zone,
+                  club_type: clubForm.clubType,
+                  partner_club: clubForm.partnerClub.trim(),
+                  contact_email: clubForm.contactEmail.trim(),
+                  president_name: clubForm.presidentName.trim(),
+                  president_phone: clubForm.presidentPhone.trim(),
+                  president_email: clubForm.presidentEmail.trim(),
+                }
+              : o
+          )
+        );
+        setIsEditClubOpen(false);
+      } else {
+        setClubError(res.error || "Failed to update club");
+      }
+    } else {
+      const res = await createDistrictClubAction({
+        name: clubForm.name.trim(),
+        zone: clubForm.zone,
+        clubType: clubForm.clubType,
+        partnerClub: clubForm.partnerClub.trim(),
+        contactEmail: clubForm.contactEmail.trim(),
+        presidentName: clubForm.presidentName.trim(),
+        presidentPhone: clubForm.presidentPhone.trim(),
+        presidentEmail: clubForm.presidentEmail.trim(),
+      });
+
+      setClubSaving(false);
+      if (res.success) {
+        const newClub: any = {
+          id: res.clubId || `club-${Date.now()}`,
+          name: clubForm.name.trim(),
+          slug: clubForm.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          zone: clubForm.zone,
+          club_type: clubForm.clubType,
+          partner_club: clubForm.partnerClub.trim(),
+          contact_email: clubForm.contactEmail.trim(),
+          president_name: clubForm.presidentName.trim(),
+          president_phone: clubForm.presidentPhone.trim(),
+          president_email: clubForm.presidentEmail.trim(),
+          status: "ACTIVE",
+          is_verified: true,
+          kyc_status: "VERIFIED",
+          event_count: 0,
+        };
+        setOrganizations([newClub, ...organizations]);
+        setIsEditClubOpen(false);
+      } else {
+        setClubError(res.error || "Failed to add club");
+      }
+    }
+  }
+
+  async function handleDeleteClub(clubId: string, clubName: string) {
+    if (!confirm(`Are you sure you want to archive / remove "${clubName}" from District 3192 directory?`)) {
+      return;
+    }
+
+    const res = await deleteDistrictClubAction(clubId);
+    if (res.success) {
+      setOrganizations((prev) => prev.filter((o) => o.id !== clubId));
+    } else {
+      alert(res.error || "Failed to delete club");
+    }
+  }
+
+  async function handleSyncAllClubs() {
+    if (!confirm("Synchronize all 85 authentic District 3192 clubs from the master Excel directory?")) {
+      return;
+    }
+    setSyncingClubs(true);
+    const res = await seedDistrictClubsAction();
+    if (res.success) {
+      const refreshed = await getDistrictClubsAction();
+      if (refreshed.success && refreshed.data) {
+        setOrganizations(refreshed.data);
+      }
+      alert(`Successfully synchronized ${res.count} District 3192 clubs!`);
+    } else {
+      alert(res.error || "Failed to synchronize clubs");
+    }
+    setSyncingClubs(false);
+  }
+
   function handleCopyJson(obj: any) {
     navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
     setCopiedPayload(true);
@@ -478,31 +651,160 @@ export function SuperAdminDashboardClient({
 
   // Filtered lists
   const filteredOrgs = organizations.filter((o) => {
-    const matchesSearch = o.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    if (kycFilter === "ALL") return matchesSearch;
-    return matchesSearch && o.kyc_status === kycFilter;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      o.name?.toLowerCase().includes(q) ||
+      o.partner_club?.toLowerCase().includes(q) ||
+      o.president_name?.toLowerCase().includes(q) ||
+      o.zone?.toLowerCase().includes(q);
+
+    const matchesZone =
+      selectedZoneFilter === "ALL" || o.zone?.toLowerCase() === selectedZoneFilter.toLowerCase();
+
+    const matchesKyc = kycFilter === "ALL" || o.kyc_status === kycFilter;
+
+    return matchesSearch && matchesZone && matchesKyc;
   });
 
   const filteredEvents = events.filter((e) =>
     e.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] text-gray-900 flex flex-row font-sans">
+  const NAV_ITEMS = [
+    { id: "overview",  label: "Overview",             icon: Activity,     count: null },
+    { id: "requests",  label: "Host Requests",        icon: Users,        count: organizerRequests.filter((r: any) => r.status === "PENDING").length },
+    { id: "upi",      label: "UPI Payments",         icon: QrCode,       count: pendingUpiOrders.length },
+    { id: "kyc",      label: "Club Roster",          icon: Building,     count: pendingKycCount },
+    { id: "events",   label: "All Events",           icon: Calendar,     count: events.length },
+    { id: "finance",  label: "Sales & Finance",      icon: DollarSign,   count: orders.length },
+    { id: "checkins", label: "QR Gate Check-ins",    icon: Smartphone,   count: totalCheckInsCount },
+    { id: "audit",    label: "Activity Logs",        icon: Lock,         count: auditLogs.length },
+    { id: "flags",    label: "App Settings",         icon: Sliders,      count: null },
+  ];
 
-      {/* ── SIDEBAR NAVIGATION ────────────────────────────────────────── */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col justify-between flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-gray-900 flex flex-col lg:flex-row font-sans">
+
+      {/* ── MOBILE SLIDE-OVER DRAWER (Visible on < lg screens) ─────────── */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <aside className="relative w-4/5 max-w-xs bg-gray-900 text-white flex flex-col justify-between h-full overflow-y-auto z-10 shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="flex flex-col h-full">
+              {/* Brand & Close */}
+              <div className="px-5 pt-6 pb-4 border-b border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-11 h-11 shrink-0">
+                    <Image src="/brand/logo.png" alt="Logo" fill className="object-contain" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#1e9df1] block">
+                      SUPER ADMIN
+                    </span>
+                    <span className="text-sm font-extrabold text-white leading-tight block">
+                      RotaSphere
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Drawer Nav Items */}
+              <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                {NAV_ITEMS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  const isUrgent =
+                    (tab.id === "upi" && pendingUpiOrders.length > 0) ||
+                    (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as any);
+                        setMobileSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-[#1e9df1] text-white shadow-sm"
+                          : isUrgent
+                          ? "text-amber-300 hover:bg-gray-800 hover:text-white"
+                          : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon size={16} />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.count !== null && tab.count > 0 && (
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : isUrgent
+                              ? "bg-amber-500 text-white animate-pulse"
+                              : "bg-gray-700 text-gray-300"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Drawer Bottom Actions */}
+              <div className="px-3 pb-6 space-y-2 border-t border-gray-800 pt-4">
+                <button
+                  onClick={() => {
+                    setIsAddOrgOpen(true);
+                    setMobileSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-3 rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  <Plus size={15} /> Charter New Club
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="w-full flex items-center justify-center gap-2 text-xs font-bold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-xl transition-all"
+                >
+                  <Building size={14} /> Organizer Hub
+                </Link>
+                <Link
+                  href="/"
+                  className="w-full flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-gray-800 hover:bg-black px-4 py-3 rounded-xl transition-all cursor-pointer"
+                >
+                  <LogOut size={14} /> Exit Admin
+                </Link>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ── DESKTOP SIDEBAR (Visible on >= lg screens) ──────────────────── */}
+      <aside className="hidden lg:flex w-64 bg-gray-900 text-white flex-col justify-between flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
         <div className="flex flex-col h-full">
 
           {/* Brand / Logo */}
           <div className="px-5 pt-6 pb-4 border-b border-gray-800 space-y-3">
             <div className="flex items-center gap-2.5">
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow bg-white shrink-0">
+              <div className="relative w-12 h-12 shrink-0">
                 <Image
                   src="/brand/logo.png"
                   alt="Rotaract District 3192 Logo"
                   fill
-                  className="object-contain p-0.5"
+                  className="object-contain"
                   priority
                 />
               </div>
@@ -523,20 +825,12 @@ export function SuperAdminDashboardClient({
 
           {/* Nav Items */}
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {[
-              { id: "overview",  label: "Overview 🏠",            icon: Activity,     count: null },
-              { id: "requests",  label: "Host Access Requests 👑", icon: Users,        count: organizerRequests.filter((r: any) => r.status === "PENDING").length },
-              { id: "upi",      label: "UPI Payments 💳",         icon: QrCode,       count: pendingUpiOrders.length },
-              { id: "kyc",      label: "Club Roster 🏛️",          icon: Building,     count: pendingKycCount },
-              { id: "events",   label: "All Events 📅",           icon: Calendar,     count: events.length },
-              { id: "finance",  label: "Sales & Finance 💰",      icon: DollarSign,   count: orders.length },
-              { id: "checkins", label: "QR Gate Check-ins 📱",    icon: Smartphone,   count: totalCheckInsCount },
-              { id: "audit",    label: "Activity Logs 📜",        icon: Lock,         count: auditLogs.length },
-              { id: "flags",    label: "App Settings ⚙️",         icon: Sliders,      count: null },
-            ].map((tab) => {
+            {NAV_ITEMS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              const isUrgent = (tab.id === "upi" && pendingUpiOrders.length > 0) || (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
+              const isUrgent =
+                (tab.id === "upi" && pendingUpiOrders.length > 0) ||
+                (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
               return (
                 <button
                   key={tab.id}
@@ -554,13 +848,15 @@ export function SuperAdminDashboardClient({
                     <span>{tab.label}</span>
                   </div>
                   {tab.count !== null && tab.count > 0 && (
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : isUrgent
-                        ? "bg-amber-500 text-white animate-pulse"
-                        : "bg-gray-700 text-gray-300"
-                    }`}>
+                    <span
+                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : isUrgent
+                          ? "bg-amber-500 text-white animate-pulse"
+                          : "bg-gray-700 text-gray-300"
+                      }`}
+                    >
                       {tab.count}
                     </span>
                   )}
@@ -595,11 +891,85 @@ export function SuperAdminDashboardClient({
 
       {/* ── MAIN CONTENT AREA ───────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 overflow-y-auto">
-        {/* Top bar inside main */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+
+        {/* ── MOBILE HEADER (Visible on < lg) ────────────────────────────── */}
+        <div className="lg:hidden bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white cursor-pointer active:scale-95 transition-all"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-9 h-9 shrink-0">
+                <Image src="/brand/logo.png" alt="Logo" fill className="object-contain" />
+              </div>
+              <div>
+                <span className="text-xs font-black text-white block leading-tight">RotaSphere</span>
+                <span className="text-[9px] font-bold text-[#1e9df1] block leading-none">SUPER ADMIN</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsBulkEmailOpen(true)}
+              className="p-2 rounded-xl bg-[#1e9df1] hover:bg-[#1583cd] text-white flex items-center justify-center cursor-pointer shadow-xs"
+              title="Broadcast Email"
+            >
+              <Megaphone size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── MOBILE HORIZONTAL SWIPEABLE TABS (Visible on < lg) ─────────── */}
+        <div className="lg:hidden bg-white border-b border-gray-200 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar sticky top-[53px] z-20 shadow-2xs">
+          {NAV_ITEMS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const isUrgent =
+              (tab.id === "upi" && pendingUpiOrders.length > 0) ||
+              (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-[#1e9df1] text-white shadow-xs"
+                    : isUrgent
+                    ? "bg-amber-50 text-amber-800 border border-amber-300"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <Icon size={13} />
+                <span>{tab.label}</span>
+                {tab.count !== null && tab.count > 0 && (
+                  <span
+                    className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                      isActive
+                        ? "bg-white/30 text-white"
+                        : isUrgent
+                        ? "bg-amber-500 text-white"
+                        : "bg-gray-300 text-gray-800"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop Top bar inside main */}
+        <div className="hidden lg:flex bg-white border-b border-gray-200 px-6 py-3.5 items-center justify-between sticky top-0 z-20 shadow-xs">
           <div>
             <h1 className="text-base font-black text-gray-900">
               {activeTab === "overview" && "Executive Overview"}
+              {activeTab === "requests" && "Host Access Requests"}
               {activeTab === "upi" && "UPI Payment Verification Hub"}
               {activeTab === "kyc" && "Club KYC & Organizations"}
               {activeTab === "events" && "Event Moderation"}
@@ -618,7 +988,7 @@ export function SuperAdminDashboardClient({
               <Megaphone size={14} />
               <span>Broadcast Email</span>
             </button>
-            <span className="hidden sm:flex text-xs font-bold text-gray-600 bg-gray-100 px-3 py-2 rounded-xl items-center gap-1.5">
+            <span className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-2 rounded-xl flex items-center gap-1.5">
               <ShieldCheck size={13} className="text-[#1e9df1]" />
               {user?.email || "admin@rotasphere.org"}
             </span>
@@ -626,7 +996,7 @@ export function SuperAdminDashboardClient({
         </div>
 
         {/* ── MAIN DASHBOARD CONTENT ─────────────────────────────────── */}
-        <div className="px-6 py-6 space-y-8">
+        <div className="px-3 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
 
         {/* ══════════════════════════════════════════════════════════════════
             TAB 1: EXECUTIVE OVERVIEW
@@ -1227,106 +1597,202 @@ export function SuperAdminDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            TAB 3: CLUB KYC & ORGANIZATIONS
+            TAB 3: DISTRICT 3192 CLUBS & ORGANIZATIONS GOVERNANCE
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "kyc" && (
           <div className="space-y-6 animate-in fade-in-50">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-black text-gray-900">Organization &amp; Club KYC Directory</h2>
-                <p className="text-xs text-gray-500">Moderate district clubs, charter status, and SaaS commission rules</p>
+            {/* Header & Controls */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-xs">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e9df1] border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
+                  <Award size={12} /> DISTRICT 3192 GOVERNANCE
+                </div>
+                <h2 className="text-xl font-black text-gray-900">District Clubs &amp; Organizations Directory</h2>
+                <p className="text-xs text-gray-500">
+                  Manage official Rotaract clubs across all 6 zones, assign leadership, and configure club permissions.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search size={15} className="absolute left-3.5 top-3 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search clubs..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-white border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#1e9df1] w-48 sm:w-64"
-                  />
-                </div>
-
-                <select
-                  value={kycFilter}
-                  onChange={(e) => setKycFilter(e.target.value as any)}
-                  className="bg-white border border-gray-200 rounded-2xl px-3 py-2 text-xs font-bold text-gray-700 outline-none cursor-pointer"
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleSyncAllClubs}
+                  disabled={syncingClubs}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Re-synchronize all 85 authentic District 3192 clubs from Excel directory"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="PENDING">Pending Only</option>
-                  <option value="VERIFIED">Verified Only</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+                  <RefreshCw size={14} className={syncingClubs ? "animate-spin" : ""} />
+                  <span>{syncingClubs ? "Syncing..." : "Sync 85 Clubs"}</span>
+                </button>
 
                 <button
-                  onClick={() => setIsAddOrgOpen(true)}
-                  className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+                  onClick={handleOpenAddClub}
+                  className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Plus size={14} /> Add Club
+                  <Plus size={14} /> Add New Club
                 </button>
               </div>
             </div>
 
+            {/* Filter & Search Strip */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                <div className="sm:col-span-8 relative">
+                  <Search size={15} className="absolute left-3.5 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by club name, partner rotary, president, or zone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-gray-900 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="sm:col-span-4">
+                  <select
+                    value={kycFilter}
+                    onChange={(e) => setKycFilter(e.target.value as any)}
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none cursor-pointer transition-all"
+                  >
+                    <option value="ALL">All KYC &amp; Verification Statuses</option>
+                    <option value="VERIFIED">Verified Active Clubs</option>
+                    <option value="PENDING">Pending Verification</option>
+                    <option value="REJECTED">Suspended / Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Zone Filter Pills */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+                <span className="text-[11px] font-extrabold uppercase text-gray-400 mr-2 flex items-center gap-1">
+                  <Filter size={12} /> Zone:
+                </span>
+                {["ALL", "Taranga", "Varuna", "Samudhra", "Sagara", "Pravaha", "Arnava"].map((z) => (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() => setSelectedZoneFilter(z)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      selectedZoneFilter === z
+                        ? "bg-[#1e9df1] text-white shadow-xs"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {z === "ALL" ? "All Zones" : `Zone ${z}`}
+                  </button>
+                ))}
+                <span className="text-xs font-bold text-gray-400 ml-auto">
+                  Showing {filteredOrgs.length} of {organizations.length} Clubs
+                </span>
+              </div>
+            </div>
+
+            {/* Clubs Table */}
             <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-gray-700">
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
-                      <th className="px-6 py-4">Club / Organization</th>
-                      <th className="px-6 py-4">District</th>
-                      <th className="px-6 py-4">SaaS Fee</th>
-                      <th className="px-6 py-4">KYC Status</th>
-                      <th className="px-6 py-4 text-right">Moderation Actions</th>
+                      <th className="px-6 py-4">Club Name &amp; Zone</th>
+                      <th className="px-6 py-4">Club Type</th>
+                      <th className="px-6 py-4">Partner Rotary</th>
+                      <th className="px-6 py-4">President &amp; Contact</th>
+                      <th className="px-6 py-4">Events</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Management</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium">
-                    {filteredOrgs.map((org) => (
-                      <tr key={org.id} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="space-y-0.5">
-                            <span className="font-extrabold text-gray-900 block">{org.name}</span>
-                            <span className="text-[10px] text-gray-400 font-mono">slug: {org.slug}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-800">{org.district || "District 3192"}</td>
-                        <td className="px-6 py-4 font-mono font-bold text-[#1e9df1]">
-                          {org.custom_platform_fee_percent ?? "0"}%
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
-                              org.kyc_status === "VERIFIED"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : org.kyc_status === "REJECTED"
-                                ? "bg-rose-50 text-rose-700 border-rose-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
-                            }`}
-                          >
-                            ● {org.kyc_status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          {org.kyc_status !== "VERIFIED" && (
-                            <button
-                              onClick={() => handleApproveKyc(org.id)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer"
-                            >
-                              Approve KYC
-                            </button>
-                          )}
-                          {org.kyc_status !== "REJECTED" && (
-                            <button
-                              onClick={() => handleRejectKyc(org.id)}
-                              className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          )}
+                    {filteredOrgs.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-12 text-gray-400">
+                          No District 3192 clubs match your current search and zone filters.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredOrgs.map((org) => (
+                        <tr key={org.id} className="hover:bg-gray-50/80 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="space-y-0.5">
+                              <span className="font-extrabold text-gray-900 block text-sm">{org.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-[#1e9df1] font-extrabold bg-blue-50 border border-blue-200/60 px-2 py-0.2 rounded-md">
+                                  Zone {org.zone || "District 3192"}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-mono">slug: {org.slug}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-semibold text-gray-700">
+                              {org.club_type || "Community Based"}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className="text-xs text-gray-600 font-medium">
+                              {org.partner_club || "District 3192"}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="space-y-0.5">
+                              {org.president_name ? (
+                                <span className="font-bold text-gray-900 block">{org.president_name}</span>
+                              ) : (
+                                <span className="text-gray-400 italic">No president listed</span>
+                              )}
+                              {org.contact_email && (
+                                <a href={`mailto:${org.contact_email}`} className="text-[11px] text-[#1e9df1] hover:underline block truncate max-w-[180px]">
+                                  {org.contact_email}
+                                </a>
+                              )}
+                              {org.president_phone && (
+                                <span className="text-[10px] text-gray-500 block font-mono">{org.president_phone}</span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-bold text-gray-800">
+                              {org.event_count || 0} Events
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span
+                              className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                org.kyc_status === "VERIFIED" || org.is_verified
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : org.kyc_status === "REJECTED"
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              ● {org.kyc_status || (org.is_verified ? "VERIFIED" : "PENDING")}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditClub(org)}
+                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteClub(org.id, org.name)}
+                              className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
+                            >
+                              Archive
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1941,7 +2407,7 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "480px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto"
+            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -2039,7 +2505,178 @@ export function SuperAdminDashboardClient({
         </div>
       )}
 
-      {/* ── BULK EMAIL BROADCAST MODAL ────────────────────────────────────── */}
+      {/* ── ADD / EDIT DISTRICT 3192 CLUB MODAL ────────────────────────── */}
+      {isEditClubOpen && (
+        <div
+          onClick={() => setIsEditClubOpen(false)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: "560px" }}
+            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                  DISTRICT 3192 DIRECTORY
+                </span>
+                <h3 className="text-xl font-black text-gray-900">
+                  {editingClub ? "Edit Club Details" : "Add New Rotaract Club"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditClubOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {clubError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
+                {clubError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveClubSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  Club Official Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Rotaract Club of Bengaluru Central"
+                  value={clubForm.name}
+                  onChange={(e) => setClubForm({ ...clubForm, name: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                    District Zone *
+                  </label>
+                  <select
+                    value={clubForm.zone}
+                    onChange={(e) => setClubForm({ ...clubForm, zone: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white cursor-pointer"
+                  >
+                    <option value="Taranga">Zone Taranga</option>
+                    <option value="Varuna">Zone Varuna</option>
+                    <option value="Samudhra">Zone Samudhra</option>
+                    <option value="Sagara">Zone Sagara</option>
+                    <option value="Pravaha">Zone Pravaha</option>
+                    <option value="Arnava">Zone Arnava</option>
+                    <option value="District 3192">District 3192 Council</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                    Club Base Type *
+                  </label>
+                  <select
+                    value={clubForm.clubType}
+                    onChange={(e) => setClubForm({ ...clubForm, clubType: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white cursor-pointer"
+                  >
+                    <option value="Community Based">Community Based</option>
+                    <option value="Institution Based">Institution / College</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                    Partner Rotary Club
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bangalore West"
+                    value={clubForm.partnerClub}
+                    onChange={(e) => setClubForm({ ...clubForm, partnerClub: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                    Official Club Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="rotaract@gmail.com"
+                    value={clubForm.contactEmail}
+                    onChange={(e) => setClubForm({ ...clubForm, contactEmail: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* President Details */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 block">
+                  Club President Details (Optional)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-1">President Name</label>
+                    <input
+                      type="text"
+                      placeholder="Rtr. John Doe"
+                      value={clubForm.presidentName}
+                      onChange={(e) => setClubForm({ ...clubForm, presidentName: e.target.value })}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      placeholder="9876543210"
+                      value={clubForm.presidentPhone}
+                      onChange={(e) => setClubForm({ ...clubForm, presidentPhone: e.target.value })}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-1">Email ID</label>
+                    <input
+                      type="email"
+                      placeholder="president@gmail.com"
+                      value={clubForm.presidentEmail}
+                      onChange={(e) => setClubForm({ ...clubForm, presidentEmail: e.target.value })}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditClubOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={clubSaving || !clubForm.name.trim()}
+                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {clubSaving ? <Loader2 size={14} className="animate-spin" /> : editingClub ? "Save Changes" : "Create Club"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <BulkEmailModal
         isOpen={isBulkEmailOpen}
         onClose={() => setIsBulkEmailOpen(false)}
@@ -2049,8 +2686,8 @@ export function SuperAdminDashboardClient({
 
       {/* ── SUPER ADMIN INTERACTIVE PHOTO REVIEW & APPROVAL MODAL ─────── */}
       {proofModalOrder && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in-50">
-          <div className="relative max-w-3xl w-full bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-left">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in-50">
+          <div className="relative max-w-3xl w-full bg-white rounded-3xl p-5 sm:p-8 shadow-2xl space-y-5 text-left max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>

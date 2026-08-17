@@ -30,7 +30,7 @@ export function EventCard({
   startDate,
   price,
   badge,
-  variant = "dark",
+  variant = "light",
 }: EventCardProps) {
   const [saved, setSaved] = useState(false);
 
@@ -46,7 +46,10 @@ export function EventCard({
   return (
     <article className="group flex flex-col gap-3 relative">
       {/* ── Photo Container ────────────────────────────────────────────── */}
-      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-gray-900 border border-white/10 shadow-md">
+      <Link
+        href={`/events/${slug}`}
+        className="block relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-gray-900 border border-gray-200/80 dark:border-white/10 shadow-sm group-hover:shadow-md transition-all duration-300"
+      >
         {thumbnailUrl ? (
           <Image
             src={thumbnailUrl}
@@ -56,8 +59,8 @@ export function EventCard({
             className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold bg-gradient-to-br from-gray-900 to-gray-800">
-            RotaSphere
+          <div className="w-full h-full flex items-center justify-center text-gray-400 font-black bg-gradient-to-br from-gray-900 to-gray-800 text-sm">
+            RotaSphere 3192
           </div>
         )}
 
@@ -75,9 +78,10 @@ export function EventCard({
           aria-label={saved ? "Remove from saved" : "Save event"}
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setSaved((v) => !v);
           }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center hover:scale-110 hover:bg-white/20 transition-all shadow-sm cursor-pointer"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center hover:scale-110 hover:bg-white/20 transition-all shadow-sm cursor-pointer z-10"
         >
           <Heart
             size={15}
@@ -94,22 +98,22 @@ export function EventCard({
             <Calendar size={11} className="text-amber-400" /> {formattedDate}
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* ── Content & Title ────────────────────────────────────────────── */}
-      <Link href={`/events/${slug}`} className="flex flex-col gap-1.5 focus:outline-hidden group-hover:opacity-90">
-        {/* Title */}
-        <h3 className={`font-bold text-base line-clamp-1 group-hover:text-amber-400 transition-colors ${isDark ? "text-white" : "text-gray-900"}`}>
+      <Link href={`/events/${slug}`} className="flex flex-col gap-1.5 focus:outline-hidden group-hover:opacity-95">
+        {/* Title — High contrast dark text visible at all times */}
+        <h3 className={`font-black text-base leading-snug line-clamp-1 transition-colors ${isDark ? "text-white group-hover:text-amber-400" : "text-gray-900 group-hover:text-[#1e9df1]"}`}>
           {title}
         </h3>
 
         {/* Location & Details */}
-        <div className="flex items-center justify-between text-xs text-gray-400">
+        <div className="flex items-center justify-between text-xs text-gray-500">
           <span className="flex items-center gap-1">
-            <MapPin size={13} className="text-amber-400/80" />
-            {city || "District 3192"}
+            <MapPin size={13} className="text-[#1e9df1]" />
+            <span className="font-medium text-gray-600">{city || "District 3192"}</span>
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 group-hover:translate-x-1 transition-transform">
+          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#1e9df1] group-hover:translate-x-0.5 transition-transform">
             Book Pass <ArrowRight size={12} />
           </span>
         </div>

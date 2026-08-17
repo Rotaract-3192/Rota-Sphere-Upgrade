@@ -37,6 +37,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
+import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 import type { EventFormat, TicketTierType } from "@/types/saas";
 
 interface CreateEventWizardModalProps {
@@ -44,6 +45,8 @@ interface CreateEventWizardModalProps {
   onClose: () => void;
   onSuccess: (slug: string) => void;
   eventToEdit?: any | null;
+  defaultClubName?: string;
+  defaultOrganizationId?: string;
 }
 
 const BANNER_PRESETS = [
@@ -54,20 +57,12 @@ const BANNER_PRESETS = [
   { label: "Corporate Speech", url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&auto=format&fit=crop&q=80" },
 ];
 
-const ROTARACT_CLUBS = [
-  "Rotaract Club of Bengaluru Central",
-  "Rotaract Club of Bangalore West",
-  "Rotaract Club of Koramangala",
-  "Rotaract Club of Indiranagar",
-  "Rotaract Club of Whitefield",
-  "Rotaract Club of Yelahanka",
-  "Rotaract Club of Tumakuru",
-  "Rotaract Club of Kolar Silk City",
-  "Rotaract Club of BMSCE",
-  "Rotaract Club of PES University",
-  "Rotaract Club of RVCE",
-  "Rotaract District 3192 Council",
-];
+const ROTARACT_CLUBS = Array.from(
+  new Set([
+    "Rotaract District 3192 Council",
+    ...DISTRICT_3192_CLUBS.map((c) => c.name),
+  ])
+).sort((a, b) => (a === "Rotaract District 3192 Council" ? -1 : b === "Rotaract District 3192 Council" ? 1 : a.localeCompare(b)));
 
 const CATEGORIES = [
   "Community Service",
@@ -80,7 +75,14 @@ const CATEGORIES = [
   "Workshops & Masterclasses",
 ];
 
-export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit }: CreateEventWizardModalProps) {
+export function CreateEventWizardModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  eventToEdit,
+  defaultClubName,
+  defaultOrganizationId,
+}: CreateEventWizardModalProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
   // Step 3: Event Settings
   const [priceModel, setPriceModel] = useState<"FREE" | "PAID">("FREE");
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
-  const [hostingClub, setHostingClub] = useState("Rotaract District 3192 Council");
+  const [hostingClub, setHostingClub] = useState(defaultClubName || "Rotaract District 3192 Council");
   const [locationDeliveryType, setLocationDeliveryType] = useState<"IN_PERSON" | "ONLINE" | "HYBRID">("IN_PERSON");
   const [upiId, setUpiId] = useState("rotaractdistrict3192@okaxis");
   const [upiPayeeName, setUpiPayeeName] = useState("Rotaract District 3192");
@@ -384,6 +386,7 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
     try {
       const fullAddress = `${streetAddress}, ${city}, ${stateRegion} ${pincode}, ${country}`;
       const payload: CreateEventInput = {
+        organizationId: defaultOrganizationId,
         title,
         slug,
         summary: tagline,
@@ -490,8 +493,8 @@ export function CreateEventWizardModal({ isOpen, onClose, onSuccess, eventToEdit
         </div>
 
         {/* ── 1. WIZARD STEP HEADER WITH CONNECTING LINES ──────────────── */}
-        <div className="bg-gray-50/70 border-b border-gray-100 px-6 sm:px-12 py-6">
-          <div className="flex items-center justify-between relative max-w-3xl mx-auto">
+        <div className="bg-gray-50/70 border-b border-gray-100 px-4 sm:px-12 py-4 sm:py-6 overflow-x-auto no-scrollbar">
+          <div className="flex items-center justify-between relative max-w-3xl min-w-[340px] sm:min-w-0 mx-auto">
             {stepMeta.map((s, idx) => {
               const isCompleted = currentStep > s.num;
               const isCurrent = currentStep === s.num;

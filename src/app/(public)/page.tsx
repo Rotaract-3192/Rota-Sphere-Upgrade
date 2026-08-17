@@ -25,33 +25,6 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-const INCLUDED_FEATURES = [
-  {
-    icon: Sparkles,
-    title: "World-Class Keynotes",
-    desc: "Inspirational sessions with global leaders, founder-Rotaractors, and changemakers.",
-    color: "bg-blue-50 text-[#1e9df1]",
-  },
-  {
-    icon: Ticket,
-    title: "Verified Delegate Passes",
-    desc: "Instant digital ticket confirmation with secure QR code verification.",
-    color: "bg-emerald-50 text-emerald-600",
-  },
-  {
-    icon: MapPin,
-    title: "Hospitality & Stay",
-    desc: "Organized accommodations, airport transfers, and meals for outstation delegates.",
-    color: "bg-amber-50 text-amber-600",
-  },
-  {
-    icon: Award,
-    title: "Certificates & Kits",
-    desc: "Exclusive Rotaract delegate merchandise, badges, and official certificates.",
-    color: "bg-purple-50 text-purple-600",
-  },
-];
-
 // Fetch real platform stats from DB
 async function getPlatformStats() {
   try {
@@ -228,41 +201,6 @@ export default async function HomePage() {
             title="Interactive Event Map & Venue Discovery"
             subtitle="Locate Rotaract conferences, conventions, and youth festivals across District 3192 on the map."
           />
-        </div>
-      </section>
-
-      {/* ── 5. WHAT'S INCLUDED ────────────────────────────────────────────── */}
-      <section className="bg-gray-50 border-t border-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-3">
-              <Sparkles size={14} /> Delegate Experience
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
-              What&apos;s Included
-            </h2>
-            <p className="text-gray-600 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
-              Every RotaSphere pass comes with a premium delegate experience built for Rotaract leaders.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {INCLUDED_FEATURES.map((feat, idx) => {
-              const Icon = feat.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-white border border-gray-100 hover:border-[#1e9df1]/30 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 group"
-                >
-                  <div className={`w-12 h-12 rounded-2xl ${feat.color} flex items-center justify-center mb-4`}>
-                    <Icon size={22} />
-                  </div>
-                  <h3 className="text-base font-bold text-gray-900 mb-2">{feat.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{feat.desc}</p>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </section>
 

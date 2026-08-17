@@ -20,8 +20,9 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const { data: orgsData } = await executeSql(`SELECT * FROM organizations ORDER BY created_at DESC;`);
-  const organizations = orgsData || [];
+  const { getDistrictClubsAction } = await import("@/app/actions/clubActions");
+  const clubsRes = await getDistrictClubsAction();
+  const organizations = clubsRes.data || [];
 
   const { data: eventsData } = await executeSql(`
     SELECT e.*, json_build_object('name', o.name) as organizations

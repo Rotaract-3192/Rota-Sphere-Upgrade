@@ -8,6 +8,7 @@ import type { Config } from "tailwindcss";
 // Colors: Rausch (#ff385c) as single brand voltage
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -86,29 +87,13 @@ const config: Config = {
       },
 
       // ── BORDER RADIUS ────────────────────────────────────────────────────
-      // DESIGN-airbnb.md §rounded
-      // No hard corners anywhere except the body grid
       borderRadius: {
-        "none":  "0px",
-        "xs":    "4px",
-        "sm":    "8px",    // buttons, inputs
         "card":  "14px",   // property/event cards
-        "lg":    "20px",
-        "xl":    "32px",   // category strip pills
-        "full":  "9999px", // search bar, orb, avatar
       },
 
       // ── SPACING ──────────────────────────────────────────────────────────
-      // DESIGN-airbnb.md §spacing (4px base unit)
       spacing: {
-        "xxs":     "2px",
-        "xs":      "4px",
-        "sm":      "8px",
-        "md":      "12px",
         "base":    "16px",
-        "lg":      "24px",
-        "xl":      "32px",
-        "xxl":     "48px",
         "section": "64px",  // major section vertical padding
       },
 

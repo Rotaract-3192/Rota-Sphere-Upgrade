@@ -7,9 +7,10 @@ import { LayoutGrid, MapPin } from "lucide-react";
 
 interface EventsPageClientProps {
   events: any[];
+  clubName?: string;
 }
 
-export function EventsPageClient({ events }: EventsPageClientProps) {
+export function EventsPageClient({ events, clubName }: EventsPageClientProps) {
   const [viewMode, setViewMode] = useState<"GRID" | "MAP">("GRID");
 
   return (
@@ -18,11 +19,15 @@ export function EventsPageClient({ events }: EventsPageClientProps) {
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight">
-            {viewMode === "GRID" ? "All Event Listings" : "Interactive Event Map"}
+            {clubName
+              ? `Events Hosted by ${clubName}`
+              : viewMode === "GRID"
+              ? "All Event Listings"
+              : "Interactive Event Map"}
           </h2>
           <p className="text-xs text-gray-500">
             {viewMode === "GRID"
-              ? `Showing ${events.length} published events`
+              ? `Showing ${events.length} published event${events.length === 1 ? "" : "s"}`
               : "Locate events and venues on the interactive map"}
           </p>
         </div>

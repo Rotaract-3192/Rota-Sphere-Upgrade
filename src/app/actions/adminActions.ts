@@ -208,17 +208,20 @@ async function ensureOrganizerRequestsTable() {
       user_name VARCHAR(255) NOT NULL,
       user_email VARCHAR(255) NOT NULL,
       club_name VARCHAR(255) NOT NULL,
+      organization_id VARCHAR(255),
       position VARCHAR(255) NOT NULL,
       reason TEXT NOT NULL,
       status VARCHAR(50) DEFAULT 'PENDING',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE organizer_access_requests ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255);
   `);
 }
 
 export async function submitOrganizerAccessRequestAction(data: {
   clubName: string;
+  organizationId?: string;
   position: string;
   reason: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -236,13 +239,23 @@ export async function submitOrganizerAccessRequestAction(data: {
       return { success: false, error: "You already have a pending organizer access request under review by the District Admin." };
     }
 
+    // Resolve organization ID if not explicitly passed
+    let orgId = data.organizationId;
+    if (!orgId && data.clubName) {
+      const orgRes = await executeSql(`
+        SELECT id FROM organizations WHERE name ILIKE ${escapeSql(data.clubName.trim())} LIMIT 1;
+      `);
+      orgId = orgRes.data?.[0]?.id;
+    }
+
     await executeSql(`
-      INSERT INTO organizer_access_requests (user_id, user_name, user_email, club_name, position, reason, status)
+      INSERT INTO organizer_access_requests (user_id, user_name, user_email, club_name, organization_id, position, reason, status)
       VALUES (
         ${escapeSql(user.clerkId)},
         ${escapeSql(user.profile.full_name || user.email)},
         ${escapeSql(user.email)},
         ${escapeSql(data.clubName)},
+        ${escapeSql(orgId || null)},
         ${escapeSql(data.position)},
         ${escapeSql(data.reason)},
         'PENDING'
@@ -294,8 +307,20 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
       WHERE id = ${escapeSql(req.user_id)};
     `);
 
-    const orgRes = await executeSql(`SELECT id FROM organizations ORDER BY created_at ASC LIMIT 1;`);
-    const orgId = orgRes.data?.[0]?.id;
+    // Find the matching club organization
+    let orgId = req.organization_id;
+    if (!orgId && req.club_name) {
+      const findOrg = await executeSql(`
+        SELECT id FROM organizations WHERE name ILIKE ${escapeSql(req.club_name.trim())} LIMIT 1;
+      `);
+      orgId = findOrg.data?.[0]?.id;
+    }
+
+    if (!orgId) {
+      const fallbackOrg = await executeSql(`SELECT id FROM organizations ORDER BY created_at ASC LIMIT 1;`);
+      orgId = fallbackOrg.data?.[0]?.id;
+    }
+
     if (orgId) {
       await executeSql(`
         INSERT INTO organization_members (organization_id, user_id, role, created_at)
@@ -311,7 +336,7 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
       action: "ORGANIZER_REQUEST_APPROVED",
       entityType: "USER",
       entityId: req.user_id,
-      newState: { role: "organizer", club: req.club_name },
+      newState: { role: "organizer", club: req.club_name, organization_id: orgId },
     });
 
     revalidatePath("/admin");

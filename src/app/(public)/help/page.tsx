@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search, HelpCircle, Ticket, QrCode, ShieldCheck, RefreshCw, Mail, ArrowRight } from "lucide-react";
+import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
 
 export const metadata = {
   title: "Help Centre & Support | RotaSphere District 3192",
@@ -75,26 +76,29 @@ const FAQS = [
 
 export default function HelpPage() {
   return (
-    <main className="min-h-screen bg-gray-50 pb-20">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 transition-colors">
       {/* Hero Search Header */}
       <section className="bg-gray-900 text-white py-14 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
-        <div className="max-w-3xl mx-auto space-y-6 relative z-10 flex flex-col items-center justify-center">
-          <span className="text-xs font-black uppercase tracking-widest text-[#60a5fa] inline-flex items-center gap-1.5 justify-center">
-            <HelpCircle size={14} /> District 3192 Support Hub
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight w-full text-center block">
+        <div className="w-full max-w-3xl mx-auto space-y-5 relative z-10">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#60a5fa] text-xs font-black uppercase tracking-widest">
+              <HelpCircle size={14} /> District 3192 Support Hub
+            </div>
+            <LastUpdatedBadge date={new Date()} label="Help articles updated" />
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
             How can we help you today?
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 w-full max-w-xl mx-auto text-center block leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
             Find instant answers for delegate pass bookings, UPI payment verification, gate check-in scanning, and organizer access.
           </p>
 
-          <div className="w-full max-w-xl mx-auto relative">
-            <Search size={18} className="absolute left-4 top-3.5 text-gray-400 pointer-events-none" />
+          <div className="max-w-xl mx-auto relative pt-2">
+            <Search size={18} className="absolute left-4.5 top-6 text-gray-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Search help topics (e.g. UTR payment, download pass, organizer access)..."
-              className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-11 pr-4 py-3.5 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-[#1e9df1] block"
+              className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-12 pr-4 py-4 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/30 transition-all shadow-inner"
             />
           </div>
         </div>
@@ -106,19 +110,19 @@ export default function HelpPage() {
           {FAQS.map((cat, idx) => {
             const Icon = cat.icon;
             return (
-              <div key={idx} className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div key={idx} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-blue-50 text-[#1e9df1] rounded-2xl flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 bg-blue-50 dark:bg-blue-950/40 text-[#1e9df1] rounded-2xl flex items-center justify-center shrink-0">
                     <Icon size={22} />
                   </div>
-                  <h2 className="text-lg font-black text-gray-900">{cat.category}</h2>
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white">{cat.category}</h2>
                 </div>
 
-                <div className="space-y-4 divide-y divide-gray-100">
+                <div className="space-y-4 divide-y divide-gray-100 dark:divide-gray-800">
                   {cat.questions.map((faq, fIdx) => (
                     <div key={fIdx} className={fIdx > 0 ? "pt-4 space-y-1.5" : "space-y-1.5"}>
-                      <h3 className="text-xs sm:text-sm font-bold text-gray-900 leading-snug w-full block">{faq.q}</h3>
-                      <p className="text-xs text-gray-600 leading-relaxed w-full block">{faq.a}</p>
+                      <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug w-full block">{faq.q}</h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed w-full block">{faq.a}</p>
                     </div>
                   ))}
                 </div>
@@ -146,3 +150,4 @@ export default function HelpPage() {
     </main>
   );
 }
+

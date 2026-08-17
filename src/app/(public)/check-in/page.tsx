@@ -301,12 +301,12 @@ function CheckInScannerContent() {
         {/* ── 1. TOP HEADER & NAVIGATION BAR ─────────────────────────────── */}
         <header className="bg-[#121721] border border-gray-800/80 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-md bg-white shrink-0">
+            <div className="relative w-14 h-14 shrink-0">
               <Image
                 src="/brand/logo.png"
                 alt="Rotaract District 3192 Ticketing Logo"
                 fill
-                className="object-contain p-1"
+                className="object-contain"
                 priority
               />
             </div>

@@ -5,6 +5,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
 
 const FOOTER_COLUMNS = [
   {
@@ -32,6 +34,7 @@ const FOOTER_COLUMNS = [
     links: [
       { label: "About Us", href: "/about" },
       { label: "District 3192", href: "/district" },
+      { label: "Clubs Directory", href: "/clubs" },
       { label: "Events Discovery", href: "/events" },
       { label: "Photo Gallery", href: "/gallery" },
       { label: "Careers", href: "/careers" },
@@ -49,8 +52,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Info Column */}
           <div className="space-y-3">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="relative w-11 h-11 shrink-0 rounded-2xl overflow-hidden shadow-xs bg-white">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative w-12 h-12 shrink-0 group-hover:scale-105 transition-transform">
                 <Image
                   src="/brand/logo.png"
                   alt="Rotaract District 3192 Ticketing Logo"
@@ -94,26 +97,33 @@ export function Footer() {
       </div>
 
       {/* ── Legal band ──────────────────────────────────────────────────── */}
-      <div className="border-t border-gray-200 bg-white">
+      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
             <span>© {year} RotaSphere, Inc.</span>
             <span>·</span>
-            <Link href="/privacy" className="hover:underline text-gray-600">
+            <Link href="/privacy" className="hover:underline text-gray-600 dark:text-gray-300">
               Privacy
             </Link>
             <span>·</span>
-            <Link href="/terms" className="hover:underline text-gray-600">
+            <Link href="/privacy-center" className="hover:underline text-gray-600 dark:text-gray-300 font-medium">
+              Privacy Center
+            </Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:underline text-gray-600 dark:text-gray-300">
               Terms
             </Link>
             <span>·</span>
-            <Link href="/sitemap.xml" className="hover:underline text-gray-600">
+            <Link href="/sitemap.xml" className="hover:underline text-gray-600 dark:text-gray-300">
               Sitemap
             </Link>
+            <span>·</span>
+            <LastUpdatedBadge label="Directory verified" />
           </div>
 
-          {/* Social icons */}
-          <div className="flex items-center gap-4 text-gray-500">
+          {/* Social icons & Theme toggle */}
+          <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
+            <ThemeToggle />
             <a
               href="https://facebook.com/rotasphere"
               target="_blank"

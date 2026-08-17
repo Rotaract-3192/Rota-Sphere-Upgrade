@@ -1,32 +1,111 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { ShieldAlert, Send, CheckCircle2, Clock, XCircle, Loader2, ArrowLeft, Building2, User, FileText } from "lucide-react";
+import { 
+  ShieldAlert, Send, CheckCircle2, Clock, XCircle, Loader2, ArrowLeft, 
+  Building2, User, FileText, Search, ChevronDown, Check, Sparkles 
+} from "lucide-react";
 import { submitOrganizerAccessRequestAction } from "@/app/actions/adminActions";
+import { getDistrictClubsAction, ClubRecord } from "@/app/actions/clubActions";
+import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 
 interface ApplyOrganizerClientProps {
   user: any;
   existingRequest?: any;
 }
 
+const COMMON_POSITIONS = [
+  "Club President",
+  "Club Secretary",
+  "Vice President",
+  "Event Chair",
+  "Treasurer",
+  "Director of International Service",
+  "Director of Community Service",
+  "Director of Club Service",
+  "Director of Professional Development",
+  "District Official / ZRR",
+];
+
 export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerClientProps) {
-  const [clubName, setClubName] = useState("");
+  const [clubs, setClubs] = useState<ClubRecord[]>([]);
+  const [loadingClubs, setLoadingClubs] = useState(true);
+
+  const [clubSearch, setClubSearch] = useState("");
+  const [selectedClub, setSelectedClub] = useState<ClubRecord | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [position, setPosition] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentReq, setCurrentReq] = useState(existingRequest || null);
 
+  useEffect(() => {
+    async function loadClubs() {
+      try {
+        const res = await getDistrictClubsAction();
+        if (res.success && res.data && res.data.length > 0) {
+          setClubs(res.data);
+        } else {
+          // Fallback to static district list
+          const staticList: ClubRecord[] = DISTRICT_3192_CLUBS.map((c, i) => ({
+            id: `club-${i}`,
+            name: c.name,
+            slug: c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            zone: c.zone,
+            club_type: c.clubType,
+            partner_club: c.partnerClub,
+            contact_email: c.clubEmail,
+            president_name: c.presidentName || "",
+            president_phone: c.presidentPhone || "",
+            president_email: c.presidentEmail || "",
+            status: "ACTIVE",
+            is_verified: true,
+          }));
+          setClubs(staticList);
+        }
+      } catch (err) {
+        console.error("Failed to load clubs list:", err);
+      } finally {
+        setLoadingClubs(false);
+      }
+    }
+    loadClubs();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredClubs = useMemo(() => {
+    if (!clubSearch.trim()) return clubs;
+    const q = clubSearch.toLowerCase();
+    return clubs.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.zone.toLowerCase().includes(q)
+    );
+  }, [clubs, clubSearch]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clubName.trim() || !position.trim() || !reason.trim()) return;
+    const finalClubName = selectedClub ? selectedClub.name : clubSearch.trim();
+    if (!finalClubName || !position.trim() || !reason.trim()) return;
 
     setLoading(true);
     setStatusMessage(null);
 
     const res = await submitOrganizerAccessRequestAction({
-      clubName: clubName.trim(),
+      clubName: finalClubName,
+      organizationId: selectedClub?.id,
       position: position.trim(),
       reason: reason.trim(),
     });
@@ -36,10 +115,10 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
     if (res.success) {
       setStatusMessage({
         type: "success",
-        text: "Your organizer access request has been submitted to the District 3192 Super Admin!",
+        text: "Your organizer access request has been submitted to District 3192 Super Admin!",
       });
       setCurrentReq({
-        club_name: clubName,
+        club_name: finalClubName,
         position,
         reason,
         status: "PENDING",
@@ -68,7 +147,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                 Host Event Access Required
               </h1>
               <p className="text-xs sm:text-sm text-gray-400">
-                District 3192 Event Management Portal
+                District 3192 Official Club &amp; Event Management Portal
               </p>
             </div>
             <Link
@@ -123,7 +202,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                   <div className="w-full text-center space-y-2">
                     <h3 className="text-xl font-extrabold text-emerald-900 text-center w-full block">Organizer Access Approved!</h3>
                     <p className="text-xs sm:text-sm text-emerald-800 w-full max-w-md mx-auto text-center block leading-relaxed">
-                      Your account has been granted organizer privileges. Please refresh the page to open your Organizer Hub.
+                      Your account has been granted organizer privileges for your club. Please refresh the page to open your Organizer Hub.
                     </p>
                   </div>
                   <button
@@ -153,7 +232,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
               <div className="space-y-1">
                 <h2 className="text-lg font-black text-gray-900">Apply for Rotaract Organizer Rights</h2>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Only authorized Rotaract Club Presidents, Secretaries, and District Event Chairs can publish events and collect registrations on RotaSphere.
+                  Select your chartered Rotaract Club from the District 3192 Directory to request event publishing and registration collection rights.
                 </p>
               </div>
 
@@ -170,24 +249,92 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                    Rotaract / Rotary Club Name *
-                  </label>
-                  <div className="relative">
-                    <Building2 size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* ── Searchable Club Dropdown ── */}
+                <div ref={dropdownRef} className="relative">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Select District 3192 Club *
+                    </label>
+                    <span className="text-[10px] font-bold text-gray-400">
+                      {clubs.length > 0 ? `${clubs.length} Verified Clubs` : "Loading..."}
+                    </span>
+                  </div>
+
+                  <div 
+                    onClick={() => setIsDropdownOpen(true)}
+                    className={`w-full bg-gray-50 border ${
+                      isDropdownOpen ? "border-[#1e9df1] bg-white ring-2 ring-[#1e9df1]/10" : "border-gray-200"
+                    } rounded-2xl pl-10 pr-10 py-3 text-xs font-bold text-gray-900 flex items-center cursor-pointer transition-all relative`}
+                  >
+                    <Building2 size={16} className="absolute left-3.5 text-gray-400" />
+                    
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Rotaract Club of Koramangala / Bangalore West"
-                      value={clubName}
-                      onChange={(e) => setClubName(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1] focus:bg-white transition-all"
+                      placeholder={loadingClubs ? "Loading District 3192 clubs..." : "Search club by name or zone (e.g. Koramangala, Bangalore West)..."}
+                      value={selectedClub ? selectedClub.name : clubSearch}
+                      onChange={(e) => {
+                        setSelectedClub(null);
+                        setClubSearch(e.target.value);
+                        setIsDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsDropdownOpen(true)}
+                      className="w-full bg-transparent outline-none text-xs font-bold text-gray-900 placeholder:text-gray-400"
                     />
+
+                    <ChevronDown size={16} className={`absolute right-3.5 text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
                   </div>
+
+                  {/* Dropdown Options */}
+                  {isDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl border border-gray-200 shadow-xl max-h-64 overflow-y-auto z-50 p-2 space-y-1">
+                      {filteredClubs.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-gray-500">
+                          <p className="font-semibold">No registered club found matching &quot;{clubSearch}&quot;.</p>
+                          <p className="text-[11px] text-gray-400 mt-1">You can still submit with this club name for super admin review.</p>
+                        </div>
+                      ) : (
+                        filteredClubs.map((club) => {
+                          const isSelected = selectedClub?.id === club.id || selectedClub?.name === club.name;
+                          return (
+                            <button
+                              key={club.id || club.name}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClub(club);
+                                setClubSearch(club.name);
+                                setIsDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                                isSelected 
+                                  ? "bg-blue-50 text-[#1e9df1] font-bold" 
+                                  : "hover:bg-gray-50 text-gray-800 font-medium"
+                              }`}
+                            >
+                              <div className="space-y-0.5 pr-2">
+                                <p className="font-bold leading-tight">{club.name}</p>
+                                <p className="text-[10px] text-gray-500">
+                                  Zone {club.zone} · {club.club_type || "Community Based"}
+                                </p>
+                              </div>
+                              {isSelected && <Check size={14} className="text-[#1e9df1] shrink-0" />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {selectedClub && (
+                    <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold">
+                      <Sparkles size={13} className="shrink-0" />
+                      <span>Verified District 3192 Club (Zone {selectedClub.zone})</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* ── Position Selection / Input ── */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
                     Your Official Designation / Role *
@@ -203,8 +350,27 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                       className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1] focus:bg-white transition-all"
                     />
                   </div>
+
+                  {/* Preset Position Pills */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {COMMON_POSITIONS.slice(0, 5).map((pos) => (
+                      <button
+                        key={pos}
+                        type="button"
+                        onClick={() => setPosition(pos)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          position === pos 
+                            ? "bg-[#1e9df1] text-white border-[#1e9df1]" 
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
+                        }`}
+                      >
+                        {pos}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
+                {/* ── Reason / Event Details ── */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
                     Proposed Event Details / Request Reason *
@@ -214,7 +380,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                     <textarea
                       required
                       rows={3}
-                      placeholder="Briefly describe the event you plan to host (e.g. District Cultural Fest, Sports Tournament, Blood Drive)..."
+                      placeholder="Briefly describe the upcoming event you plan to publish on RotaSphere (e.g. Annual District Cultural Fest, Sports Tournament, Community Blood Drive)..."
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1] focus:bg-white transition-all"
@@ -231,11 +397,11 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                   </Link>
                   <button
                     type="submit"
-                    disabled={loading || !clubName.trim() || !position.trim() || !reason.trim()}
+                    disabled={loading || (!selectedClub && !clubSearch.trim()) || !position.trim() || !reason.trim()}
                     className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-95"
                   >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
-                    Submit Request to Admin
+                    Submit Request to District Admin
                   </button>
                 </div>
               </form>

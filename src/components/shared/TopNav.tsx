@@ -10,11 +10,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton } from "@clerk/nextjs";
-import { Menu, X, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle } from "lucide-react";
+import { Menu, X, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { PushNotificationBell } from "@/components/shared/PushNotificationBell";
 
 const NAV_TABS = [
   { label: "Explore Events", href: "/events", icon: Calendar, isNew: false },
+  { label: "Clubs", href: "/clubs", icon: Users, isNew: false },
   { label: "My Tickets", href: "/tickets", icon: Ticket, isNew: false },
   { label: "Photo Gallery", href: "/gallery", icon: ImageIcon, isNew: true },
 ] as const;
@@ -41,7 +44,7 @@ export function TopNav() {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 h-16 sm:h-20 shadow-xs"
+      className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 h-16 sm:h-20 shadow-xs transition-colors"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-4">
 
@@ -51,7 +54,7 @@ export function TopNav() {
           className="flex items-center gap-3 group focus:outline-hidden"
           aria-label="RotaSphere home"
         >
-          <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-2xl overflow-hidden shadow-sm group-hover:scale-105 transition-transform bg-white">
+          <div className="relative w-11 h-11 sm:w-13 sm:h-13 shrink-0 group-hover:scale-105 transition-transform">
             <Image
               src="/brand/logo.png"
               alt="Rotaract District 3192 Ticketing Logo"
@@ -61,20 +64,22 @@ export function TopNav() {
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-black tracking-tight text-lg sm:text-xl text-gray-900 leading-none">
-              Rota<span className="text-[#0052ff]">Sphere</span>
-            </span>
-            <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#0052ff]">
-              District 3192
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-base sm:text-lg tracking-tight text-gray-900 dark:text-white">
+                RotaSphere
+              </span>
+              <span className="text-[10px] font-black text-[#1e9df1] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-1.5 py-0.2 rounded-md">
+                3192
+              </span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold -mt-0.5 hidden sm:block">
+              District 3192 Ticketing
             </span>
           </div>
         </Link>
 
-        {/* ── CENTER: Product Tabs (desktop) ──────────────────────────── */}
-        <nav
-          aria-label="Main navigation"
-          className="hidden md:flex items-center gap-8"
-        >
+        {/* ── CENTER: Desktop Navigation Tabs ─────────────────────────── */}
+        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 lg:gap-2">
           {NAV_TABS.map(({ label, href, icon: Icon, isNew }) => {
             const active = isActive(href);
             return (
@@ -82,26 +87,24 @@ export function TopNav() {
                 key={href}
                 href={href}
                 className={[
-                  "flex items-center gap-2 py-1 relative group transition-colors duration-150 text-sm font-bold",
-                  active ? "text-gray-950" : "text-gray-500 hover:text-gray-900",
+                  "relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all",
+                  active
+                    ? "text-[#1e9df1] bg-blue-50/80 dark:bg-blue-950/40"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800",
                 ].join(" ")}
-                aria-current={active ? "page" : undefined}
               >
-                <Icon size={18} strokeWidth={active ? 2.2 : 1.75} className={active ? "text-[#1e9df1]" : "text-gray-400 group-hover:text-gray-700"} />
+                <Icon size={16} className={active ? "text-[#1e9df1]" : "text-gray-400"} />
                 <span>{label}</span>
-
                 {isNew && (
-                  <span className="bg-blue-50 border border-blue-200 text-[#1e9df1] rounded-full px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wider leading-none">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 rounded-full px-1.5 py-0.2">
                     NEW
                   </span>
                 )}
-
-                {/* Active underline */}
                 {active && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute -bottom-2 left-0 right-0 h-0.5 bg-[#1e9df1] rounded-full"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  <motion.div
+                    layoutId="activeNavIndicator"
+                    className="absolute bottom-0 inset-x-3.5 h-0.5 bg-[#1e9df1] rounded-full"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
               </Link>
@@ -109,25 +112,30 @@ export function TopNav() {
           })}
         </nav>
 
-        {/* ── RIGHT: Account utilities & Actions ───────────────────────── */}
-        <div className="flex items-center gap-3">
+        {/* ── RIGHT: Actions & User Button ─────────────────────────────── */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Dark Mode Toggle */}
+          <ThemeToggle />
+          {/* Push Notifications Bell */}
+          <PushNotificationBell />
+
           {/* Admin panel link */}
           {isAdminUser && (
             <Link
               href="/admin"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-xl transition-all shadow-xs"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors"
             >
               <Shield size={14} className="text-amber-700" />
-              Admin Hub
+              <span>Admin</span>
             </Link>
           )}
 
           {/* Host an Event CTA */}
           <Link
             href="/dashboard"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-800 hover:text-gray-950 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors"
           >
-            <PlusCircle size={16} className="text-gray-600" />
+            <PlusCircle size={16} className="text-gray-600 dark:text-gray-300" />
             Host Event
           </Link>
 
@@ -156,7 +164,7 @@ export function TopNav() {
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

@@ -1,6 +1,6 @@
 import { executeSql } from "@/lib/db/directDb";
 import { EventsPageClient } from "@/components/events/EventsPageClient";
-import { Search, Sparkles, Filter, MapPin } from "lucide-react";
+import { Search, Sparkles, Filter, MapPin, Users, X, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -11,18 +11,37 @@ export const metadata = {
 interface PageProps {
   searchParams: Promise<{
     q?: string;
+    search?: string;
+    club?: string;
+    club_id?: string;
+    club_slug?: string;
     category?: string;
     city?: string;
     format?: string;
   }>;
 }
 
-export default async function EventsPage({ searchParams }: PageProps) {
-  const { q, category, city, format } = await searchParams;
+function escapeSql(str: string | null | undefined): string {
+  if (str === null || str === undefined) return "NULL";
+  return String(str).replace(/'/g, "''");
+}
 
-  // Build query
+export default async function EventsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const q = params.q || params.search || "";
+  const clubName = params.club || "";
+  const clubId = params.club_id || "";
+  const clubSlug = params.club_slug || "";
+  const category = params.category || "";
+  const city = params.city || "";
+  const format = params.format || "";
+
+  // Build query with organizations join
   let sql = `
     SELECT e.*, 
+      o.name as organization_name,
+      o.slug as organization_slug,
+      o.zone as organization_zone,
       COALESCE(
         json_agg(
           json_build_object(
@@ -35,16 +54,36 @@ export default async function EventsPage({ searchParams }: PageProps) {
         '[]'
       ) as saas_ticket_tiers
     FROM saas_events e
+    LEFT JOIN organizations o ON e.organization_id = o.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
     WHERE e.status = 'PUBLISHED'
   `;
 
-  if (category) sql += ` AND e.category_id = '${category}'`;
-  if (city) sql += ` AND e.city ILIKE '%${city}%'`;
-  if (format) sql += ` AND e.event_type = '${format.toUpperCase()}'`;
-  if (q) sql += ` AND (e.title ILIKE '%${q}%' OR e.description ILIKE '%${q}%' OR e.city ILIKE '%${q}%')`;
+  if (category) sql += ` AND (e.category_id = '${escapeSql(category)}' OR e.category = '${escapeSql(category)}')`;
+  if (city) sql += ` AND e.city ILIKE '%${escapeSql(city)}%'`;
+  if (format) sql += ` AND e.event_type = '${escapeSql(format.toUpperCase())}'`;
 
-  sql += ` GROUP BY e.id ORDER BY e.start_date ASC;`;
+  // Specific Club Filter
+  if (clubId && (clubId.startsWith("org-") || clubId.length > 5)) {
+    sql += ` AND (e.organization_id = '${escapeSql(clubId)}' OR o.name ILIKE '%${escapeSql(clubName || clubId)}%')`;
+  } else if (clubName) {
+    sql += ` AND (o.name ILIKE '%${escapeSql(clubName)}%' OR e.title ILIKE '%${escapeSql(clubName)}%' OR e.summary ILIKE '%${escapeSql(clubName)}%')`;
+  } else if (clubSlug) {
+    sql += ` AND (o.slug = '${escapeSql(clubSlug)}')`;
+  }
+
+  // General text search
+  if (q && !clubName) {
+    sql += ` AND (
+      e.title ILIKE '%${escapeSql(q)}%' 
+      OR e.description ILIKE '%${escapeSql(q)}%' 
+      OR e.city ILIKE '%${escapeSql(q)}%'
+      OR o.name ILIKE '%${escapeSql(q)}%'
+      OR e.venue_name ILIKE '%${escapeSql(q)}%'
+    )`;
+  }
+
+  sql += ` GROUP BY e.id, o.name, o.slug, o.zone ORDER BY e.start_date ASC;`;
 
   const { data: events } = await executeSql(sql);
 
@@ -67,12 +106,32 @@ export default async function EventsPage({ searchParams }: PageProps) {
               <Sparkles size={14} /> District 3192 Ticketing Engine
             </span>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-              Discover Verified Events &amp; Passes
+              {clubName ? `${clubName} Events` : "Discover Verified Events & Passes"}
             </h1>
             <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-              Secure entry passes for flagship Rotaract conferences, cultural nights, and community initiatives.
+              {clubName
+                ? `Browse official events, delegate passes, and registrations hosted by ${clubName}.`
+                : "Secure entry passes for flagship Rotaract conferences, cultural nights, and community initiatives."}
             </p>
           </div>
+
+          {/* Active Club Filter Pill / Banner */}
+          {(clubName || clubId) && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1e9df1]/15 border border-[#1e9df1]/30 rounded-2xl p-4 text-xs text-white max-w-2xl">
+              <div className="flex items-center gap-2.5">
+                <Users size={18} className="text-[#60a5fa] shrink-0" />
+                <span>
+                  Filtering events organized by: <strong className="text-white font-bold">{clubName || "Chartered Club"}</strong>
+                </span>
+              </div>
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1.5 rounded-xl transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+              >
+                <ArrowLeft size={13} /> View All District Events
+              </Link>
+            </div>
+          )}
 
           {/* Search Bar */}
           <form method="GET" action="/events" className="max-w-2xl flex gap-2">
@@ -98,7 +157,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
           {categories && categories.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
               <Link
-                href="/events"
+                href={clubName ? `/events?club=${encodeURIComponent(clubName)}` : "/events"}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                   !category ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
                 }`}
@@ -108,7 +167,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
               {categories.map((cat: any) => (
                 <Link
                   key={cat.id}
-                  href={`/events?category=${cat.id}`}
+                  href={`/events?category=${cat.id}${clubName ? `&club=${encodeURIComponent(clubName)}` : ""}`}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                     category === cat.id ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
                   }`}
@@ -123,7 +182,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
       {/* ── EVENT LISTINGS & INTERACTIVE MAP DISCOVERY ───────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        <EventsPageClient events={(events as any) || []} />
+        <EventsPageClient events={(events as any) || []} clubName={clubName} />
       </section>
     </main>
   );

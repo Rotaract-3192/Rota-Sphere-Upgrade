@@ -16,6 +16,7 @@ import {
   X,
   ShieldCheck,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Loader2,
   Lock,
@@ -32,8 +33,10 @@ import {
   Upload,
   Trash2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
+import { SlideToPayButton } from "./SlideToPayButton";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import Link from "next/link";
 import Image from "next/image";
@@ -329,12 +332,12 @@ export function CheckoutModal({
         <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
 
           <div className="flex items-center gap-3.5 relative z-10">
-            <div className="relative w-10 h-10 rounded-2xl overflow-hidden shadow-xs bg-white shrink-0">
+            <div className="relative w-12 h-12 shrink-0">
               <Image
                 src="/brand/logo.png"
                 alt="Rotaract District 3192 Ticketing Logo"
                 fill
-                className="object-contain p-0.5"
+                className="object-contain"
                 priority
               />
             </div>
@@ -387,35 +390,68 @@ export function CheckoutModal({
             </div>
           </div>
         ) : checkoutStep === "SUCCESS" ? (
-          /* ── 2. SUCCESS CONFIRMATION STATE ─────────────────────────────── */
-          <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
-              <CheckCircle2 size={36} />
+          /* ── 2. SUCCESS CONFIRMATION STATE WITH ANIMATED GREEN TICK ─────── */
+          <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6 animate-in zoom-in-95 duration-300">
+            <div className="relative">
+              {/* Glowing emerald ambient halo */}
+              <div className="absolute inset-0 bg-emerald-500/30 rounded-full blur-xl animate-pulse" />
+              
+              {/* Animated green circle with checkmark */}
+              <motion.div
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                className="relative w-20 h-20 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-50 dark:ring-emerald-950/50 shrink-0"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <Check size={44} className="stroke-[3.5]" />
+                </motion.div>
+              </motion.div>
             </div>
 
             <div className="w-full text-center space-y-3 block">
-              <h3 className="text-2xl font-black text-gray-900 text-center w-full block">
-                {completedOrder?.isFree ? "Registration Confirmed!" : "UPI Payment Submitted!"}
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black uppercase tracking-wider">
+                <span>✓ TICKET SUBMITTED FOR VERIFICATION</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight text-center w-full block">
+                {completedOrder?.isFree ? "Registration Confirmed!" : "Ticket Submitted Successfully!"}
               </h3>
+              
               <p className="text-xs sm:text-sm text-gray-600 text-center w-full max-w-md mx-auto block leading-relaxed">
                 {completedOrder?.isFree
                   ? "Your complimentary entry pass has been issued and is available in your passes dashboard."
-                  : `Your UTR reference (${upiTransactionId || "Submitted"}) has been dispatched to the event organizer for verification. Passes will be confirmed once approved.`}
+                  : `Your payment reference (${upiTransactionId || "UTR Submitted"}) has been dispatched to the event organizer for verification. Your scannable QR pass will unlock once approved.`}
               </p>
-              <div className="pt-2 w-full flex justify-center">
-                <span className="inline-block bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-700 text-center">
+
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                <span className="bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-800">
                   Order Ref: {completedOrder?.orderNumber}
+                </span>
+                <span className="bg-blue-50 text-[#1e9df1] border border-blue-200 px-3.5 py-2 rounded-xl text-xs font-extrabold">
+                  Status: PENDING APPROVAL
                 </span>
               </div>
             </div>
 
-            <div className="w-full max-w-sm mx-auto pt-2 flex items-center justify-center">
+            <div className="w-full max-w-sm mx-auto pt-2 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/tickets"
-                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center block"
+                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
               >
-                View My Passes &amp; Status <ArrowRight size={15} />
+                View My Passes <ArrowRight size={15} />
               </Link>
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3.5 px-5 rounded-2xl transition-colors cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
 
@@ -575,23 +611,22 @@ export function CheckoutModal({
               </div>
             </div>
 
-            {/* Navigation / Submit Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            {/* Navigation / Submit Slider */}
+            <div className="space-y-3 pt-2">
               <button
                 type="button"
                 onClick={() => setCheckoutStep("SELECT_PASSES")}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-3.5 rounded-2xl text-xs transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 font-bold transition-colors cursor-pointer"
               >
-                Back
+                <ArrowLeft size={14} /> Back to Pass Selection
               </button>
-              <button
-                type="button"
+
+              <SlideToPayButton
+                onSuccess={() => handleSubmitOrder(upiTransactionId)}
+                label={loading ? "Submitting..." : "Slide to Submit Ticket for Approval"}
                 disabled={loading || !upiTransactionId.trim()}
-                onClick={() => handleSubmitOrder(upiTransactionId)}
-                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : "Submit Payment for Approval"}
-              </button>
+                loading={loading}
+              />
             </div>
           </div>
         ) : (
@@ -1006,22 +1041,23 @@ export function CheckoutModal({
               </div>
             </div>
 
-            {/* Action Button */}
-            <button
-              type="button"
-              disabled={loading || totalTicketCount === 0}
-              onClick={handleProceedToPayment}
-              className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm py-4 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-            >
-              {loading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : isFreeOrder ? (
-                "Confirm Free Registration"
-              ) : (
-                `Proceed to Dynamic UPI Payment • ₹${fees.totalPayable.toFixed(2)}`
-              )}
-              <ArrowRight size={16} />
-            </button>
+            {/* Proceed Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                disabled={loading || totalTicketCount === 0}
+                onClick={handleProceedToPayment}
+                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg shadow-[#1e9df1]/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? (
+                  <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                ) : isFreeOrder ? (
+                  <>Confirm Free Registration <ArrowRight size={16} /></>
+                ) : (
+                  <>Proceed to Payment • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} /></>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>

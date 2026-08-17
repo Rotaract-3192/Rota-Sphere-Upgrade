@@ -458,8 +458,8 @@ export function OrganizerDashboardClient({
       <div className="md:hidden bg-gray-900 text-white border-b border-gray-800 px-4 pt-3 pb-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-white shrink-0">
-              <Image src="/brand/logo.png" alt="Logo" fill className="object-contain p-0.5" priority />
+            <div className="relative w-9 h-9 shrink-0">
+              <Image src="/brand/logo.png" alt="Logo" fill className="object-contain" priority />
             </div>
             <span className="text-sm font-extrabold text-white truncate max-w-[160px]">{organization?.name || "Dashboard"}</span>
           </div>
@@ -506,12 +506,12 @@ export function OrganizerDashboardClient({
           <div className="px-2 pt-2 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-xs bg-white shrink-0">
+                <div className="relative w-12 h-12 shrink-0">
                   <Image
                     src="/brand/logo.png"
                     alt="Rotaract District 3192 Ticketing Logo"
                     fill
-                    className="object-contain p-0.5"
+                    className="object-contain"
                     priority
                   />
                 </div>
@@ -1747,6 +1747,8 @@ export function OrganizerDashboardClient({
       <CreateEventWizardModal
         isOpen={wizardOpen}
         eventToEdit={eventToEdit}
+        defaultClubName={organization?.name}
+        defaultOrganizationId={organization?.id}
         onClose={() => {
           setWizardOpen(false);
           setEventToEdit(null);

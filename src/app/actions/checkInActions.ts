@@ -217,12 +217,14 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
 
     // Audit log
     await writeAuditLog({
-      actorUserId: scannerUserId,
+      actorId: scannerUserId,
       actorEmail: "gate-scanner@rotasphere.org",
       action: "TICKET_CHECKED_IN",
-      targetType: "TICKET",
-      targetId: ticket.id,
-      details: { gate: gateName, timestamp: new Date().toISOString() },
+      category: "ADMIN_ACTION",
+      resourceType: "TICKET",
+      resourceId: ticket.id,
+      result: "SUCCESS",
+      metadata: { gate: gateName, timestamp: new Date().toISOString() },
     });
 
     return {

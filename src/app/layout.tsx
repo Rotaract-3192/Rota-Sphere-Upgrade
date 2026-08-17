@@ -11,6 +11,15 @@ import { Inter, Open_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
+import { RootJsonLd } from "@/components/seo/JsonLd";
+import { SkipToContent } from "@/components/shared/SkipToContent";
+import { ScrollProgressBar } from "@/components/shared/ScrollProgressBar";
+import { ScrollToTop } from "@/components/shared/ScrollToTop";
+import { CookieConsentBanner } from "@/components/shared/CookieConsentBanner";
+import { FloatingContactButton } from "@/components/shared/FloatingContactButton";
+import { GlobalCommandPalette } from "@/components/shared/GlobalCommandPalette";
+import { UtmTracker } from "@/lib/analytics/utmTracker";
+
 const openSans = Open_Sans({
   subsets: ["latin"],
   variable: "--font-sans-open",
@@ -27,24 +36,47 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | RotaSphere",
-    default: "RotaSphere — Rotaract Event Platform",
+    template: "%s | RotaSphere District 3192",
+    default: "RotaSphere — Rotaract District 3192 Experience & Ticketing",
   },
   description:
-    "Discover, register, and manage Rotaract events across District 3192. Buy tickets, track registrations, and connect with your community.",
-  keywords: ["rotaract", "events", "district 3192", "tickets", "community", "gallery"],
-  authors: [{ name: "RotaSphere" }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+    "Official event ticketing, registration, and club discovery platform for Rotaract District 3192. Discover verified conferences, sports fests, cultural nights, and community initiatives.",
+  keywords: [
+    "rotaract",
+    "district 3192",
+    "rotaract bangalore",
+    "rotary international zone 5",
+    "rotaract events",
+    "event ticketing",
+    "delegate pass",
+    "rotaract clubs",
+  ],
+  authors: [{ name: "Rotaract District 3192 Council" }],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rotaract3192.org"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
-    siteName: "RotaSphere",
-    title: "RotaSphere — Rotaract Event Platform",
-    description: "Discover, register, and manage Rotaract events across District 3192.",
+    siteName: "RotaSphere District 3192",
+    title: "RotaSphere — Rotaract District 3192 Experience & Ticketing",
+    description:
+      "Discover verified conferences, cultural fests, workshops, and concerts across all 85 chartered clubs in District 3192.",
+    images: [
+      {
+        url: "/brand-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "RotaSphere District 3192",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RotaSphere — Rotaract Event Platform",
-    description: "Discover, register, and manage Rotaract events across District 3192.",
+    title: "RotaSphere — Rotaract District 3192 Platform",
+    description:
+      "Discover verified events, passes, and 85 chartered Rotaract clubs across District 3192.",
+    images: ["/brand-logo.png"],
   },
   robots: {
     index: true,
@@ -81,8 +113,39 @@ export default function RootLayout({
 
   const content = (
     <html lang="en" className={`${openSans.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="antialiased bg-canvas text-ink font-sans" suppressHydrationWarning>
-        {children}
+      <head>
+        <RootJsonLd />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('rotasphere-theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (theme === 'dark' || (!theme && prefersDark)) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.style.colorScheme = 'dark';
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.style.colorScheme = 'light';
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="antialiased bg-canvas text-ink font-sans relative selection:bg-[#1e9df1] selection:text-white" suppressHydrationWarning>
+        <SkipToContent />
+        <ScrollProgressBar />
+        <UtmTracker />
+        <GlobalCommandPalette />
+
+        <div id="main-content">
+          {children}
+        </div>
+
+        <FloatingContactButton />
+        <ScrollToTop />
+        <CookieConsentBanner />
       </body>
     </html>
   );

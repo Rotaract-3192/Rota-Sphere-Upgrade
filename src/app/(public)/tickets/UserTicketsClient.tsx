@@ -47,6 +47,7 @@ interface UserTicketsClientProps {
 
 export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
   const [tickets, setTickets] = useState(initialTickets);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "previous">("upcoming");
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [qrModalTicket, setQrModalTicket] = useState<any | null>(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -122,9 +123,24 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
   async function handleDownloadTicket(ticket: any) {
     setDownloadingId(ticket.id);
     try {
-      const event = ticket.saas_events;
-      const tier = ticket.saas_ticket_tiers;
+      const event = ticket.events || ticket.saas_events;
+      const tier = ticket.ticket_tiers || ticket.saas_ticket_tiers;
       const qrContent = ticket.qr_token || ticket.ticket_code;
+      const clubName = event?.organizations?.name || "Rotaract District 3192";
+      const eventTitle = event?.title || "District Event Pass";
+      const attendeeName = ticket.attendee_name || "Delegate";
+      const attendeeEmail = ticket.attendee_email || "";
+      const tierName = tier?.name || "Delegate Pass";
+      const ticketCode = ticket.ticket_code || "RS-PASS";
+      const venueStr = event?.venue_name ? `${event.venue_name}, ${event.city || ""}` : (event?.city || "Bengaluru, Karnataka");
+      const dateStr = event?.start_time
+        ? new Date(event.start_time).toLocaleDateString("en-IN", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "RY 2026–27";
 
       // Generate sharp 500px QR for the badge
       const qrDataUrl = qrDataMap[ticket.id] || (await QRCode.toDataURL(qrContent, {
@@ -143,7 +159,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       canvas.width = width;
       canvas.height = height;
 
-      // 1. Background Fill
+      // 1. Background Fill & Rounded Card
       const bgGrad = ctx.createLinearGradient(0, 0, width, height);
       bgGrad.addColorStop(0, "#ffffff");
       bgGrad.addColorStop(1, "#f8fafc");
@@ -159,13 +175,123 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.roundRect(0, 0, width, height, 36);
       ctx.stroke();
 
-      // Top Brand Color Header Strip
-      ctx.fillStyle = "#0052ff";
+      // Top Brand Color Header Strip (Azure Electric)
+      ctx.fillStyle = "#1e9df1";
       ctx.beginPath();
-      ctx.roundRect(0, 0, width, 20, [36, 36, 0, 0]);
+      ctx.roundRect(0, 0, width, 18, [36, 36, 0, 0]);
       ctx.fill();
 
-      // 5. Vertical Perforation Line
+      // Load Logo Image
+      const logoImg: HTMLImageElement | null = await new Promise((resolve) => {
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+          const fb = new window.Image();
+          fb.crossOrigin = "anonymous";
+          fb.onload = () => resolve(fb);
+          fb.onerror = () => resolve(null);
+          fb.src = "/logo.png";
+        };
+        img.src = "/brand/logo.png";
+      });
+
+      // 2. Left Side: Logo & Club / District Header
+      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        ctx.drawImage(logoImg, 60, 45, 60, 60);
+      }
+
+      const pillX = logoImg ? 132 : 60;
+      ctx.fillStyle = "#eff6ff";
+      ctx.beginPath();
+      ctx.roundRect(pillX, 55, 380, 38, 19);
+      ctx.fill();
+      ctx.strokeStyle = "#bfdbfe";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(pillX, 55, 380, 38, 19);
+      ctx.stroke();
+
+      ctx.fillStyle = "#1d4ed8";
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillText(`★ ${clubName.slice(0, 36).toUpperCase()}`, pillX + 16, 79);
+
+      // 3. Event Title (Auto-wrapped bold typography)
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "900 32px sans-serif";
+      const maxTitleWidth = 680;
+      const words = eventTitle.split(" ");
+      let currentLine = "";
+      let lineY = 145;
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxTitleWidth && currentLine) {
+          ctx.fillText(currentLine, 60, lineY);
+          currentLine = word;
+          lineY += 40;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        ctx.fillText(currentLine, 60, lineY);
+        lineY += 40;
+      }
+
+      // 4. Date and Venue Metadata
+      ctx.fillStyle = "#475569";
+      ctx.font = "bold 16px sans-serif";
+      ctx.fillText(`📅 ${dateStr}   •   📍 ${venueStr}`, 60, Math.max(200, lineY + 5));
+
+      // 5. Delegate Information Box (Card inside ticket)
+      const cardBoxY = Math.max(235, lineY + 35);
+      ctx.fillStyle = "#f1f5f9";
+      ctx.beginPath();
+      ctx.roundRect(60, cardBoxY, 700, 200, 24);
+      ctx.fill();
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(60, cardBoxY, 700, 200, 24);
+      ctx.stroke();
+
+      // Delegate Name Label
+      ctx.fillStyle = "#64748b";
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillText("ATTENDEE / DELEGATE", 90, cardBoxY + 38);
+
+      // Large Attendee Name
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "900 28px sans-serif";
+      ctx.fillText(attendeeName, 90, cardBoxY + 75);
+
+      // Attendee Email
+      ctx.fillStyle = "#475569";
+      ctx.font = "15px sans-serif";
+      ctx.fillText(attendeeEmail, 90, cardBoxY + 105);
+
+      // Tier Pill (e.g. Early Bird / Delegate Pass)
+      ctx.fillStyle = "#1e9df1";
+      ctx.beginPath();
+      ctx.roundRect(90, cardBoxY + 130, 200, 36, 18);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillText(`🎟 ${tierName.toUpperCase()}`, 110, cardBoxY + 153);
+
+      // Verified Status Badge
+      ctx.fillStyle = "#059669";
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillText("● CONFIRMED & ADMIT READY", 310, cardBoxY + 153);
+
+      // Pass ID text
+      ctx.fillStyle = "#64748b";
+      ctx.font = "13px monospace";
+      ctx.fillText(`PASS REF: ${ticketCode}`, 90, cardBoxY + 185);
+
+      // 6. Vertical Perforation Line
       ctx.setLineDash([8, 8]);
       ctx.strokeStyle = "#cbd5e1";
       ctx.lineWidth = 3;
@@ -175,26 +301,24 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 6. Right Side Stub - Logo & Header
-      try {
-        const logoImg = new window.Image();
-        logoImg.src = "/brand/logo.png";
-        await new Promise((res) => {
-          logoImg.onload = res;
-          logoImg.onerror = res;
-        });
-        if (logoImg.complete && logoImg.naturalWidth > 0) {
-          ctx.drawImage(logoImg, 940, 40, 110, 110);
-        }
-      } catch (err) {
-        console.error("Logo drawing error:", err);
+      // 7. Right Side Stub - Logo & Header
+      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        ctx.drawImage(logoImg, 965, 32, 60, 60);
       }
 
-      ctx.fillStyle = "#64748b";
-      ctx.font = "bold 13px sans-serif";
-      ctx.fillText("GATE SCANNER PASS", 860, 180);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "900 17px sans-serif";
+      ctx.fillText("ROTASPHERE", 895, 110);
 
-      // Load QR Image (Positioned below header & logo)
+      ctx.fillStyle = "#1e9df1";
+      ctx.font = "bold 11px sans-serif";
+      ctx.fillText("DISTRICT 3192 ENTRY", 895, 126);
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "bold 11px sans-serif";
+      ctx.fillText("SCAN AT VENUE GATE", 885, 146);
+
+      // Load and Draw QR Image on the Right Stub
       const qrImg = new window.Image();
       qrImg.src = qrDataUrl;
 
@@ -203,39 +327,39 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           // White card backdrop for QR
           ctx.fillStyle = "#ffffff";
           ctx.beginPath();
-          ctx.roundRect(850, 205, 290, 290, 24);
+          ctx.roundRect(850, 175, 290, 290, 24);
           ctx.fill();
           ctx.strokeStyle = "#cbd5e1";
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.roundRect(850, 205, 290, 290, 24);
+          ctx.roundRect(850, 175, 290, 290, 24);
           ctx.stroke();
 
-          ctx.drawImage(qrImg, 865, 220, 260, 260);
+          ctx.drawImage(qrImg, 865, 190, 260, 260);
           resolve();
         };
         qrImg.onerror = () => resolve();
       });
 
-      // QR Security Token & Instructions
+      // QR Security Token & Instructions below QR
       ctx.fillStyle = "#64748b";
-      ctx.font = "14px monospace";
-      ctx.fillText(ticket.qr_token ? `${ticket.qr_token.slice(0, 18)}...` : ticket.ticket_code, 860, 530);
+      ctx.font = "13px monospace";
+      ctx.fillText(ticket.qr_token ? `${ticket.qr_token.slice(0, 20)}...` : ticketCode, 860, 500);
 
       ctx.fillStyle = "#059669";
       ctx.font = "bold 13px sans-serif";
-      ctx.fillText("● ENCRYPTED QR TOKEN", 860, 560);
+      ctx.fillText("● SINGLE ENTRY GATE PASS", 860, 530);
 
       // Bottom Security Footer
       ctx.fillStyle = "#94a3b8";
       ctx.font = "12px sans-serif";
-      ctx.fillText("Powered by RotaSphere • District 3192 Verified • Single Entry Only", 60, 625);
+      ctx.fillText("Powered by RotaSphere • Rotaract District 3192 Official Ticketing • Single Entry Only", 60, 630);
 
-      // 7. Trigger Direct Download
+      // 8. Trigger Direct Download
       const dataUrl = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `${ticket.ticket_code}_Pass.png`;
+      a.download = `${ticketCode}_Pass.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -303,19 +427,19 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
   if (tickets.length === 0) {
     return (
-      <div className="w-full text-center py-16 sm:py-20 border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 bg-white shadow-xs flex flex-col items-center justify-center gap-6">
+      <div className="w-full text-center py-16 sm:py-20 border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 bg-white shadow-xs space-y-6">
         <div className="w-16 h-16 rounded-full bg-blue-50 text-[#1e9df1] flex items-center justify-center mx-auto shadow-inner shrink-0">
           <TicketIcon size={32} />
         </div>
-        <div className="w-full max-w-md mx-auto text-center space-y-2">
-          <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight w-full block text-center">
+        <div className="max-w-md mx-auto space-y-2">
+          <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
             No Tickets Booked Yet
           </h3>
-          <p className="text-xs sm:text-sm text-gray-500 leading-relaxed w-full max-w-md mx-auto block text-center">
+          <p className="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-md mx-auto">
             Explore upcoming conferences, festivals, and workshops across District 3192 and book your entry passes.
           </p>
         </div>
-        <div className="pt-2 w-full text-center flex justify-center">
+        <div className="pt-2">
           <Link
             href="/events"
             className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer active:scale-95 text-center"
@@ -327,12 +451,86 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
     );
   }
 
+  const now = new Date();
+
+  const upcomingTickets = tickets.filter((t) => {
+    const eventDate = t.saas_events?.start_date ? new Date(t.saas_events.start_date) : null;
+    return !eventDate || eventDate >= now;
+  });
+
+  const previousTickets = tickets.filter((t) => {
+    const eventDate = t.saas_events?.start_date ? new Date(t.saas_events.start_date) : null;
+    return eventDate && eventDate < now;
+  });
+
+  const displayedTickets = activeTab === "upcoming" ? upcomingTickets : previousTickets;
+
   return (
-    <div className="space-y-8">
-      
+    <div className="space-y-6">
+
+      {/* ── TAB SWITCHER ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab("upcoming")}
+          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            activeTab === "upcoming"
+              ? "bg-white text-[#1e9df1] shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Upcoming Events
+          {upcomingTickets.length > 0 && (
+            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+              activeTab === "upcoming" ? "bg-[#1e9df1] text-white" : "bg-gray-300 text-gray-600"
+            }`}>
+              {upcomingTickets.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("previous")}
+          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            activeTab === "previous"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Previous Events
+          {previousTickets.length > 0 && (
+            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+              activeTab === "previous" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600"
+            }`}>
+              {previousTickets.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── EMPTY STATE FOR ACTIVE TAB ────────────────────────────────── */}
+      {displayedTickets.length === 0 && (
+        <div className="w-full text-center py-12 border-2 border-dashed border-gray-200 rounded-3xl bg-white space-y-4">
+          <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto">
+            <TicketIcon size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-700">
+              {activeTab === "upcoming" ? "No upcoming tickets" : "No previous event tickets"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {activeTab === "upcoming"
+                ? "Book a ticket to see it here."
+                : "Attended events will appear here after they\'ve passed."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── TICKETS GRID ──────────────────────────────────────────────── */}
+      {displayedTickets.length > 0 && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-        {tickets.map((ticket) => {
+        {displayedTickets.map((ticket) => {
           const event = ticket.saas_events;
           const tier = ticket.saas_ticket_tiers;
           const isApproved = ticket.status === "ISSUED" || ticket.status === "CONFIRMED";
@@ -353,7 +551,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
               <div className="p-6 sm:p-7 space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-xs bg-white border border-gray-100 shrink-0 mt-0.5">
+                    <div className="relative w-11 h-11 shrink-0 mt-0.5">
                       <Image
                         src="/brand/logo.png"
                         alt="Rotaract District 3192 Ticketing Logo"
@@ -564,6 +762,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           );
         })}
       </div>
+      )}
 
       {/* ── FULLSCREEN LARGE QR CODE GATE SCANNER MODAL ────────────────── */}
       {qrModalTicket && (

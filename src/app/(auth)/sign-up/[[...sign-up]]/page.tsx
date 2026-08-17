@@ -34,7 +34,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-[#0b0d12] text-white flex flex-col justify-center items-center px-4 py-12">
       <div className="flex flex-col items-center mb-6 text-center">
         <Link href="/" className="flex flex-col items-center gap-2 group">
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg bg-white p-1 group-hover:scale-105 transition-transform">
+          <div className="relative w-20 h-20 group-hover:scale-105 transition-transform">
             <Image
               src="/brand/logo.png"
               alt="Rotaract District 3192 Ticketing"
