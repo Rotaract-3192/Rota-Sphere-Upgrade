@@ -506,4 +506,55 @@ html.dark .shadow-xl {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* ── Festive Payment Confirmation Animation Keyframes ── */
+@keyframes paymentArtwork {
+  0% { opacity: 0; transform: scale(0.55) rotate(-4deg); }
+  55% { opacity: 1; transform: scale(1.035) rotate(1.5deg); }
+  78% { transform: scale(0.985) rotate(-0.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes paymentRing {
+  0% { opacity: 0; transform: scale(0.55); }
+  55% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
+@keyframes paymentGlow {
+  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  50% { transform: scale(1.06); opacity: 0.95; }
+}
+
+@keyframes paymentMessage {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes paymentDot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+}
+
+@keyframes paymentParticle {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(0.4); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 45px), var(--dy, -80px)) rotate(220deg) scale(1); }
+}
+
+@keyframes flowerBreath {
+  0%, 100% { transform: scale(0.97) rotate(-1deg); }
+  50%      { transform: scale(1.045) rotate(1deg); }
+}
+
+@keyframes flowerFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+@keyframes flowerShimmer {
+  0%, 100% { opacity: 0.18; transform: scale(0.82) rotate(0deg); }
+  50%      { opacity: 0.72; transform: scale(1.08) rotate(8deg); }
+}
+
+
 

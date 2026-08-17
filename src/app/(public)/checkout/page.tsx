@@ -12,6 +12,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Script from "next/script";
 import { createOrderAction, SelectedTierInput } from "@/app/actions/orderActions";
 import { ShieldCheck, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { PaymentConfirmationAnimation } from "@/components/checkout/PaymentConfirmationAnimation";
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<any>(null);
   const [currentUrl, setCurrentUrl] = useState("/events");
 
   useEffect(() => {
@@ -69,11 +71,10 @@ function CheckoutContent() {
       return;
     }
 
+    setCompletedOrder(result);
+
     if (result.isFree) {
       setSuccess(true);
-      setTimeout(() => {
-        router.replace(`/tickets?orderId=${result.orderId}`);
-      }, 1500);
       return;
     }
 
@@ -93,9 +94,6 @@ function CheckoutContent() {
       order_id: (result as any).gatewayOrderId || (result as any).orderId,
       handler: function () {
         setSuccess(true);
-        setTimeout(() => {
-          router.replace(`/tickets?orderId=${result.orderId}`);
-        }, 1500);
       },
       modal: {
         ondismiss: function () {
@@ -114,16 +112,14 @@ function CheckoutContent() {
 
   if (success) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-base py-section text-center">
-        <div className="max-w-md">
-          <div className="w-16 h-16 rounded-full bg-brand/10 text-brand flex items-center justify-center mx-auto mb-lg">
-            <CheckCircle2 size={36} strokeWidth={2} />
-          </div>
-          <h1 className="text-display-md font-bold text-ink mb-xs">Registration Confirmed!</h1>
-          <p className="text-body-md text-muted mb-lg">
-            Your tickets are being issued. Redirecting you to your tickets...
-          </p>
-        </div>
+      <div className="w-full">
+        <PaymentConfirmationAnimation
+          orderNumber={completedOrder?.orderNumber}
+          isFree={completedOrder?.isFree}
+          amount={completedOrder?.totalAmount}
+          viewTicketsHref={completedOrder?.orderId ? `/tickets?orderId=${completedOrder.orderId}` : "/tickets"}
+          fullScreen={true}
+        />
       </div>
     );
   }

@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 008: DPDP Act 2023 Compliance Schema
+-- Migration 0008: DPDP Act 2023 Compliance Schema
 -- RotaSphere Indian Ticketing Platform
 -- IMPORTANT: Review by Indian privacy/legal professional
 -- required before commercial launch.
@@ -549,4 +549,3 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE TRIGGER trg_security_incidents_updated_at BEFORE UPDATE ON security_incidents FOR EACH ROW EXECUTE FUNCTION update_updated_at_col();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-

@@ -37,6 +37,7 @@ import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
 import { SlideToPayButton } from "./SlideToPayButton";
+import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import Link from "next/link";
 import Image from "next/image";
@@ -329,34 +330,35 @@ export function CheckoutModal({
         className="relative z-10 w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 mx-auto"
       >
         {/* Modal Header */}
-        <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
+        {checkoutStep !== "SUCCESS" && (
+          <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
+            <div className="flex items-center gap-3.5 relative z-10">
+              <div className="relative w-12 h-12 shrink-0">
+                <Image
+                  src="/brand/logo.png"
+                  alt="Rotaract District 3192 Ticketing Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#60a5fa] flex items-center gap-1.5 leading-none">
+                  <QrCode size={12} /> DYNAMIC UPI CHECKOUT
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-white leading-tight line-clamp-1">{event.title}</h2>
+                <p className="text-[11px] text-gray-400 font-medium">District 3192 Direct UPI Pass Booking</p>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="relative w-12 h-12 shrink-0">
-              <Image
-                src="/brand/logo.png"
-                alt="Rotaract District 3192 Ticketing Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#60a5fa] flex items-center gap-1.5 leading-none">
-                <QrCode size={12} /> DYNAMIC UPI CHECKOUT
-              </span>
-              <h2 className="text-lg sm:text-xl font-black text-white leading-tight line-clamp-1">{event.title}</h2>
-              <p className="text-[11px] text-gray-400 font-medium">District 3192 Direct UPI Pass Booking</p>
-            </div>
+            <button
+              onClick={onClose}
+              className="relative z-10 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
           </div>
-
-          <button
-            onClick={onClose}
-            className="relative z-10 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        )}
 
         {/* ── 1. GATED STATE: NOT LOGGED IN ─────────────────────────────── */}
         {!userEmail ? (
@@ -390,71 +392,19 @@ export function CheckoutModal({
             </div>
           </div>
         ) : checkoutStep === "SUCCESS" ? (
-          /* ── 2. SUCCESS CONFIRMATION STATE WITH ANIMATED GREEN TICK ─────── */
-          <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="relative">
-              {/* Glowing emerald ambient halo */}
-              <div className="absolute inset-0 bg-emerald-500/30 rounded-full blur-xl animate-pulse" />
-              
-              {/* Animated green circle with checkmark */}
-              <motion.div
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                className="relative w-20 h-20 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-50 dark:ring-emerald-950/50 shrink-0"
-              >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-                >
-                  <Check size={44} className="stroke-[3.5]" />
-                </motion.div>
-              </motion.div>
-            </div>
-
-            <div className="w-full text-center space-y-3 block">
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black uppercase tracking-wider">
-                <span>✓ TICKET SUBMITTED FOR VERIFICATION</span>
-              </div>
-
-              <h3 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight text-center w-full block">
-                {completedOrder?.isFree ? "Registration Confirmed!" : "Ticket Submitted Successfully!"}
-              </h3>
-              
-              <p className="text-xs sm:text-sm text-gray-600 text-center w-full max-w-md mx-auto block leading-relaxed">
-                {completedOrder?.isFree
-                  ? "Your complimentary entry pass has been issued and is available in your passes dashboard."
-                  : `Your payment reference (${upiTransactionId || "UTR Submitted"}) has been dispatched to the event organizer for verification. Your scannable QR pass will unlock once approved.`}
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
-                <span className="bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-mono font-bold text-gray-800">
-                  Order Ref: {completedOrder?.orderNumber}
-                </span>
-                <span className="bg-blue-50 text-[#1e9df1] border border-blue-200 px-3.5 py-2 rounded-xl text-xs font-extrabold">
-                  Status: PENDING APPROVAL
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full max-w-sm mx-auto pt-2 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/tickets"
-                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
-              >
-                View My Passes <ArrowRight size={15} />
-              </Link>
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3.5 px-5 rounded-2xl transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
+          /* ── 2. SUCCESS CONFIRMATION STATE WITH FESTIVE ANIMATION ─────── */
+          <div className="w-full flex-1 overflow-y-auto animate-in zoom-in-95 duration-300">
+            <PaymentConfirmationAnimation
+              orderNumber={completedOrder?.orderNumber}
+              isFree={completedOrder?.isFree}
+              upiTransactionId={upiTransactionId}
+              eventName={event.title}
+              amount={fees.totalPayable}
+              onClose={onClose}
+              viewTicketsHref="/tickets"
+              fullScreen={false}
+            />
           </div>
-
         ) : checkoutStep === "UPI_PAYMENT" ? (
           /* ── 3. DYNAMIC UPI QR & 1-CLICK PAY STEP ───────────────────────── */
           <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
