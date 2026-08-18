@@ -469,19 +469,19 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
     <div className="space-y-6 animate-fade-in-up">
 
       {/* ── TAB SWITCHER ──────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full w-fit border border-gray-200/80 dark:border-gray-700 shadow-inner">
         <button
           type="button"
           onClick={() => setActiveTab("upcoming")}
-          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
+          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
             activeTab === "upcoming"
-              ? "bg-white dark:bg-gray-900 text-[#0758fc] shadow-xs"
+              ? "bg-white dark:bg-gray-900 text-[#0758fc] shadow-sm"
               : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           }`}
         >
           Upcoming Passes
           {upcomingTickets.length > 0 && (
-            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black ${
               activeTab === "upcoming" ? "bg-[#0758fc] text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             }`}>
               {upcomingTickets.length}
@@ -491,16 +491,16 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
         <button
           type="button"
           onClick={() => setActiveTab("previous")}
-          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
+          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
             activeTab === "previous"
-              ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs"
+              ? "bg-white dark:bg-gray-900 text-[#0758fc] shadow-sm"
               : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           }`}
         >
           Previous Passes
           {previousTickets.length > 0 && (
-            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-              activeTab === "previous" ? "bg-gray-900 dark:bg-gray-700 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black ${
+              activeTab === "previous" ? "bg-[#0758fc] text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             }`}>
               {previousTickets.length}
             </span>
