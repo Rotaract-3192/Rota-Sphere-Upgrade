@@ -17,6 +17,7 @@ import { ScrollProgressBar } from "@/components/shared/ScrollProgressBar";
 import { ScrollToTop } from "@/components/shared/ScrollToTop";
 import { CookieConsentBanner } from "@/components/shared/CookieConsentBanner";
 import { FloatingContactButton } from "@/components/shared/FloatingContactButton";
+import { BottomNav } from "@/components/shared/BottomNav";
 import { GlobalCommandPalette } from "@/components/shared/GlobalCommandPalette";
 import { UtmTracker } from "@/lib/analytics/utmTracker";
 
@@ -139,13 +140,14 @@ export default function RootLayout({
         <UtmTracker />
         <GlobalCommandPalette />
 
-        <div id="main-content">
+        <div id="main-content" className="pb-20 md:pb-0">
           {children}
         </div>
 
         <FloatingContactButton />
         <ScrollToTop />
         <CookieConsentBanner />
+        <BottomNav />
       </body>
     </html>
   );

@@ -143,7 +143,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
-              className="text-xs sm:text-sm font-bold text-white bg-[#1e9df1] hover:bg-[#1583cd] px-5 py-2 rounded-xl shadow-sm transition-all"
+              className="text-xs sm:text-sm font-bold text-white bg-[#1e9df1] hover:bg-[#1583cd] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95"
             >
               Sign In
             </Link>
@@ -153,87 +153,13 @@ export function TopNav() {
             <UserButton
               appearance={{
                 elements: {
-                  avatarBox: "w-9 h-9 rounded-full ring-2 ring-gray-200 shadow-sm",
+                  avatarBox: "w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 shadow-xs",
                 },
               }}
             />
           )}
-
-          {/* Mobile hamburger */}
-          <button
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileOpen}
-            onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
       </div>
-
-      {/* ── MOBILE MENU ───────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-16 inset-x-0 bg-white border-b border-gray-200 shadow-xl md:hidden z-40 p-4 space-y-2"
-          >
-            <nav aria-label="Mobile navigation" className="flex flex-col gap-1">
-              {NAV_TABS.map(({ label, href, icon: Icon, isNew }) => {
-                const active = isActive(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setMobileOpen(false)}
-                    className={[
-                      "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold",
-                      active
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon size={18} className={active ? "text-[#1e9df1]" : "text-gray-400"} />
-                      <span>{label}</span>
-                    </div>
-                    {isNew && (
-                      <span className="text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 rounded-full px-2 py-0.5">
-                        NEW
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-
-              <div className="h-px bg-gray-200 my-2" />
-
-              {isAdminUser && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-amber-900 bg-amber-50 rounded-xl transition-colors"
-                >
-                  <Shield size={18} className="text-amber-700" />
-                  Admin Hub
-                </Link>
-              )}
-
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                <PlusCircle size={18} className="text-gray-600" />
-                Host an Event
-              </Link>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 }
