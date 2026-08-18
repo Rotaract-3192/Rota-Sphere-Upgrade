@@ -128,10 +128,6 @@ export default function GalleryPage() {
       {/* ── 1. MOBILE-OPTIMIZED HERO HEADER ───────────────────────────── */}
       <section className="py-8 sm:py-14 px-4 sm:px-6 md:px-8 text-center bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 animate-fade-in-up">
         <div className="max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1e9df1]/10 text-[#1e9df1] text-[11px] sm:text-xs font-black uppercase tracking-widest">
-            <Sparkles size={13} /> District 3192 Visual Archives
-          </div>
-          
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
             MOMENTS &amp; MEMORIES
           </h1>
