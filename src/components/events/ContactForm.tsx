@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * ContactForm — Interactive Light-Mode Inquiry Form
- * RotaSphere Design System: Clean white/blue, high contrast, crisp inputs.
+ * ContactForm — Mobile-First Interactive Inquiry Form
+ * RotaSphere Design System: Clean white/blue, high contrast, crisp touch targets.
  */
 
 import { useState } from "react";
-import { Send, Phone, Mail, User, CheckCircle2 } from "lucide-react";
+import { Send, Phone, Mail, User, CheckCircle2, MessageSquare } from "lucide-react";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -22,20 +22,20 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <div className="lg:col-span-7 bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center space-y-3">
-        <CheckCircle2 size={48} className="text-emerald-600 mx-auto" />
-        <h4 className="text-2xl font-bold text-gray-900">Inquiry Received!</h4>
-        <p className="text-sm text-gray-600">
-          Thank you, <span className="font-bold text-gray-900">{name}</span>. Our District 3192 Team will contact you at <span className="font-bold text-gray-900">{phone}</span> within 24 hours.
+      <div className="lg:col-span-7 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-3xl p-6 sm:p-8 text-center space-y-3 animate-fade-in-up">
+        <CheckCircle2 size={44} className="text-emerald-600 dark:text-emerald-400 mx-auto" />
+        <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Inquiry Received!</h4>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">
+          Thank you, <strong className="text-gray-900 dark:text-white">{name}</strong>. Our District 3192 Team will contact you at <strong className="text-gray-900 dark:text-white">{phone}</strong> within 24 hours.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-5">
+    <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-4 sm:space-y-5 animate-fade-in-up">
       <div>
-        <label htmlFor="user-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+        <label htmlFor="user-name" className="block text-[11px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
           Your Name
         </label>
         <div className="relative">
@@ -47,13 +47,13 @@ export function ContactForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your full name"
-            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl px-4 py-3 pl-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="user-phone" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+        <label htmlFor="user-phone" className="block text-[11px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
           Phone / WhatsApp Number
         </label>
         <div className="relative">
@@ -65,28 +65,30 @@ export function ContactForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+91 98765 43210"
-            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl px-4 py-3 pl-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="user-comment" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+        <label htmlFor="user-comment" className="block text-[11px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
           Message / Club Details
         </label>
-        <textarea
-          id="user-comment"
-          rows={3}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Tell us about your event or inquiry..."
-          className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#1e9df1] focus:ring-4 focus:ring-[#1e9df1]/10 rounded-2xl p-4 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all resize-none"
-        />
+        <div className="relative">
+          <textarea
+            id="user-comment"
+            rows={3}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Tell us about your event or inquiry..."
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl p-3.5 sm:p-4 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all resize-none"
+          />
+        </div>
       </div>
 
       <button
         type="submit"
-        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-sm py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#1e9df1]/20 active:scale-98 cursor-pointer"
+        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-black text-xs sm:text-sm py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#1e9df1]/20 active:scale-95 cursor-pointer"
       >
         <Send size={16} /> Send Inquiry
       </button>

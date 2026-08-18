@@ -275,26 +275,29 @@ export default async function HomePage() {
       </section>
 
       {/* ── 7. CONTACT / INQUIRY FORM ─────────────────────────────────────── */}
-      <section className="bg-gray-50 border-t border-gray-100 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-gray-50 dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
-          <div className="bg-white border border-gray-100 rounded-3xl p-8 sm:p-12 shadow-xs">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-              <div className="lg:col-span-5 space-y-4">
-                <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-1">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-xs space-y-6 sm:space-y-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-center">
+              <div className="lg:col-span-5 space-y-3 sm:space-y-4">
+                <div className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-black text-[#1e9df1] uppercase tracking-widest">
                   <Mail size={14} /> Get in Touch
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-snug">
                   Want to host or have questions?
                 </h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                   Leave a request and our District Team will reach out within 24 hours to assist with club registrations, event hosting, or ticket inquiries.
                 </p>
-                <div className="space-y-2 pt-2 text-xs text-gray-600">
-                  <p className="flex items-center gap-2">
-                    <Mail size={14} className="text-[#1e9df1]" /> support@rotasphere.in
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <Phone size={14} className="text-[#1e9df1]" /> District 3192 Helpline
+                <div className="space-y-2 pt-2 text-xs text-gray-600 dark:text-gray-300">
+                  <a
+                    href="mailto:tech.rotaract3192@gmail.com"
+                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-[#1e9df1] transition-colors"
+                  >
+                    <Mail size={14} className="text-[#1e9df1] shrink-0" /> tech.rotaract3192@gmail.com
+                  </a>
+                  <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Phone size={14} className="text-[#1e9df1] shrink-0" /> District 3192 Helpline
                   </p>
                 </div>
               </div>
