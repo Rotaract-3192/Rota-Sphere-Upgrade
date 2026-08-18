@@ -8,7 +8,7 @@ export function FloatingContactButton() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end">
+    <div className="fixed bottom-20 md:bottom-6 left-4 md:left-auto md:right-6 z-40 flex flex-col items-start md:items-end">
       {/* Popover Menu */}
       {open && (
         <div className="mb-3 bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl text-white space-y-3 w-64 animate-in fade-in slide-in-from-bottom-2 duration-200">
