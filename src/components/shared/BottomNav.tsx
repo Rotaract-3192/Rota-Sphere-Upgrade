@@ -113,8 +113,11 @@ export function BottomNav() {
                   }`}
                 >
                   <motion.div
-                    animate={active ? { scale: [1, 1.15, 1], rotate: [0, -8, 0] } : {}}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    animate={{
+                      scale: active ? 1.08 : 1,
+                      rotate: active ? -3 : 0,
+                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
                   >
                     <Icon size={23} strokeWidth={2.4} />
                   </motion.div>
@@ -152,8 +155,11 @@ export function BottomNav() {
                 )}
 
                 <motion.div
-                  animate={active ? { scale: [1, 1.2, 1], y: -2 } : { scale: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  animate={{
+                    scale: active ? 1.15 : 1,
+                    y: active ? -2 : 0,
+                  }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
                 >
                   <Icon
                     size={20}
