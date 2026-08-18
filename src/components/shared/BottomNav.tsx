@@ -2,16 +2,18 @@
 
 /**
  * Mobile Bottom Navigation Bar (Dock / Tab Bar)
- * Mobile-first native experience with "My Tickets" elevated in the center.
- * Features: 5 primary navigation targets, spring active indicators, safe-area inset support,
- * elevated center ticket pass button, and role-aware admin shortcuts.
+ * High-end tactile native mobile experience with fluid Framer Motion animations:
+ * - Sliding active pill capsule background with spring physics
+ * - Bouncy icon micro-interactions on selection and tap
+ * - Elevated pulsating center action button for "My Tickets"
+ * - Safe-area inset support for modern edge-to-edge mobile devices
  */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Calendar, Users, Ticket, PlusCircle, Shield, Image as ImageIcon } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 function useSafeUser() {
   try {
@@ -27,7 +29,7 @@ export function BottomNav() {
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const isSuperAdmin = userEmail === "tech.rotaract3192@gmail.com";
 
-  // Hide BottomNav on scanner or full-screen view if needed
+  // Hide BottomNav on scanner or full-screen routes
   if (pathname.startsWith("/check-in")) {
     return null;
   }
@@ -82,9 +84,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Mobile Bottom Navigation"
-      className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200/80 dark:border-gray-800/80 shadow-2xl transition-colors pb-[max(env(safe-area-inset-bottom),8px)] pt-1 px-2"
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/92 dark:bg-gray-950/92 backdrop-blur-2xl border-t border-gray-200/80 dark:border-gray-800/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-colors pb-[max(env(safe-area-inset-bottom),10px)] pt-1.5 px-3 rounded-t-3xl"
     >
-      <div className="grid grid-cols-5 items-center justify-around max-w-lg mx-auto">
+      <div className="grid grid-cols-5 items-center justify-around max-w-md mx-auto relative">
         {navItems.map((item) => {
           const active = isTabActive(item.href);
           const Icon = item.icon;
@@ -94,24 +96,33 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center -mt-5 group focus:outline-hidden"
+                className="flex flex-col items-center justify-center -mt-6 group focus:outline-hidden"
               >
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 ${
+                <motion.div
+                  whileTap={{ scale: 0.88, rotate: -4 }}
+                  whileHover={{ scale: 1.06, y: -2 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  className={`w-13 h-13 rounded-full flex items-center justify-center shadow-xl transition-all relative ${
                     active
-                      ? "bg-gradient-to-tr from-[#0758fc] to-blue-600 text-white shadow-blue-500/40 ring-4 ring-white dark:ring-gray-950"
-                      : "bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-blue-500/30 ring-4 ring-white dark:ring-gray-950 group-hover:scale-105"
+                      ? "bg-gradient-to-tr from-[#0758fc] via-blue-600 to-indigo-600 text-white shadow-[#0758fc]/45 ring-4 ring-white dark:ring-gray-950 scale-105 animate-soft-pulse"
+                      : "bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-[#0758fc]/30 ring-4 ring-white dark:ring-gray-950"
                   }`}
                 >
-                  <Icon size={22} className="transition-transform group-hover:scale-110" />
-                </div>
-                <span
-                  className={`text-[10px] font-extrabold mt-1 tracking-tight ${
+                  <motion.div
+                    animate={active ? { scale: [1, 1.15, 1], rotate: [0, -8, 0] } : {}}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  >
+                    <Icon size={23} strokeWidth={2.4} />
+                  </motion.div>
+                </motion.div>
+                <motion.span
+                  animate={{ y: active ? -1 : 0 }}
+                  className={`text-[10px] font-black mt-1 tracking-tight transition-colors ${
                     active ? "text-[#0758fc]" : "text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {item.label}
-                </span>
+                </motion.span>
               </Link>
             );
           }
@@ -120,34 +131,47 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-col items-center justify-center py-2 px-1 text-center transition-all group focus:outline-hidden active:scale-95"
+              className="relative flex flex-col items-center justify-center py-1.5 px-1 text-center transition-all group focus:outline-hidden"
             >
-              <div className="relative">
-                <Icon
-                  size={20}
-                  className={`transition-colors duration-200 ${
-                    active
-                      ? "text-[#0758fc]"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
-                  }`}
-                />
+              <motion.div
+                whileTap={{ scale: 0.84 }}
+                transition={{ type: "spring", stiffness: 600, damping: 22 }}
+                className="relative flex flex-col items-center"
+              >
+                {/* Active Capsule Glow Background */}
                 {active && (
                   <motion.div
-                    layoutId="bottom-nav-indicator"
-                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0758fc]"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    layoutId="bottom-nav-active-pill"
+                    className="absolute -inset-x-3 -inset-y-1 bg-[#0758fc]/10 dark:bg-[#0758fc]/20 rounded-2xl -z-10 border border-[#0758fc]/20"
+                    transition={{ type: "spring", stiffness: 450, damping: 30 }}
                   />
                 )}
-              </div>
-              <span
-                className={`text-[10px] font-bold mt-1 tracking-tight truncate max-w-[60px] ${
-                  active
-                    ? "text-[#0758fc] font-extrabold"
-                    : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
-                }`}
-              >
-                {item.label}
-              </span>
+
+                <motion.div
+                  animate={active ? { scale: [1, 1.2, 1], y: -2 } : { scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  <Icon
+                    size={20}
+                    strokeWidth={active ? 2.5 : 1.8}
+                    className={`transition-colors duration-200 ${
+                      active
+                        ? "text-[#0758fc]"
+                        : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                    }`}
+                  />
+                </motion.div>
+
+                <span
+                  className={`text-[10px] tracking-tight truncate max-w-[56px] transition-all duration-200 mt-0.5 ${
+                    active
+                      ? "text-[#0758fc] font-black"
+                      : "text-gray-500 dark:text-gray-400 font-semibold group-hover:text-gray-900 dark:group-hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </motion.div>
             </Link>
           );
         })}
