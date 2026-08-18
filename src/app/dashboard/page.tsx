@@ -28,8 +28,7 @@ export default async function DashboardPage() {
     userRole === "admin" ||
     userRole === "super_admin" ||
     hasApprovedRequest ||
-    user.email === "tech.rotaract3192@gmail.com" ||
-    user.email === "thejaswinps@gmail.com";
+    user.email === "tech.rotaract3192@gmail.com";
 
   if (!isOrganizerOrAdmin) {
     return <ApplyOrganizerClient user={user} existingRequest={reqRes.data} />;
@@ -38,8 +37,7 @@ export default async function DashboardPage() {
   const clerkUserId = user.clerkId;
   const isSuperAdmin =
     userRole === "super_admin" ||
-    user.email === "tech.rotaract3192@gmail.com" ||
-    user.email === "thejaswinps@gmail.com";
+    user.email === "tech.rotaract3192@gmail.com";
   const organizerCondition = isSuperAdmin
     ? ""
     : `AND (e.organizer_id = '${clerkUserId}' OR e.created_by_user_id = '${clerkUserId}')`;

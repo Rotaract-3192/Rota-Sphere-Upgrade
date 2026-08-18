@@ -602,8 +602,7 @@ export function OrganizerDashboardClient({
 
             {/* If SuperAdmin, show quick switcher banner */}
             {(user?.profile?.role === "super_admin" ||
-              user?.email === "tech.rotaract3192@gmail.com" ||
-              user?.email === "thejaswinps@gmail.com") && (
+              user?.email === "tech.rotaract3192@gmail.com") && (
               <Link
                 href="/admin"
                 className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"

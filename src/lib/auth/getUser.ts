@@ -11,7 +11,6 @@ export interface AuthUser {
 
 const SUPER_ADMIN_EMAILS = [
   "tech.rotaract3192@gmail.com",
-  "thejaswinps@gmail.com",
   ...(process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()) : []),
   ...(process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL.trim().toLowerCase()] : []),
 ].map((e) => e.toLowerCase());

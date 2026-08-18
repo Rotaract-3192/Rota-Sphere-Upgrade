@@ -35,7 +35,7 @@ export function TopNav() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded, user } = useSafeUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-  const isAdminUser = userEmail === "tech.rotaract3192@gmail.com" || userEmail === "thejaswinps@gmail.com";
+  const isAdminUser = userEmail === "tech.rotaract3192@gmail.com";
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");

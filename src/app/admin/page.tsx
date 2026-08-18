@@ -17,8 +17,7 @@ export default async function AdminPage() {
 
   const isSuperAdmin =
     user.profile?.role === "super_admin" ||
-    user.email === "tech.rotaract3192@gmail.com" ||
-    user.email === "thejaswinps@gmail.com";
+    user.email === "tech.rotaract3192@gmail.com";
   if (!isSuperAdmin) {
     redirect("/dashboard");
   }
