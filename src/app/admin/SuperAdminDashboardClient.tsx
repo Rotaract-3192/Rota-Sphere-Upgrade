@@ -59,6 +59,7 @@ import {
   Check,
   Megaphone,
   Menu,
+  AlertTriangle,
 } from "lucide-react";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import {
@@ -69,6 +70,8 @@ import {
   createOrganizationAction,
   approveOrganizerAccessRequestAction,
   rejectOrganizerAccessRequestAction,
+  updateComplaintStatusAction,
+  updatePrivacyRequestStatusAction,
 } from "@/app/actions/adminActions";
 import {
   createDistrictClubAction,
@@ -89,6 +92,8 @@ interface SuperAdminProps {
   initialAuditLogs: any[];
   initialFeatureFlags: any[];
   initialOrganizerRequests?: any[];
+  initialComplaints?: any[];
+  initialPrivacyRequests?: any[];
 }
 
 function downloadCsv(filename: string, rows: Record<string, any>[]) {
@@ -142,9 +147,11 @@ export function SuperAdminDashboardClient({
   initialAuditLogs,
   initialFeatureFlags,
   initialOrganizerRequests = [],
+  initialComplaints = [],
+  initialPrivacyRequests = [],
 }: SuperAdminProps) {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "requests" | "upi" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
+    "overview" | "requests" | "upi" | "grievances" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
   >("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -198,6 +205,63 @@ export function SuperAdminDashboardClient({
   const [rejectModalOrder, setRejectModalOrder] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("UTR transaction reference not found in bank statement");
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
+
+  // Grievances & Privacy Reports State
+  const [complaints, setComplaints] = useState(initialComplaints || []);
+  const [privacyRequests, setPrivacyRequests] = useState(initialPrivacyRequests || []);
+  const [grievanceFilter, setGrievanceFilter] = useState<"ALL" | "open" | "under_review" | "resolved" | "rejected">("ALL");
+  const [grievanceSearch, setGrievanceSearch] = useState("");
+  const [selectedComplaint, setSelectedComplaint] = useState<any | null>(null);
+  const [resolutionInput, setResolutionInput] = useState("");
+  const [updatingComplaintId, setUpdatingComplaintId] = useState<string | null>(null);
+  const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
+
+  async function handleUpdateComplaintStatus(complaintId: string, status: any, resolution?: string) {
+    setUpdatingComplaintId(complaintId);
+    const res = await updateComplaintStatusAction(complaintId, status, resolution);
+    setUpdatingComplaintId(null);
+    if (res.success) {
+      setComplaints((prev: any[]) =>
+        prev.map((c) =>
+          c.id === complaintId || c.complaint_number === complaintId
+            ? {
+                ...c,
+                status,
+                resolution: resolution || c.resolution,
+                resolved_at: status === "resolved" ? new Date().toISOString() : c.resolved_at,
+              }
+            : c
+        )
+      );
+      if (selectedComplaint && (selectedComplaint.id === complaintId || selectedComplaint.complaint_number === complaintId)) {
+        setSelectedComplaint((prev: any) => ({
+          ...prev,
+          status,
+          resolution: resolution || prev.resolution,
+          resolved_at: status === "resolved" ? new Date().toISOString() : prev.resolved_at,
+        }));
+      }
+    } else {
+      alert(res.error || "Failed to update complaint status");
+    }
+  }
+
+  async function handleUpdatePrivacyRequestStatus(requestId: string, status: any, resolution?: string) {
+    setUpdatingRequestId(requestId);
+    const res = await updatePrivacyRequestStatusAction(requestId, status, resolution);
+    setUpdatingRequestId(null);
+    if (res.success) {
+      setPrivacyRequests((prev: any[]) =>
+        prev.map((r) =>
+          r.id === requestId || r.request_number === requestId
+            ? { ...r, status, completed_at: status === "completed" ? new Date().toISOString() : r.completed_at }
+            : r
+        )
+      );
+    } else {
+      alert(res.error || "Failed to update request status");
+    }
+  }
 
   // Audit Logs State & Filters
   const [auditSearch, setAuditSearch] = useState("");
@@ -671,16 +735,21 @@ export function SuperAdminDashboardClient({
     e.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const pendingGrievanceCount =
+    complaints.filter((c: any) => c.status === "open" || c.status === "under_review").length +
+    privacyRequests.filter((r: any) => r.status === "open" || r.status === "in_progress").length;
+
   const NAV_ITEMS = [
-    { id: "overview",  label: "Overview",             icon: Activity,     count: null },
-    { id: "requests",  label: "Host Requests",        icon: Users,        count: organizerRequests.filter((r: any) => r.status === "PENDING").length },
-    { id: "upi",      label: "UPI Payments",         icon: QrCode,       count: pendingUpiOrders.length },
-    { id: "kyc",      label: "Club Roster",          icon: Building,     count: pendingKycCount },
-    { id: "events",   label: "All Events",           icon: Calendar,     count: events.length },
-    { id: "finance",  label: "Sales & Finance",      icon: DollarSign,   count: orders.length },
-    { id: "checkins", label: "QR Gate Check-ins",    icon: Smartphone,   count: totalCheckInsCount },
-    { id: "audit",    label: "Activity Logs",        icon: Lock,         count: auditLogs.length },
-    { id: "flags",    label: "App Settings",         icon: Sliders,      count: null },
+    { id: "overview",   label: "Overview",             icon: Activity,      count: null },
+    { id: "requests",   label: "Host Requests",        icon: Users,         count: organizerRequests.filter((r: any) => r.status === "PENDING").length },
+    { id: "upi",       label: "UPI Payments",         icon: QrCode,        count: pendingUpiOrders.length },
+    { id: "grievances", label: "Grievances & Reports", icon: AlertTriangle, count: pendingGrievanceCount },
+    { id: "kyc",       label: "Club Roster",          icon: Building,      count: pendingKycCount },
+    { id: "events",    label: "All Events",           icon: Calendar,      count: events.length },
+    { id: "finance",   label: "Sales & Finance",      icon: DollarSign,    count: orders.length },
+    { id: "checkins",  label: "QR Gate Check-ins",    icon: Smartphone,    count: totalCheckInsCount },
+    { id: "audit",     label: "Activity Logs",        icon: Lock,          count: auditLogs.length },
+    { id: "flags",     label: "App Settings",         icon: Sliders,       count: null },
   ];
 
   return (
@@ -725,7 +794,8 @@ export function SuperAdminDashboardClient({
                   const isActive = activeTab === tab.id;
                   const isUrgent =
                     (tab.id === "upi" && pendingUpiOrders.length > 0) ||
-                    (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
+                    (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING")) ||
+                    (tab.id === "grievances" && pendingGrievanceCount > 0);
                   return (
                     <button
                       key={tab.id}
@@ -830,7 +900,8 @@ export function SuperAdminDashboardClient({
               const isActive = activeTab === tab.id;
               const isUrgent =
                 (tab.id === "upi" && pendingUpiOrders.length > 0) ||
-                (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING"));
+                (tab.id === "requests" && organizerRequests.some((r: any) => r.status === "PENDING")) ||
+                (tab.id === "grievances" && pendingGrievanceCount > 0);
               return (
                 <button
                   key={tab.id}
@@ -990,7 +1061,7 @@ export function SuperAdminDashboardClient({
             </button>
             <span className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-2 rounded-xl flex items-center gap-1.5">
               <ShieldCheck size={13} className="text-[#1e9df1]" />
-              {user?.email || "admin@rotasphere.org"}
+              {user?.email || "tech.rotaract3192@gmail.com"}
             </span>
           </div>
         </div>
@@ -1597,6 +1668,361 @@ export function SuperAdminDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
+            TAB: GRIEVANCES & STATUTORY DPDP COMPLIANCE REPORTS
+            ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "grievances" && (
+          <div className="space-y-8 animate-in fade-in-50">
+            {/* Header banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-gray-900">Grievance Redressal &amp; DPDP Reports</h2>
+                  {pendingGrievanceCount > 0 && (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
+                      {pendingGrievanceCount} Action Required
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Statutory 24-hour acknowledgement and 15-day resolution SLAs under DPDP Act 2023 &amp; Consumer Protection (E-Commerce) Rules.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => downloadCsv("rotasphere-grievance-report.csv", complaints)}
+                  className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+                >
+                  <Download size={14} /> Export Grievances CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadJson("rotasphere-grievance-report.json", { complaints, privacyRequests })}
+                  className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+                >
+                  <FileJson size={14} /> Export JSON
+                </button>
+              </div>
+            </div>
+
+            {/* Scorecard KPI Tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Open Grievances</span>
+                <div className="text-2xl font-black text-rose-600">
+                  {complaints.filter((c: any) => c.status === "open").length}
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium">Pending initial triage (&lt;24h SLA)</p>
+              </div>
+
+              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Under Investigation</span>
+                <div className="text-2xl font-black text-amber-600">
+                  {complaints.filter((c: any) => c.status === "under_review" || c.status === "awaiting_info").length}
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium">Active club / ombudsman review</p>
+              </div>
+
+              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">DPDP Rights Requests</span>
+                <div className="text-2xl font-black text-[#1e9df1]">
+                  {privacyRequests.filter((r: any) => r.status === "open" || r.status === "in_progress").length}
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium">Access, Erasure &amp; Portability</p>
+              </div>
+
+              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Resolved &amp; Closed</span>
+                <div className="text-2xl font-black text-emerald-600">
+                  {complaints.filter((c: any) => c.status === "resolved").length + privacyRequests.filter((r: any) => r.status === "completed").length}
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium">Compliant closures on record</p>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                  {(["ALL", "open", "under_review", "resolved", "rejected"] as const).map((filterVal) => {
+                    const label =
+                      filterVal === "ALL"
+                        ? "All Tickets"
+                        : filterVal === "open"
+                        ? "Open"
+                        : filterVal === "under_review"
+                        ? "Under Review"
+                        : filterVal === "resolved"
+                        ? "Resolved"
+                        : "Rejected";
+                    const count =
+                      filterVal === "ALL"
+                        ? complaints.length
+                        : complaints.filter((c: any) => c.status === filterVal).length;
+
+                    return (
+                      <button
+                        key={filterVal}
+                        type="button"
+                        onClick={() => setGrievanceFilter(filterVal)}
+                        className={`text-xs font-extrabold px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                          grievanceFilter === filterVal
+                            ? "bg-[#1e9df1] text-white shadow-xs"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        <span>{label}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                            grievanceFilter === filterVal ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by case #, name, email..."
+                    value={grievanceSearch}
+                    onChange={(e) => setGrievanceSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#1e9df1] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Grievances & Complaints Table */}
+              <div className="overflow-x-auto rounded-2xl border border-gray-200">
+                <table className="w-full text-left text-xs text-gray-700">
+                  <thead className="bg-gray-50/90 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                    <tr>
+                      <th className="px-5 py-3.5">Case Reference</th>
+                      <th className="px-5 py-3.5">Complainant</th>
+                      <th className="px-5 py-3.5">Category</th>
+                      <th className="px-5 py-3.5">Description</th>
+                      <th className="px-5 py-3.5">Status</th>
+                      <th className="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {complaints
+                      .filter((c: any) => {
+                        const matchesFilter = grievanceFilter === "ALL" || c.status === grievanceFilter;
+                        const q = grievanceSearch.toLowerCase();
+                        const matchesSearch =
+                          !q ||
+                          c.complaint_number?.toLowerCase().includes(q) ||
+                          c.user_name?.toLowerCase().includes(q) ||
+                          c.user_email?.toLowerCase().includes(q) ||
+                          c.category?.toLowerCase().includes(q) ||
+                          c.description?.toLowerCase().includes(q);
+                        return matchesFilter && matchesSearch;
+                      })
+                      .map((comp: any) => {
+                        const isUpdating = updatingComplaintId === comp.id || updatingComplaintId === comp.complaint_number;
+                        const isOpen = comp.status === "open";
+                        const isReview = comp.status === "under_review" || comp.status === "awaiting_info";
+                        const isResolved = comp.status === "resolved";
+                        const isRejected = comp.status === "rejected";
+
+                        return (
+                          <tr key={comp.id || comp.complaint_number} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <p className="font-mono font-bold text-gray-900">{comp.complaint_number || comp.id?.slice(0, 12)}</p>
+                              <p className="text-[10px] text-gray-400">
+                                {comp.created_at ? new Date(comp.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent"}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-3.5">
+                              <p className="font-bold text-gray-900">{comp.user_name || "User"}</p>
+                              <p className="text-[11px] text-gray-500 font-mono">{comp.user_email}</p>
+                            </td>
+
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 border border-gray-200">
+                                {comp.category || "General"}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-3.5 max-w-xs sm:max-w-sm">
+                              <p className="text-xs text-gray-800 line-clamp-2">{comp.description}</p>
+                              {comp.resolution && (
+                                <p className="text-[10px] text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5 mt-1 line-clamp-1">
+                                  <strong>Resolution:</strong> {comp.resolution}
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <span
+                                className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                  isOpen
+                                    ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse font-black"
+                                    : isReview
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : isResolved
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-gray-100 text-gray-600 border-gray-200"
+                                }`}
+                              >
+                                ● {comp.status}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedComplaint(comp);
+                                  setResolutionInput(comp.resolution || "");
+                                }}
+                                className="text-[11px] font-bold text-[#1e9df1] hover:underline px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
+                              >
+                                Inspect
+                              </button>
+
+                              {!isResolved && (
+                                <button
+                                  type="button"
+                                  disabled={isUpdating}
+                                  onClick={() => handleUpdateComplaintStatus(comp.id || comp.complaint_number, "resolved", "Case reviewed and resolved by Platform Grievance Desk.")}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-2.5 py-1 rounded-lg text-[10px] transition-all shadow-2xs cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  {isUpdating ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                                  Resolve
+                                </button>
+                              )}
+
+                              {!isReview && !isResolved && (
+                                <button
+                                  type="button"
+                                  disabled={isUpdating}
+                                  onClick={() => handleUpdateComplaintStatus(comp.id || comp.complaint_number, "under_review")}
+                                  className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  Investigate
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                    {complaints.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                          <CheckCircle2 size={32} className="mx-auto text-emerald-500/60 mb-2" />
+                          <p className="font-bold text-gray-600 text-sm">No Open Grievances</p>
+                          <p className="text-xs text-gray-400 mt-1">All user and attendee disputes are currently resolved.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* DPDP Data Subject Rights Requests Sub-Table */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-black text-gray-900">DPDP Data Subject Rights Requests</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    User requests for Data Access, Erasure, Correction, and Portability under DPDP Act 2023.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                  {privacyRequests.length} Total Requests
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-gray-200">
+                <table className="w-full text-left text-xs text-gray-700">
+                  <thead className="bg-gray-50/90 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                    <tr>
+                      <th className="px-5 py-3.5">Request #</th>
+                      <th className="px-5 py-3.5">Data Principal</th>
+                      <th className="px-5 py-3.5">Request Type</th>
+                      <th className="px-5 py-3.5">Description</th>
+                      <th className="px-5 py-3.5">Status</th>
+                      <th className="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {privacyRequests.map((req: any) => {
+                      const isUpdating = updatingRequestId === req.id || updatingRequestId === req.request_number;
+                      const isCompleted = req.status === "completed";
+
+                      return (
+                        <tr key={req.id || req.request_number} className="hover:bg-gray-50/80 transition-colors">
+                          <td className="px-5 py-3.5 whitespace-nowrap font-mono font-bold text-gray-900">
+                            {req.request_number || req.id?.slice(0, 10)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <p className="font-bold text-gray-900">{req.user_name || "User"}</p>
+                            <p className="text-[11px] text-gray-500 font-mono">{req.user_email}</p>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#1e9df1] border border-blue-200">
+                              {req.request_type}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 max-w-xs">
+                            <p className="text-xs text-gray-800 line-clamp-2">{req.description || "Data principal request"}</p>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span
+                              className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                                isCompleted
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              ● {req.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                            {!isCompleted && (
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleUpdatePrivacyRequestStatus(req.id || req.request_number, "completed", "Request fulfilled per DPDP rules.")}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-2.5 py-1 rounded-lg text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {isUpdating ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                                Complete Request
+                              </button>
+                            )}
+                            {isCompleted && (
+                              <span className="text-[10px] font-bold text-emerald-600">Fulfilled</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {privacyRequests.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                          <p className="text-xs">No pending data access or erasure requests.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
             TAB 3: DISTRICT 3192 CLUBS & ORGANIZATIONS GOVERNANCE
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "kyc" && (
@@ -2138,7 +2564,7 @@ export function SuperAdminDashboardClient({
                             </span>
                           </td>
                           <td className="px-6 py-4 font-semibold text-gray-800">
-                            {log.actor_email || "thejaswinps@gmail.com"}
+                            {log.actor_email || "tech.rotaract3192@gmail.com"}
                           </td>
                           <td className="px-6 py-4 font-mono text-[11px] text-gray-500">
                             {log.entity_type} {log.entity_id ? `(#${log.entity_id.slice(0, 8)})` : ""}
@@ -2344,7 +2770,7 @@ export function SuperAdminDashboardClient({
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Actor Email</span>
                 <span className="font-extrabold text-gray-900 truncate block">
-                  {selectedAuditLog.actor_email || "thejaswinps@gmail.com"}
+                  {selectedAuditLog.actor_email || "tech.rotaract3192@gmail.com"}
                 </span>
               </div>
               <div>
@@ -2774,6 +3200,151 @@ export function SuperAdminDashboardClient({
                   <CheckCircle2 size={16} /> Confirm Photo &amp; Approve Pass
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── COMPLAINT & GRIEVANCE DEEP-INSPECTION MODAL ────────────────── */}
+      {selectedComplaint && (
+        <div
+          onClick={() => setSelectedComplaint(null)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: "620px" }}
+            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                  STATUTORY GRIEVANCE REDRESSAL
+                </span>
+                <h3 className="text-xl font-black text-gray-900">
+                  Case: {selectedComplaint.complaint_number || selectedComplaint.id?.slice(0, 12)}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedComplaint(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Complainant Metadata Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs">
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Complainant</span>
+                <span className="font-extrabold text-gray-900">{selectedComplaint.user_name || "User"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Contact Email</span>
+                <span className="font-mono text-gray-800 text-[11px] truncate block">{selectedComplaint.user_email}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Category</span>
+                <span className="font-bold text-[#1e9df1]">{selectedComplaint.category || "General"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Filed Date</span>
+                <span className="text-gray-700">
+                  {selectedComplaint.created_at ? new Date(selectedComplaint.created_at).toLocaleString("en-IN") : "Recent"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Current Status</span>
+                <span className="font-extrabold uppercase text-xs">{selectedComplaint.status}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Statutory SLA</span>
+                <span className="font-bold text-emerald-600">15-Day Resolution</span>
+              </div>
+            </div>
+
+            {/* Description Body */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Full Complaint &amp; Incident Narrative
+              </label>
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-800 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {selectedComplaint.description}
+              </div>
+            </div>
+
+            {/* Resolution Recording */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Record Official Resolution &amp; Ombudsman Findings
+              </label>
+              <textarea
+                rows={3}
+                value={resolutionInput}
+                onChange={(e) => setResolutionInput(e.target.value)}
+                placeholder="Enter statutory resolution notes for the complainant audit record..."
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs outline-none focus:border-[#1e9df1] focus:bg-white"
+              />
+
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Refund processed to original payment account",
+                  "Personal data permanently erased per DPDP Act",
+                  "Direct consent status updated in Privacy Center",
+                  "Resolved via host organizer consultation",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setResolutionInput(preset)}
+                    className="text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedComplaint(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-2xl text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                disabled={updatingComplaintId === (selectedComplaint.id || selectedComplaint.complaint_number)}
+                onClick={async () => {
+                  await handleUpdateComplaintStatus(
+                    selectedComplaint.id || selectedComplaint.complaint_number,
+                    "under_review",
+                    resolutionInput.trim() || undefined
+                  );
+                }}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 rounded-2xl text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                Mark Under Investigation
+              </button>
+
+              <button
+                type="button"
+                disabled={updatingComplaintId === (selectedComplaint.id || selectedComplaint.complaint_number)}
+                onClick={async () => {
+                  await handleUpdateComplaintStatus(
+                    selectedComplaint.id || selectedComplaint.complaint_number,
+                    "resolved",
+                    resolutionInput.trim() || "Case reviewed and resolved by Platform Grievance Desk."
+                  );
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-2xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 size={14} /> Resolve &amp; Close
+              </button>
             </div>
           </div>
         </div>

@@ -86,8 +86,9 @@ export function OrganizerDashboardClient({
   const [tickets, setTickets] = useState(initialTickets);
   const [coupons, setCoupons] = useState(initialCoupons);
 
-  // Search queries
+  // Search & Filter queries
   const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [selectedAttendeeEventId, setSelectedAttendeeEventId] = useState<string>("ALL");
   const [eventSearch, setEventSearch] = useState("");
 
   // Event Wizard & Edit State
@@ -219,12 +220,24 @@ export function OrganizerDashboardClient({
       e.city?.toLowerCase().includes(eventSearch.toLowerCase())
   );
 
-  const filteredTickets = tickets.filter(
-    (t) =>
-      t.attendee_name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
-      t.attendee_email?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
-      t.ticket_code?.toLowerCase().includes(attendeeSearch.toLowerCase())
-  );
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      const q = attendeeSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        t.attendee_name?.toLowerCase().includes(q) ||
+        t.attendee_email?.toLowerCase().includes(q) ||
+        t.ticket_code?.toLowerCase().includes(q);
+
+      const matchesEvent =
+        selectedAttendeeEventId === "ALL" ||
+        t.event_id === selectedAttendeeEventId ||
+        t.saas_events?.id === selectedAttendeeEventId ||
+        t.saas_events?.title === selectedAttendeeEventId;
+
+      return matchesSearch && matchesEvent;
+    });
+  }, [tickets, attendeeSearch, selectedAttendeeEventId]);
 
   // ─── 1. EDIT EVENT ──────────────────────────────────────────────────────────
   function handleOpenCreateModal() {
@@ -418,6 +431,52 @@ export function OrganizerDashboardClient({
     showToast(`✓ Excel spreadsheet downloaded for "${eventTitle}"`);
   }
 
+  function handleExportFilteredAttendeesCSV() {
+    const listToExport = filteredTickets;
+    if (listToExport.length === 0) {
+      alert("No attendees found to export for the selected filter.");
+      return;
+    }
+
+    const currentEvent = activeEvents.find((e) => e.id === selectedAttendeeEventId);
+    const eventName = currentEvent ? currentEvent.title : "All_Events";
+
+    const headers = [
+      "Ticket Code",
+      "Attendee Name",
+      "Email",
+      "Phone",
+      "Event Title",
+      "Ticket Tier",
+      "Amount Paid (INR)",
+      "Status",
+      "Check-In Status",
+      "Checked In At",
+      "Registration Date",
+      "QR Hash",
+    ];
+
+    const rows = listToExport.map((t: any) => [
+      t.ticket_code || t.id,
+      `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
+      t.attendee_email || "",
+      t.attendee_phone || "",
+      `"${(t.saas_events?.title || currentEvent?.title || "Event").replace(/"/g, '""')}"`,
+      `"${(t.saas_ticket_tiers?.name || "Standard").replace(/"/g, '""')}"`,
+      t.unit_price || t.saas_ticket_tiers?.price || "0",
+      t.status || "CONFIRMED",
+      t.status === "USED" ? "CHECKED_IN" : "PENDING",
+      t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned",
+      t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "",
+      t.qr_code_hash || "",
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const sanitizedTitle = eventName.replace(/[^a-zA-Z0-9]/g, "_");
+    downloadCsvFile(csvContent, `${sanitizedTitle}_Attendees_${new Date().toISOString().slice(0, 10)}.csv`);
+    showToast(`✓ Exported ${listToExport.length} delegates for "${currentEvent?.title || 'All Events'}"`);
+  }
+
   function handleExportAllAttendeesCSV() {
     if (tickets.length === 0) {
       alert("No attendees to export");
@@ -430,19 +489,23 @@ export function OrganizerDashboardClient({
       "Phone",
       "Event Title",
       "Ticket Tier",
+      "Amount Paid (INR)",
       "Status",
       "Checked In At",
+      "Registration Date",
       "QR Hash",
     ];
     const rows = tickets.map((t) => [
-      t.ticket_code,
-      `"${(t.attendee_name || "").replace(/"/g, '""')}"`,
+      t.ticket_code || t.id,
+      `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
       t.attendee_email || "",
       t.attendee_phone || "",
-      `"${(t.saas_events?.title || "").replace(/"/g, '""')}"`,
-      `"${(t.saas_ticket_tiers?.name || "").replace(/"/g, '""')}"`,
-      t.status,
+      `"${(t.saas_events?.title || "Event").replace(/"/g, '""')}"`,
+      `"${(t.saas_ticket_tiers?.name || "Standard").replace(/"/g, '""')}"`,
+      t.unit_price || t.saas_ticket_tiers?.price || "0",
+      t.status || "CONFIRMED",
       t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Pending",
+      t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "",
       t.qr_code_hash || "",
     ]);
 
@@ -538,7 +601,9 @@ export function OrganizerDashboardClient({
             <p className="text-xs text-gray-400">Organizer Portal</p>
 
             {/* If SuperAdmin, show quick switcher banner */}
-            {(user?.profile?.role === "super_admin" || user?.email === "thejaswinps@gmail.com") && (
+            {(user?.profile?.role === "super_admin" ||
+              user?.email === "tech.rotaract3192@gmail.com" ||
+              user?.email === "thejaswinps@gmail.com") && (
               <Link
                 href="/admin"
                 className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
@@ -1087,27 +1152,77 @@ export function OrganizerDashboardClient({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-extrabold text-gray-900">Attendee Directory</h2>
-                <p className="text-xs text-gray-500 mt-1">Search, filter, and export registered delegates with QR code pass status.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Search, filter, and export registered delegates per event with QR code pass status.
+                </p>
               </div>
 
-              <button
-                onClick={handleExportAllAttendeesCSV}
-                className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-sm cursor-pointer"
-              >
-                <FileSpreadsheet size={15} /> Export All to Excel / CSV
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedAttendeeEventId !== "ALL" && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAttendeeEventId("ALL")}
+                    className="text-xs font-bold text-gray-600 hover:text-gray-900 px-3 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
+                  >
+                    Show All Events
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleExportFilteredAttendeesCSV}
+                  className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  <FileSpreadsheet size={15} />
+                  {selectedAttendeeEventId === "ALL"
+                    ? "Export All to Excel / CSV"
+                    : `Export "${activeEvents.find((e) => e.id === selectedAttendeeEventId)?.title || "Event"}" (${filteredTickets.length})`}
+                </button>
+              </div>
             </div>
 
-            <div className="relative">
-              <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
-              <input
-                type="text"
-                value={attendeeSearch}
-                onChange={(e) => setAttendeeSearch(e.target.value)}
-                placeholder="Search attendees by name, email, or ticket code..."
-                className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-gray-900 outline-none focus:border-amber-400 shadow-xs"
-              />
+            {/* Event Filter Selector & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Event Dropdown Filter */}
+              <div className="sm:w-80 shrink-0">
+                <select
+                  value={selectedAttendeeEventId}
+                  onChange={(e) => setSelectedAttendeeEventId(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#1e9df1] shadow-xs cursor-pointer"
+                >
+                  <option value="ALL">📅 All Events ({tickets.length} Attendees)</option>
+                  {activeEvents.map((ev) => {
+                    const evCount = tickets.filter((t) => t.event_id === ev.id || t.saas_events?.title === ev.title).length;
+                    return (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title} ({evCount} Attendees)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
+                <input
+                  type="text"
+                  value={attendeeSearch}
+                  onChange={(e) => setAttendeeSearch(e.target.value)}
+                  placeholder="Search attendees by name, email, or ticket code..."
+                  className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-gray-900 outline-none focus:border-[#1e9df1] shadow-xs"
+                />
+              </div>
             </div>
+
+            {selectedAttendeeEventId !== "ALL" && (
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl px-4 py-2.5 text-xs">
+                <span>
+                  Filtering for event: <strong>{activeEvents.find((e) => e.id === selectedAttendeeEventId)?.title || "Selected Event"}</strong> ({filteredTickets.length} delegates)
+                </span>
+                <span className="font-mono text-[11px] text-blue-700">Export button will download only this event</span>
+              </div>
+            )}
 
             <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">

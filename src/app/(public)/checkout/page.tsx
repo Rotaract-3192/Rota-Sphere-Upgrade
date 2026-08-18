@@ -2,25 +2,15 @@
 
 /**
  * Checkout Page
- * Handles order confirmation, inventory reservation, Razorpay payment modal, and redirection to tickets.
- * Architecture §33-37: Payment integration flow.
- * DESIGN-airbnb.md: Clean white canvas, Rausch CTA, Airbnb spacing.
+ * Handles order confirmation, inventory reservation, direct UPI settlement, and redirection to tickets.
+ * Architecture: Direct Non-Profit UPI Settlement (0% platform fee).
  */
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Script from "next/script";
 import { createOrderAction, SelectedTierInput } from "@/app/actions/orderActions";
-import { ShieldCheck, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Lock, AlertCircle, QrCode } from "lucide-react";
 import { PaymentConfirmationAnimation } from "@/components/checkout/PaymentConfirmationAnimation";
-
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-    };
-  }
-}
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -33,13 +23,6 @@ function CheckoutContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any>(null);
-  const [currentUrl, setCurrentUrl] = useState("/events");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setCurrentUrl(window.location.href);
-    }
-  }, []);
 
   let selectedTiers: SelectedTierInput[] = [];
   try {
@@ -72,42 +55,8 @@ function CheckoutContent() {
     }
 
     setCompletedOrder(result);
-
-    if (result.isFree) {
-      setSuccess(true);
-      return;
-    }
-
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    if (!window.Razorpay) {
-      setError("Razorpay SDK failed to load. Please check your internet connection.");
-      setLoading(false);
-      return;
-    }
-
-    const options = {
-      key: keyId,
-      amount: Math.round((result.totalAmount ?? 0) * 100),
-      currency: "INR",
-      name: "RotaSphere",
-      description: `Order #${result.orderNumber}`,
-      order_id: (result as any).gatewayOrderId || (result as any).orderId,
-      handler: function () {
-        setSuccess(true);
-      },
-      modal: {
-        ondismiss: function () {
-          setLoading(false);
-          setError("Payment process was closed before completion.");
-        },
-      },
-      theme: {
-        color: "#1e9df1",
-      },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+    setSuccess(true);
+    setLoading(false);
   }
 
   if (success) {
@@ -125,13 +74,13 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="max-w-[720px] mx-auto px-base md:px-xl py-section">
-      <h1 className="text-display-lg font-medium text-ink mb-xl">Confirm & Pay</h1>
+    <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-12">
+      <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6">Confirm &amp; Register</h1>
 
       {error && (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 mb-6 space-y-2">
           <div className="flex items-start gap-2.5">
-            <AlertCircle size={20} className="flex-shrink-0 text-rose-600 mt-0.5" />
+            <AlertCircle size={20} className="shrink-0 text-rose-600 mt-0.5" />
             <p className="text-sm font-medium">{error}</p>
           </div>
           {error.toLowerCase().includes("authentication") && (
@@ -147,7 +96,7 @@ function CheckoutContent() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 mb-6 shadow-sm space-y-4 text-gray-900">
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 mb-6 shadow-xs space-y-4 text-gray-900">
         <h2 className="text-lg font-black text-gray-900">Order Summary</h2>
 
         <div className="space-y-2 border-y border-gray-200 py-4 text-xs font-semibold">
@@ -160,14 +109,14 @@ function CheckoutContent() {
         </div>
 
         <div className="flex justify-between items-center text-sm font-bold text-gray-900">
-          <span>Total</span>
-          <span>Calculated at Checkout</span>
+          <span>Payment Channel</span>
+          <span className="text-emerald-600 font-mono">Direct UPI (0% Fee)</span>
         </div>
       </div>
 
       <div className="flex items-center gap-2 text-xs text-gray-500 mb-6">
         <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-        <span>Direct UPI Payment to Rotaract District 3192. 100% Direct Non-Profit Settlement.</span>
+        <span>Direct Non-Profit UPI Settlement to host Rotaract Club bank accounts.</span>
       </div>
 
       <button
@@ -176,7 +125,7 @@ function CheckoutContent() {
         className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
       >
         <Lock size={16} />
-        {loading ? "Processing..." : "Complete Registration"}
+        {loading ? "Processing..." : "Complete Pass Registration"}
       </button>
     </div>
   );
@@ -184,11 +133,8 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-      <Suspense fallback={<div className="py-section text-center text-muted">Loading checkout...</div>}>
-        <CheckoutContent />
-      </Suspense>
-    </>
+    <Suspense fallback={<div className="py-20 text-center text-gray-400">Loading checkout...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

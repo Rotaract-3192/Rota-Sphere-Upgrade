@@ -381,3 +381,66 @@ export async function getUserPendingOrganizerRequestAction(): Promise<{ success:
     return { success: false, data: null };
   }
 }
+
+export async function updateComplaintStatusAction(
+  complaintId: string,
+  status: "open" | "under_review" | "awaiting_info" | "resolved" | "rejected",
+  resolution?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+    const resolutionClause = resolution ? `, resolution = ${escapeSql(resolution)}, resolved_at = NOW()` : "";
+    await executeSql(`
+      UPDATE privacy_complaints
+      SET status = ${escapeSql(status)}${resolutionClause}, updated_at = NOW()
+      WHERE id::text = ${escapeSql(complaintId)} OR complaint_number = ${escapeSql(complaintId)};
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: `COMPLAINT_STATUS_${status.toUpperCase()}`,
+      entityType: "COMPLAINT",
+      entityId: complaintId,
+      newState: { status, resolution },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function updatePrivacyRequestStatusAction(
+  requestId: string,
+  status: "open" | "in_progress" | "completed" | "rejected",
+  resolution?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+    const completedClause = status === "completed" ? `, completed_at = NOW()` : "";
+    await executeSql(`
+      UPDATE privacy_requests
+      SET status = ${escapeSql(status)}${completedClause}, updated_at = NOW()
+      WHERE id::text = ${escapeSql(requestId)} OR request_number = ${escapeSql(requestId)};
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: `PRIVACY_REQUEST_${status.toUpperCase()}`,
+      entityType: "PRIVACY_REQUEST",
+      entityId: requestId,
+      newState: { status, resolution },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+

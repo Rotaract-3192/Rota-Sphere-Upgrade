@@ -15,7 +15,10 @@ export default async function AdminPage() {
     redirect("/sign-in");
   }
 
-  const isSuperAdmin = user.profile?.role === "super_admin" || user.email === "thejaswinps@gmail.com";
+  const isSuperAdmin =
+    user.profile?.role === "super_admin" ||
+    user.email === "tech.rotaract3192@gmail.com" ||
+    user.email === "thejaswinps@gmail.com";
   if (!isSuperAdmin) {
     redirect("/dashboard");
   }
@@ -68,6 +71,16 @@ export default async function AdminPage() {
   `).catch(() => ({ data: [] }));
   const organizerRequests = organizerReqsData || [];
 
+  const { data: complaintsData } = await executeSql(`
+    SELECT * FROM privacy_complaints ORDER BY created_at DESC LIMIT 100;
+  `).catch(() => ({ data: [] }));
+  const complaints = complaintsData || [];
+
+  const { data: privacyReqsData } = await executeSql(`
+    SELECT * FROM privacy_requests ORDER BY created_at DESC LIMIT 100;
+  `).catch(() => ({ data: [] }));
+  const privacyRequests = privacyReqsData || [];
+
   return (
     <SuperAdminDashboardClient
       user={user}
@@ -79,6 +92,8 @@ export default async function AdminPage() {
       initialAuditLogs={auditLogs}
       initialFeatureFlags={featureFlags}
       initialOrganizerRequests={organizerRequests}
+      initialComplaints={complaints}
+      initialPrivacyRequests={privacyRequests}
     />
   );
 }

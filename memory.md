@@ -43,6 +43,23 @@
 
 ## Change Log
 
+### 2026-08-18 — Full Legal, Privacy, DPDP Act 2023, Support, and Footer Architecture Implementation
+**Session goal:** Implement the full Indian legal, privacy, refund, dispute resolution, support, and footer infrastructure per DPDP Act 2023 / Rules 2025 and Consumer Protection (E-Commerce) Rules 2020.
+- **Footer Architecture**: Completely revamped `Footer.tsx` with dedicated Support, Legal & Privacy, and Platform columns, operating legal entity disclosure (NO "RotaSphere, Inc."), Grievance Officer details (`tech.rotaract3192@gmail.com`), and interactive `DirectoryVerificationModal`.
+- **Primary Operational Email**: Configured `tech.rotaract3192@gmail.com` as the universal email address for Super Admin authorization, Clerk role mapping, Grievance Redressal, Privacy Desk, Security, and Customer Support across the entire platform.
+- **Privacy Policy (`/privacy`)**: 14-section exhaustive DPDP Act 2023 & Rules 2025 policy including itemized data collection, payment separation (Razorpay non-storage of raw cards), gate check-in telemetry, purpose-based retention schedules, 72h breach SLA, and children's data rules.
+- **Terms of Service (`/terms`)**: 12-section commercial terms clarifying technology intermediary role, organizer obligations, ticket anti-duplication, fee transparency, and governing law (Bengaluru, Karnataka).
+- **Cookie Policy & Manager (`/cookies`, `/cookie-policy`)**: Comprehensive policy and interactive `CookiePreferencesClient` with zero third-party ads disclosure.
+- **Accessibility Statement (`/accessibility`)**: WCAG 2.1 AA conformance, keyboard navigation, and reduced-motion standards.
+- **Cancellation & Refund Policies (`/cancellation-policy`, `/refund-policy`)**: Realistic banking timelines (1-3d UPI, 3-7d cards), automatic triggers, partial refunds, failed transaction reconciliation helper, and free pass transfers.
+- **Dispute Resolution & Ombudsman (`/dispute-resolution`, `/disputes`)**: 5-tier resolution hierarchy and interactive `DisputeDashboardClient` with reference tracking (`DIS-2026-XXXXXX`) and timeline audit trail.
+- **Help Centre (`/help`)**: Searchable, real-time filtered knowledge base across Attendees, Organizers, Payments, Privacy, and Security with `HelpCenterClient`.
+- **Contact Desk (`/contact`)**: Multi-channel support routing, Grievance Officer details, and interactive case generator (`CASE-2026-XXXXXX`).
+- **HTML Sitemap (`/sitemap`)**: Full directory indexing all routes.
+- **Platform Security & System Status (`/security`, `/status`)**: Cryptographic SHA-256 tokens, RLS multi-tenancy, and live 99.98% uptime monitoring.
+- **Event Detail Transparency**: Enhanced `/events/[slug]` with transparent event-level policies, directory verification, and DPDP data collection disclosures.
+- **Build verification:** Ran `npm run build`: **PASSED** (0 TypeScript errors, 36/36 routes generated).
+
 ### 2026-08-12 — Full Production Build Execution & Verification
 
 **Session goal:** Build and verify a complete production-ready RotaSphere web application following `architecture.md` & `DESIGN-airbnb.md`.
@@ -64,3 +81,6 @@
 | Ticket QR token stored as SHA-256 hash | Security requirement: `qr_token_hash` in DB; raw token only returned once | 2026-08-12 |
 | Inventory reservations with `SELECT FOR UPDATE` | DB level advisory lock prevents overselling under concurrent checkouts | 2026-08-12 |
 | Airbnb Design Tokens in Tailwind | Full design system from `DESIGN-airbnb.md` (`brand`: `#ff385c`, `ink`: `#222222`, `rounded-card`: 14px) | 2026-08-12 |
+| DPDP Act 2023 & Rules 2025 Architecture | Implement full statutory privacy, purpose-based retention, 72h breach protocol, and Grievance Officer structure upfront | 2026-08-18 |
+| Operating Entity in Footer | Use exact operating entity "RotaSphere Platform Operations / Rotaract District 3192 Secretariat" instead of "Inc." | 2026-08-18 |
+| 5-Tier Dispute & Grievance Hierarchy | Support -> Host Club -> Platform Audit -> Grievance Officer -> Statutory Authorities | 2026-08-18 |

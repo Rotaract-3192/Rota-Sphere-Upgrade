@@ -237,18 +237,80 @@ export default async function EventDetailPage({ params }: PageProps) {
               </section>
             )}
 
-            {/* Venue & Location */}
+            {/* Venue & Guidelines */}
             <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Venue & Guidelines</h2>
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Venue &amp; Location Guidelines</h2>
               <div className="space-y-2 text-sm text-gray-700">
                 <p className="font-semibold text-gray-900">{event.venue_name || event.city}</p>
                 {event.address && <p className="text-gray-500">{event.address}</p>}
                 {event.terms_and_conditions && (
-                  <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
-                    <p className="font-bold text-gray-700 uppercase tracking-wider mb-1">Terms & Policies</p>
+                  <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600 leading-relaxed">
+                    <p className="font-bold text-gray-800 uppercase tracking-wider mb-1">Host Club Guidelines</p>
                     <p>{event.terms_and_conditions}</p>
                   </div>
                 )}
+              </div>
+            </section>
+
+            {/* Event Governance, Policies & DPDP Privacy Transparency */}
+            <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                    Transparency &amp; Governance
+                  </span>
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight">Event Policies &amp; Data Notice</h2>
+                </div>
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  ◉ Directory Verified RY 2026–27
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                {/* Policy 1: Ticket Validity */}
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-1.5">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
+                    🎟️ Ticket Validity &amp; Admission
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Pass includes single-use cryptographic dynamic QR code. Valid only for {event.title}. Photo ID verification may be requested at the venue gate.
+                  </p>
+                </div>
+
+                {/* Policy 2: Cancellation & Refund */}
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-1.5">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
+                    🔄 Cancellation &amp; Refunds
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Cancellations accepted up to 48h prior to event. 100% full refund guaranteed if event is cancelled or postponed by the host organizer. Pass transfer is 100% free anytime.
+                  </p>
+                </div>
+
+                {/* Policy 3: Organizer Contact */}
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-1.5">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
+                    🏛️ Verified Host Organizer
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Hosted by {(event as any).org_name || "Rotaract Club of District 3192"}. Official chartered club in District 3192. Settlements execute directly to verified club accounts.
+                  </p>
+                </div>
+
+                {/* Policy 4: DPDP Privacy Transparency */}
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-1.5">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-1.5">
+                    🛡️ Attendee Data Notice (DPDP)
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Registration data is shared strictly with the host club for gate check-in and certificate distribution. Your personal data is never sold or shared with external third-party advertisers.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 text-[11px] text-gray-400 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100">
+                <span>Subject to RotaSphere <Link href="/terms" className="text-[#1e9df1] hover:underline font-bold">Terms of Service</Link> and <Link href="/privacy" className="text-[#1e9df1] hover:underline font-bold">Privacy Policy</Link>.</span>
+                <Link href="/disputes" className="text-gray-600 hover:text-gray-900 hover:underline font-semibold">Report an Issue with this Event →</Link>
               </div>
             </section>
           </div>

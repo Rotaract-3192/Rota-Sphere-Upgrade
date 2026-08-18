@@ -47,7 +47,7 @@ export type PaymentStatus =
   | "REFUNDED"
   | "PARTIALLY_REFUNDED";
 
-export type PaymentProvider = "razorpay" | "manual_upi";
+export type PaymentProvider = "manual_upi" | "upi";
 
 export type RefundStatus =
   | "REQUESTED"

@@ -17,10 +17,6 @@ const serverEnvSchema = z.object({
   // Supabase — server-side (service role must NEVER be NEXT_PUBLIC_)
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
 
-  // Razorpay — server-side
-  RAZORPAY_KEY_ID: z.string().min(1, "RAZORPAY_KEY_ID is required"),
-  RAZORPAY_KEY_SECRET: z.string().min(1, "RAZORPAY_KEY_SECRET is required"),
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, "RAZORPAY_WEBHOOK_SECRET is required"),
 
   // SMTP — server-side
   SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),

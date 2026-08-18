@@ -1,76 +1,169 @@
-import { FileText, ShieldCheck, RefreshCw, CalendarX, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import {
+  FileText,
+  ShieldCheck,
+  RefreshCw,
+  CalendarX,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  HelpCircle,
+  Users,
+} from "lucide-react";
+import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
 
 export const metadata = {
   title: "Cancellation Policy | RotaSphere District 3192",
-  description: "Official cancellation terms for Rotaract District 3192 delegate passes and event registrations.",
+  description:
+    "Official ticket cancellation, delegate pass transfer, and event postponement rules for Rotaract District 3192 events.",
 };
 
 export default function CancellationPolicyPage() {
   return (
-    <main className="min-h-screen bg-gray-50 pb-20">
-      <section className="bg-gray-900 text-white py-14 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
-        <div className="max-w-3xl mx-auto space-y-4 relative z-10">
-          <span className="text-xs font-black uppercase tracking-widest text-[#60a5fa] inline-flex items-center gap-1.5">
-            <FileText size={14} /> District Governance
-          </span>
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24 transition-colors">
+      {/* ── 1. HERO HEADER ──────────────────────────────────────────────── */}
+      <section className="bg-gray-900 text-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
+        <div className="w-full max-w-3xl mx-auto space-y-4 relative z-10">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="text-xs font-black uppercase tracking-widest text-[#60a5fa] bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full inline-flex items-center gap-1.5">
+              <CalendarX size={14} /> Ticket Cancellation Terms
+            </span>
+            <LastUpdatedBadge date="2026-08-18" label="Policy updated" />
+          </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
             Event Cancellation Policy
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto leading-relaxed">
-            Terms governing ticket pass cancellations, event postponements, and delegate substitution rights across Rotaract District 3192 events.
+          <p className="text-sm sm:text-base text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            Transparent cancellation windows, free delegate pass transfers, and organizer postponement protections across Rotaract District 3192 events.
           </p>
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-8 text-gray-800 text-xs sm:text-sm leading-relaxed">
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs space-y-6">
+      {/* ── 2. MAIN POLICY CONTENT ──────────────────────────────────────── */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 space-y-8 text-gray-800 dark:text-gray-200 text-xs sm:text-sm leading-relaxed">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-10">
+          
+          {/* Section 1: Overview */}
           <div className="space-y-3">
-            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <ShieldCheck className="text-[#1e9df1]" size={20} /> 1. Overview &amp; District Standards
+            <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="text-[#1e9df1]" size={20} /> 1. Transparent Cancellation Governance
             </h2>
             <p>
-              RotaSphere serves as the official ticketing and gate check-in platform for Rotaract District 3192 events. All event passes, registrations, and delegate credentials issued through RotaSphere are subject to the cancellation policies established by the respective Host Rotaract Club and the District Secretariat.
+              RotaSphere enforces clear, upfront cancellation terms for every event. Because RotaSphere hosts a wide spectrum of events—ranging from community service initiatives and professional summits to district conferences—<strong>each event publishes its specific cancellation terms directly on the event booking page before checkout.</strong>
             </p>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 space-y-3">
-            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <CalendarX className="text-rose-600" size={20} /> 2. Attendee-Initiated Cancellations
+          {/* Section 2: Standard Attendee Cancellation Rules */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-4">
+            <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <Clock className="text-amber-600" size={20} /> 2. Attendee-Initiated Cancellation Tiers
             </h2>
-            <ul className="list-disc pl-5 space-y-2 text-gray-600">
-              <li>
-                <strong>Cancellations 48+ Hours Prior:</strong> Delegates seeking to cancel their registered pass more than 48 hours prior to event commencement must submit a cancellation request through <code>My Passes (/tickets)</code> or contact the host club organizer directly.
-              </li>
-              <li>
-                <strong>Late Cancellations (&lt; 48 Hours):</strong> Cancellations requested within 48 hours of event start time are non-refundable unless explicitly permitted by the host organizer due to emergency medical circumstances.
-              </li>
-              <li>
-                <strong>Unverified UTR Submissions:</strong> Bookings cancelled prior to organizer UTR payment verification will automatically release the reserved ticket back into public inventory.
-              </li>
+            <p>Unless an organizer specifies a stricter policy on the event page, the standard District 3192 cancellation tiers apply:</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Standard Window
+                </span>
+                <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">48+ Hours Prior</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Cancellations submitted more than 48 hours before event start are eligible for a 100% full refund (less gateway processing if applicable).
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  Late Window
+                </span>
+                <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">24 – 48 Hours Prior</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Subject to organizer discretion. Delegate substitution is strongly recommended.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                  Cutoff Window
+                </span>
+                <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">&lt; 24 Hours Prior</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Non-refundable due to finalized venue catering and kit printing, unless due to emergency medical circumstances.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Complimentary Ticket Transfer */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-3">
+            <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <RefreshCw className="text-emerald-600" size={20} /> 3. Zero-Cost Delegate Pass Transfers
+            </h2>
+            <p>
+              If you cannot attend an event, you don&apos;t have to lose your registration! RotaSphere provides a <strong>100% Free Pass Transfer feature</strong>:
+            </p>
+            <ol className="list-decimal pl-5 space-y-1.5 text-gray-600 dark:text-gray-400">
+              <li>Log in and navigate to <Link href="/tickets" className="text-[#1e9df1] font-bold hover:underline">My Passes (/tickets)</Link>.</li>
+              <li>Locate your confirmed ticket card and click <strong>Transfer Pass</strong>.</li>
+              <li>Enter the recipient&apos;s registered email address. The original QR code is instantly deactivated and a fresh, authenticated QR pass is generated for the new delegate.</li>
+            </ol>
+          </div>
+
+          {/* Section 4: Organizer Postponements & Force Majeure */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-3">
+            <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <AlertTriangle className="text-rose-600" size={20} /> 4. Organizer Postponements, Rescheduling &amp; Force Majeure
+            </h2>
+            <p>
+              If an event is cancelled by the Host Rotaract Club or District Secretariat due to adverse weather, administrative directives, or force majeure:
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-gray-600 dark:text-gray-400">
+              <li><strong>Event Cancellation:</strong> 100% of all registered delegates will automatically receive a full refund without any administrative deductions.</li>
+              <li><strong>Event Rescheduling:</strong> Existing tickets automatically carry forward to the rescheduled date. If a delegate cannot attend on the revised date, they can request a 100% full refund within 7 days of the date announcement.</li>
             </ul>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 space-y-3">
-            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <RefreshCw className="text-emerald-600" size={20} /> 3. Ticket Transfers &amp; Delegate Substitution
+          {/* Section 5: Configurable Organizer Policy Models */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-3">
+            <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="text-purple-600" size={20} /> 5. Organizer Policy Standards in Event Studio
             </h2>
             <p>
-              If a registered delegate is unable to attend an event, RotaSphere provides a complimentary <strong>Pass Transfer</strong> facility. Delegates may transfer their confirmed pass to any active Rotaract member or attendee by entering the recipient&apos;s registered email address in <code>My Passes (/tickets)</code>.
+              Organizers creating events on RotaSphere can select one of the standardized district cancellation templates:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-gray-600 dark:text-gray-400">
+              <li><strong>Option A (Flexible):</strong> Full 100% refund up to 24 hours prior to the event.</li>
+              <li><strong>Option B (Moderate):</strong> Full refund up to 7 days prior; 50% refund up to 48 hours prior.</li>
+              <li><strong>Option C (Strict):</strong> Full refund up to 14 days prior; non-refundable thereafter.</li>
+              <li><strong>Option D (Non-Refundable):</strong> No refunds permitted (delegate pass transfer allowed anytime).</li>
+            </ul>
+            <p className="text-xs text-gray-500 pt-1">
+              Organizers are legally prohibited from modifying or tightening cancellation policies post ticket issuance.
             </p>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 space-y-3">
-            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <AlertTriangle className="text-amber-600" size={20} /> 4. Organizer Postponement or Force Majeure
-            </h2>
-            <p>
-              In the event that an event is postponed, rescheduled, or cancelled by the Host Rotaract Club or District Secretariat due to adverse weather, administrative directives, or force majeure:
-            </p>
-            <ul className="list-disc pl-5 space-y-2 text-gray-600">
-              <li>All existing issued passes shall remain valid for the rescheduled date.</li>
-              <li>Delegates unable to attend on the rescheduled date are entitled to a 100% full refund of the ticket price processed directly by the host club.</li>
-            </ul>
+          {/* Contact / Help Desk */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Need to cancel or transfer a pass?</h3>
+              <p className="text-xs text-gray-500">Visit your passes dashboard or contact the support desk.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/tickets"
+                className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs px-5 py-3 rounded-2xl transition-colors cursor-pointer"
+              >
+                My Passes
+              </Link>
+              <Link
+                href="/refund-policy"
+                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              >
+                View Refund Policy <ArrowRight size={14} />
+              </Link>
+            </div>
           </div>
+
         </div>
       </section>
     </main>

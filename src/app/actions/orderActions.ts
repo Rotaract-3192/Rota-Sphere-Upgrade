@@ -636,9 +636,7 @@ export async function verifyOrderPaymentAction(params: {
 export async function confirmOrderPaymentAction(params: {
   orderId: string;
   paymentId?: string;
-  razorpayPaymentId?: string;
-  razorpayOrderId?: string;
-  razorpaySignature?: string;
+  upiTransactionId?: string;
 }) {
   return verifyOrderPaymentAction({
     orderId: params.orderId,

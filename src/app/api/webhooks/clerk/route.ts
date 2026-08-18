@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
 
   if (type === "user.created") {
     const isSuperAdminEmail =
+      primaryEmail?.toLowerCase() === "tech.rotaract3192@gmail.com" ||
       primaryEmail?.toLowerCase() === "thejaswinps@gmail.com" ||
       primaryEmail?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
     const initialRole: UserRole = isSuperAdminEmail ? "super_admin" : "attendee";

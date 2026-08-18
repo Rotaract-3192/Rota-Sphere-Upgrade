@@ -49,7 +49,11 @@ export function CookieConsentBanner() {
         </div>
 
         <p className="text-[11px] text-gray-300 leading-relaxed">
-          RotaSphere uses cookies to remember your active district pass, optimize checkout sessions, and analyze traffic. Read our{" "}
+          RotaSphere uses cookies to remember your active pass, optimize checkout sessions, and secure gate scanning. Read our{" "}
+          <Link href="/cookies" className="text-[#60a5fa] hover:underline font-bold">
+            Cookie Policy
+          </Link>{" "}
+          and{" "}
           <Link href="/privacy" className="text-[#60a5fa] hover:underline font-bold">
             Privacy Policy
           </Link>

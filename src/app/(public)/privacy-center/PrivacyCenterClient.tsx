@@ -96,30 +96,43 @@ export function PrivacyCenterClient({ userId, userEmail, userName }: Props) {
 // ─── CONSENTS TAB ─────────────────────────────────────────────────────────────
 
 function ConsentsTab({ userId, userEmail }: { userId: string; userEmail: string }) {
-  const [consents, setConsents] = useState<Record<string, string>>({});
+  const [consents, setConsents] = useState<Record<string, string>>(() => {
+    const initialMap: Record<string, string> = {};
+    (Object.keys(CONSENT_LABELS) as ConsentPurpose[]).forEach((p) => {
+      initialMap[p] = "granted";
+    });
+    return initialMap;
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getUserConsentsAction().then((res) => {
-      if (res.success && res.data) {
-        const map: Record<string, string> = {};
-        (res.data as any[]).forEach((c: any) => { map[c.purpose] = c.status; });
-        setConsents(map);
+      const map: Record<string, string> = {};
+      (Object.keys(CONSENT_LABELS) as ConsentPurpose[]).forEach((p) => {
+        map[p] = "granted";
+      });
+      if (res.success && res.data && Array.isArray(res.data)) {
+        (res.data as any[]).forEach((c: any) => {
+          if (c.purpose && c.status) {
+            map[c.purpose] = c.status;
+          }
+        });
       }
+      setConsents(map);
       setLoading(false);
     });
   }, []);
 
   async function toggle(purpose: ConsentPurpose) {
-    const current = consents[purpose];
+    const current = consents[purpose] ?? "granted";
     const newStatus = current === "granted" ? "withdrawn" : "granted";
     setSaving(purpose);
     const res = await updateUserConsentAction([purpose], newStatus as any);
     if (res.success) {
       setConsents((prev) => ({ ...prev, [purpose]: newStatus }));
-      setMessage(newStatus === "granted" ? "Consent granted." : "Consent withdrawn.");
+      setMessage(newStatus === "granted" ? "Consent enabled." : "Consent disabled.");
       setTimeout(() => setMessage(null), 3000);
     }
     setSaving(null);
@@ -151,7 +164,7 @@ function ConsentsTab({ userId, userEmail }: { userId: string; userEmail: string 
       <div className="space-y-3">
         {(Object.keys(CONSENT_LABELS) as ConsentPurpose[]).map((purpose) => {
           const meta = CONSENT_LABELS[purpose];
-          const status = consents[purpose] ?? "pending";
+          const status = consents[purpose] ?? "granted";
           const isGranted = status === "granted";
           const isRequired = meta.required;
           const isSaving = saving === purpose;

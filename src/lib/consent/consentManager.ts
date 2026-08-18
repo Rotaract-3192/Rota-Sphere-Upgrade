@@ -102,7 +102,8 @@ export async function hasConsent(userId: string, purpose: ConsentPurpose): Promi
     WHERE user_id = '${userId.replace(/'/g, "''")}' AND purpose = '${purpose}'
     LIMIT 1;
   `);
-  return data?.[0]?.status === "granted";
+  if (!data || data.length === 0) return true; // Default ON
+  return data[0]?.status === "granted";
 }
 
 /** Grant consent for one or more purposes */

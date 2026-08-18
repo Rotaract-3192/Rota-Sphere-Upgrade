@@ -11,7 +11,7 @@ export interface LogAuditParams {
   actorRole: string;
   actorEmail?: string | null;
   action: string;
-  entityType: "ORGANIZATION" | "EVENT" | "TICKET_TIER" | "ORDER" | "TICKET" | "REFUND" | "USER" | "SETTING" | "FEATURE_FLAG";
+  entityType: "ORGANIZATION" | "EVENT" | "TICKET_TIER" | "ORDER" | "TICKET" | "REFUND" | "USER" | "SETTING" | "FEATURE_FLAG" | "COMPLAINT" | "PRIVACY_REQUEST";
   entityId: string;
   organizationId?: string | null;
   previousState?: Record<string, any> | null;
