@@ -133,14 +133,28 @@ export function TopNav() {
             </Link>
           )}
 
-          {/* Host an Event CTA */}
-          <Link
-            href="/dashboard"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors"
-          >
-            <PlusCircle size={16} className="text-gray-600 dark:text-gray-300" />
-            Host Event
-          </Link>
+          {/* Host Event CTA — Visible on Mobile & Desktop after signing in */}
+          {isLoaded && isSignedIn && (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white bg-[#0758fc] hover:bg-[#054fe0] px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-xs transition-all active:scale-95 shrink-0"
+              aria-label="Host an Event"
+            >
+              <PlusCircle size={15} />
+              <span>Host<span className="hidden sm:inline"> Event</span></span>
+            </Link>
+          )}
+
+          {/* Host Event CTA (Desktop only when not signed in) */}
+          {isLoaded && !isSignedIn && (
+            <Link
+              href="/dashboard"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors"
+            >
+              <PlusCircle size={16} className="text-gray-600 dark:text-gray-300" />
+              Host Event
+            </Link>
+          )}
 
           {/* Auth State Button */}
           {isLoaded && !isSignedIn && (
