@@ -135,24 +135,20 @@ export function PwaInstallPrompt() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#0758fc] bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                      <Sparkles size={10} /> Fast App Access
-                    </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                      Install RotaSphere as an App
+                    </h4>
                     <button
                       type="button"
                       onClick={handleDismiss}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer shrink-0"
                       title="Dismiss"
                       aria-label="Dismiss notification"
                     >
                       <X size={15} />
                     </button>
                   </div>
-
-                  <h4 className="text-sm font-black text-gray-900 dark:text-white mt-1">
-                    Install RotaSphere as an App
-                  </h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
                     Add to your home screen for instant 1-tap pass access and fastest booking.
                   </p>
