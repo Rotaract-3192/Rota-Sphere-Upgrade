@@ -1,6 +1,6 @@
 /**
  * RotaSphere — Homepage
- * Clean white + blue design consistent with the rest of the platform.
+ * Clean white + blue design with full dark mode support.
  * Real-time stats fetched from DB.
  */
 
@@ -84,7 +84,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="bg-white text-gray-900 min-h-screen font-sans">
+    <div className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen font-sans transition-colors">
 
       {/* ── 1. HERO SECTION ─────────────────────────────────────────────── */}
       <section className="relative bg-gray-900 text-white overflow-hidden">
@@ -145,16 +145,16 @@ export default async function HomePage() {
       </section>
 
       {/* ── 2. REAL-TIME STATS BAR ────────────────────────────────────────── */}
-      <section className="border-b border-gray-100 bg-white">
+      <section className="border-b border-gray-100 dark:border-gray-800/80 bg-white dark:bg-gray-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800">
             {statItems.map((stat, i) => {
               const Icon = stat.icon;
               return (
                 <div key={i} className="flex flex-col items-center justify-center gap-1 py-6 px-4 text-center">
                   <Icon size={18} className="text-[#0758fc] mb-1" />
-                  <span className="text-2xl font-black text-gray-900">{stat.value}</span>
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</span>
+                  <span className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</span>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{stat.label}</span>
                 </div>
               );
             })}
@@ -163,7 +163,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── 3. CATEGORY FILTER STRIP ──────────────────────────────────────── */}
-      <section className="border-b border-gray-100 bg-gray-50">
+      <section className="border-b border-gray-100 dark:border-gray-800/80 bg-gray-50 dark:bg-gray-950 transition-colors">
         <Suspense fallback={<div className="h-16" />}>
           <CategoryStrip />
         </Suspense>
@@ -176,7 +176,7 @@ export default async function HomePage() {
             <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-widest mb-2">
               <Calendar size={14} /> Upcoming Flagship Events
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
               Featured Conventions
             </h2>
           </div>
@@ -194,7 +194,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── INTERACTIVE EVENT MAP & VENUE DISCOVERY ─────────────────────── */}
-      <section className="bg-gray-100/60 border-y border-gray-200 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-gray-100/60 dark:bg-gray-900/60 border-y border-gray-200 dark:border-gray-800 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 transition-colors">
         <div className="max-w-7xl mx-auto">
           <EventMapExplorer
             events={mapEvents}
@@ -205,16 +205,16 @@ export default async function HomePage() {
       </section>
 
       {/* ── 6. ABOUT & TIMELINE ───────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-gray-100">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 transition-colors">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-widest mb-3">
               <Calendar size={14} /> The Rotasphere Journey
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
               About the Experience
             </h2>
-            <p className="text-gray-600 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base mt-3 leading-relaxed w-full max-w-2xl mx-auto">
               Curated itineraries for youth leaders across Bengaluru, Tumakuru, Kolar, and Chikkaballapura.
             </p>
           </div>
@@ -222,25 +222,25 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             {/* Left Narrative */}
             <div className="lg:col-span-4 space-y-6">
-              <h3 className="text-2xl font-bold text-gray-900 leading-tight">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                 Designed for Young Changemakers Across District 3192.
               </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 No booking confusion, ticketing delays, or gate entry issues. Everything is centralized on RotaSphere so you can focus on making an impact.
               </p>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="bg-blue-50 rounded-2xl p-4 text-center">
+                <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-2xl p-4 text-center">
                   <p className="text-3xl font-black text-[#0758fc]">
                     {stats.events > 0 ? stats.events : "—"}
                   </p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Published Events</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">Published Events</p>
                 </div>
-                <div className="bg-emerald-50 rounded-2xl p-4 text-center">
-                  <p className="text-3xl font-black text-emerald-600">
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
                     {stats.clubs > 0 ? stats.clubs : "—"}
                   </p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Active Clubs</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">Active Clubs</p>
                 </div>
               </div>
             </div>
@@ -250,19 +250,19 @@ export default async function HomePage() {
               {mapEvents.slice(0, 4).map((item: any, i: number) => (
                 <div key={item.id || i} className="relative group">
                   {/* Timeline dot */}
-                  <div className="absolute -left-[31px] top-5 w-4 h-4 rounded-full bg-[#0758fc] border-4 border-white shadow-md group-hover:scale-125 transition-transform" />
+                  <div className="absolute -left-[31px] top-5 w-4 h-4 rounded-full bg-[#0758fc] border-4 border-white dark:border-gray-950 shadow-md group-hover:scale-125 transition-transform" />
 
-                  <div className="bg-gray-50 border border-gray-100 hover:border-[#0758fc]/30 rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                  <div className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-[#0758fc]/30 rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <span className="text-xs font-bold text-[#0758fc] uppercase tracking-wider">
                         {new Date(item.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} · {item.city || "Karnataka"}
                       </span>
                     </div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h4>
-                    <p className="text-sm text-gray-500 mb-4 line-clamp-2">{item.summary || item.description || "Official Rotaract District 3192 event."}</p>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{item.title}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{item.summary || item.description || "Official Rotaract District 3192 event."}</p>
 
                     {item.cover_image_url && (
-                      <div className="relative w-32 h-20 rounded-xl overflow-hidden border border-gray-200">
+                      <div className="relative w-32 h-20 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
                         <Image src={item.cover_image_url} alt={item.title} fill className="object-cover" />
                       </div>
                     )}
@@ -275,7 +275,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── 7. CONTACT / INQUIRY FORM ─────────────────────────────────────── */}
-      <section className="bg-gray-50 dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8">
+      <section className="bg-gray-50 dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8 transition-colors">
         <div className="max-w-5xl mx-auto">
           <div className="bg-white dark:bg-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-xs space-y-6 sm:space-y-0">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-center">

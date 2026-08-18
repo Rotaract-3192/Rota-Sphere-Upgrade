@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * CategoryStrip — Sleek Dark Category Horizontal Scroll
- * Tailored for District 3192 Flagship Event Formats.
+ * CategoryStrip — Sleek Responsive Category Horizontal Scroll
+ * Tailored for District 3192 Flagship Event Formats with full light & dark theme support.
  */
 
 import { useState } from "react";
@@ -44,7 +44,7 @@ export function CategoryStrip() {
   }
 
   return (
-    <div className="w-full bg-white/95 border-b border-gray-200 sticky top-16 sm:top-20 z-30 backdrop-blur-md">
+    <div className="w-full bg-white/95 dark:bg-gray-900/95 border-b border-gray-200 dark:border-gray-800 sticky top-16 sm:top-20 z-30 backdrop-blur-md transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide py-3.5">
           {CATEGORIES.map(({ id, label, icon: Icon }) => {
@@ -55,10 +55,20 @@ export function CategoryStrip() {
                 onClick={() => handleSelect(id)}
                 className={[
                   "flex flex-col items-center gap-1.5 py-1 min-w-fit relative group cursor-pointer transition-colors duration-150",
-                  active ? "text-[#0758fc] font-bold" : "text-gray-500 hover:text-gray-900 font-medium",
+                  active
+                    ? "text-[#0758fc] font-bold"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium",
                 ].join(" ")}
               >
-                <Icon size={20} strokeWidth={active ? 2.2 : 1.6} className={active ? "text-[#0758fc]" : "text-gray-400 group-hover:text-gray-700"} />
+                <Icon
+                  size={20}
+                  strokeWidth={active ? 2.2 : 1.6}
+                  className={
+                    active
+                      ? "text-[#0758fc]"
+                      : "text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                  }
+                />
                 <span className="text-xs whitespace-nowrap">{label}</span>
 
                 {/* Active indicator */}
