@@ -1131,7 +1131,7 @@ export function SuperAdminDashboardClient({
                     ₹{totalGmv.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-                    <ArrowUpRight size={14} /> +34.2% vs prior period
+                    <ArrowUpRight size={14} /> {totalGmv > 0 ? "Live Settlement Velocity" : "0% Platform Fee · Direct UPI"}
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-[#1e9df1] to-rose-400 rounded-full w-full opacity-70" />
