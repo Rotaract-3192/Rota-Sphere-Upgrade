@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
@@ -67,7 +68,12 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
   return (
     <>
       {/* ── MAIN BOOKING CARD (Visible on both mobile & desktop) ────────────── */}
-      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 lg:sticky lg:top-24">
+      <motion.div
+        initial={{ opacity: 0, y: 35 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 lg:sticky lg:top-24"
+      >
         {/* Price Header */}
         <div className="flex items-baseline justify-between border-b border-gray-100 pb-5">
           <div>
@@ -252,10 +258,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
           <ShieldCheck size={14} className="text-emerald-500" />
           <span>Encrypted checkout · Single-use QR issued immediately</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── MOBILE FLOATING BOTTOM BAR (below lg breakpoint) ──────────────── */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl px-4 py-3 flex items-center gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl px-4 py-3 flex items-center gap-3"
+      >
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passes From</p>
           <p className="text-lg font-extrabold text-gray-900 leading-tight">
@@ -282,7 +293,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
           <Ticket size={18} />
           Register &amp; Buy
         </button>
-      </div>
+      </motion.div>
 
       {/* Checkout Modal (rendered with z-[9999] high priority) */}
       <CheckoutModal

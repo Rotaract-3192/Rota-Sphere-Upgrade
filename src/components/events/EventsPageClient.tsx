@@ -23,8 +23,8 @@ export function EventsPageClient({ events, clubName }: EventsPageClientProps) {
             {clubName
               ? `Events Hosted by ${clubName}`
               : viewMode === "GRID"
-              ? "All Event Listings"
-              : "Interactive Event Map"}
+                ? "All Event Listings"
+                : "Interactive Event Map"}
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {viewMode === "GRID"
@@ -33,26 +33,24 @@ export function EventsPageClient({ events, clubName }: EventsPageClientProps) {
           </p>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full flex items-center gap-1 border border-gray-200/80 dark:border-gray-700 self-start sm:self-auto shadow-inner">
+        <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl flex items-center gap-1 border border-gray-200 dark:border-gray-700 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setViewMode("GRID")}
-            className={`px-4 sm:px-5 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
-              viewMode === "GRID"
-                ? "bg-white dark:bg-gray-900 text-[#0758fc] dark:text-white shadow-sm"
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${viewMode === "GRID"
+                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
           >
             <LayoutGrid size={15} /> Grid View
           </button>
           <button
             type="button"
             onClick={() => setViewMode("MAP")}
-            className={`px-4 sm:px-5 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
-              viewMode === "MAP"
-                ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/25"
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${viewMode === "MAP"
+                ? "bg-[#0758fc] text-white shadow-xs"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
           >
             <MapPin size={15} /> Interactive Map
           </button>
