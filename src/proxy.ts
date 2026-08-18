@@ -48,9 +48,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
         "worker-src 'self' blob:",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https: https://img.clerk.com",
-        // Supabase, Clerk API, accounts.dev
-        "connect-src 'self' https://*.supabase.co https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://*.accounts.dev",
+        "img-src 'self' data: blob: https: https://img.clerk.com https://*.rotaract3192.org",
+        // Supabase (including custom domain db.rotaract3192.org), Clerk API, accounts.dev
+        "connect-src 'self' https://*.supabase.co https://db.rotaract3192.org https://*.rotaract3192.org https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://*.accounts.dev",
         "frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
         "frame-ancestors 'none'",
         "base-uri 'self'",
