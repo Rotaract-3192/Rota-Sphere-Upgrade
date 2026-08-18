@@ -2,9 +2,9 @@
 
 /**
  * Mobile Bottom Navigation Bar (Dock / Tab Bar)
- * Mobile-first native experience replacing traditional burger menu.
+ * Mobile-first native experience with "My Tickets" elevated in the center.
  * Features: 5 primary navigation targets, spring active indicators, safe-area inset support,
- * elevated center action button, and Clerk role-aware admin shortcuts.
+ * elevated center ticket pass button, and role-aware admin shortcuts.
  */
 
 import Link from "next/link";
@@ -53,15 +53,15 @@ export function BottomNav() {
       isCenter: false,
     },
     {
-      label: "Host",
-      href: "/dashboard",
-      icon: PlusCircle,
+      label: "My Tickets",
+      href: "/tickets",
+      icon: Ticket,
       isCenter: true,
     },
     {
-      label: "Passes",
-      href: "/tickets",
-      icon: Ticket,
+      label: "Host",
+      href: "/dashboard",
+      icon: PlusCircle,
       isCenter: false,
     },
     isSuperAdmin
@@ -103,7 +103,7 @@ export function BottomNav() {
                       : "bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-blue-500/30 ring-4 ring-white dark:ring-gray-950 group-hover:scale-105"
                   }`}
                 >
-                  <Icon size={24} className="transition-transform group-hover:rotate-45" />
+                  <Icon size={22} className="transition-transform group-hover:scale-110" />
                 </div>
                 <span
                   className={`text-[10px] font-extrabold mt-1 tracking-tight ${
@@ -120,30 +120,30 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-col items-center justify-center py-1.5 rounded-2xl transition-all active:scale-95 group focus:outline-hidden"
+              className="relative flex flex-col items-center justify-center py-2 px-1 text-center transition-all group focus:outline-hidden active:scale-95"
             >
-              <div className="relative flex items-center justify-center w-8 h-8">
+              <div className="relative">
                 <Icon
                   size={20}
                   className={`transition-colors duration-200 ${
                     active
-                      ? "text-[#1e9df1] scale-110"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200"
+                      ? "text-[#1e9df1]"
+                      : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                   }`}
                 />
                 {active && (
                   <motion.div
-                    layoutId="mobileActiveTabPill"
-                    className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl -z-10"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    layoutId="bottom-nav-indicator"
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1e9df1]"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
               </div>
               <span
-                className={`text-[10px] tracking-tight transition-colors duration-200 ${
+                className={`text-[10px] font-bold mt-1 tracking-tight truncate max-w-[60px] ${
                   active
-                    ? "font-black text-[#1e9df1]"
-                    : "font-semibold text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200"
+                    ? "text-[#1e9df1] font-extrabold"
+                    : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                 }`}
               >
                 {item.label}
