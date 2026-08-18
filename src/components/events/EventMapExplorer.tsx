@@ -72,13 +72,50 @@ export function EventMapExplorer({
   title = "Interactive Event Map & Venue Discovery",
   subtitle = "Explore verified Rotaract events across Karnataka and District 3192 on the interactive map.",
 }: EventMapExplorerProps) {
-  // Fix X button: Start with null so card is closed unless user selects an event or explicitly clicks
+  const [isDark, setIsDark] = useState<boolean>(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeCityFilter, setActiveCityFilter] = useState<string>("ALL");
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+
+  // Detect theme from DOM and localStorage, listen to changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const checkTheme = () => {
+      const isDarkMode =
+        document.documentElement.classList.contains("dark") ||
+        localStorage.getItem("rotasphere-theme") === "dark";
+      setIsDark(isDarkMode);
+    };
+
+    checkTheme();
+
+    // Listen to custom theme change event
+    const handleThemeChange = (e: any) => {
+      if (e.detail) {
+        setIsDark(e.detail === "dark");
+      } else {
+        checkTheme();
+      }
+    };
+
+    window.addEventListener("rotasphere-theme-change", handleThemeChange);
+
+    // Also observe DOM attribute changes for class="dark"
+    const observer = new MutationObserver(() => {
+      checkTheme();
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+    return () => {
+      window.removeEventListener("rotasphere-theme-change", handleThemeChange);
+      observer.disconnect();
+    };
+  }, []);
 
   // Fix X button logic: ONLY return event if selectedEventId is truthy
   const selectedEvent = useMemo(() => {
@@ -119,7 +156,11 @@ export function EventMapExplorer({
     import("leaflet").then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
 
-      // Prevent duplicate map initialization
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+      // Initialize map instance if not existing
       if (!mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current, {
           center: [12.9716, 77.5946],
@@ -128,13 +169,23 @@ export function EventMapExplorer({
           attributionControl: false,
         });
 
-        // High Performance CartoDB Dark Matter tile layer
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        const tileLayer = L.tileLayer(tileUrl, {
           maxZoom: 19,
           subdomains: "abcd",
         }).addTo(map);
 
+        tileLayerRef.current = tileLayer;
         mapInstanceRef.current = map;
+      } else {
+        // Swap tile layer if theme changed
+        if (tileLayerRef.current) {
+          mapInstanceRef.current.removeLayer(tileLayerRef.current);
+        }
+        const newLayer = L.tileLayer(tileUrl, {
+          maxZoom: 19,
+          subdomains: "abcd",
+        }).addTo(mapInstanceRef.current);
+        tileLayerRef.current = newLayer;
       }
 
       const map = mapInstanceRef.current;
@@ -157,16 +208,28 @@ export function EventMapExplorer({
 
         const isSelected = selectedEventId === evt.id;
 
+        const pinBg = isSelected
+          ? "#0758fc"
+          : isDark
+          ? "#0f172a"
+          : "#ffffff";
+        const pinText = isSelected
+          ? "#ffffff"
+          : isDark
+          ? "#f8fafc"
+          : "#0f172a";
+        const pinBorder = isSelected
+          ? "#ffffff"
+          : isDark
+          ? "#334155"
+          : "#e2e8f0";
+
         const customIcon = L.divIcon({
           className: "custom-map-pin-container",
           html: `
-            <div class="relative cursor-pointer group">
+            <div class="relative cursor-pointer group" style="transition: transform 0.2s ease;">
               ${isSelected ? '<span class="absolute -inset-2 rounded-full bg-[#0758fc]/40 animate-ping"></span>' : ''}
-              <div className="px-3 py-1.5 rounded-full border text-xs font-black transition-all flex items-center gap-1.5 shadow-xl ${
-                isSelected
-                  ? 'bg-[#0758fc] border-white text-white scale-110 shadow-[#0758fc]/60'
-                  : 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
-              }" style="background-color: ${isSelected ? '#0758fc' : '#0f172a'}; color: #ffffff; padding: 6px 12px; border-radius: 9999px; border: 1.5px solid ${isSelected ? '#ffffff' : '#334155'}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
+              <div style="background-color: ${pinBg}; color: ${pinText}; padding: 6px 12px; border-radius: 9999px; border: 1.5px solid ${pinBorder}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,${isDark ? '0.6' : '0.15'});">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: ${isSelected ? '#ffffff' : '#0758fc'};"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span>${evt.city || 'Venue'}</span>
               </div>
@@ -195,7 +258,7 @@ export function EventMapExplorer({
     return () => {
       isMounted = false;
     };
-  }, [filteredEvents, selectedEventId, activeCityFilter]);
+  }, [filteredEvents, selectedEventId, activeCityFilter, isDark]);
 
   function handleZoomIn() {
     if (mapInstanceRef.current) mapInstanceRef.current.zoomIn();
@@ -222,8 +285,8 @@ export function EventMapExplorer({
           <span className="text-[11px] font-black uppercase tracking-widest text-[#0758fc] flex items-center gap-1.5 mb-1">
             <Compass size={14} /> District 3192 Location Intelligence
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{title}</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">{subtitle}</p>
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">{title}</h2>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">{subtitle}</p>
         </div>
 
         {/* City Filter Tabs */}
@@ -234,7 +297,7 @@ export function EventMapExplorer({
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeCityFilter === "ALL"
                   ? "bg-[#0758fc] text-white shadow-xs"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
               All Cities ({events.length})
@@ -246,7 +309,7 @@ export function EventMapExplorer({
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeCityFilter === city
                     ? "bg-[#0758fc] text-white shadow-xs"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
                 {city}
@@ -257,16 +320,16 @@ export function EventMapExplorer({
       </div>
 
       {/* ── MAP & FILTERED RESULTS SPLIT-SCREEN CONTAINER ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 shadow-xl overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 shadow-xl overflow-hidden transition-colors">
         
         {/* ── LEFT CANVAS: REAL LEAFLET INTERACTIVE MAP (7 COLS ON DESKTOP) ── */}
-        <div className="lg:col-span-7 relative bg-slate-900 rounded-2xl overflow-hidden min-h-[440px] sm:min-h-[520px] border border-slate-800 shadow-inner">
+        <div className="lg:col-span-7 relative bg-slate-900 dark:bg-gray-950 rounded-2xl overflow-hidden min-h-[440px] sm:min-h-[520px] border border-slate-800 dark:border-gray-800 shadow-inner">
           
           {/* Leaflet Map Div Container */}
           <div ref={mapContainerRef} className="w-full h-full min-h-[440px] sm:min-h-[520px] z-10" />
 
           {/* Top Status Badge Overlay */}
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-slate-950/90 backdrop-blur-md border border-slate-700 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg">
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-slate-950/90 dark:bg-gray-900/90 backdrop-blur-md border border-slate-700 dark:border-gray-700 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Showing {filteredEvents.length} {filteredEvents.length === 1 ? "event" : "events"}
           </div>
@@ -277,7 +340,7 @@ export function EventMapExplorer({
               type="button"
               onClick={handleZoomIn}
               title="Zoom In"
-              className="w-8 h-8 rounded-xl bg-slate-950/90 border border-slate-700 hover:bg-slate-800 text-white flex items-center justify-center transition-colors cursor-pointer shadow-md"
+              className="w-8 h-8 rounded-xl bg-slate-950/90 dark:bg-gray-900/90 border border-slate-700 dark:border-gray-700 hover:bg-slate-800 dark:hover:bg-gray-800 text-white flex items-center justify-center transition-colors cursor-pointer shadow-md"
             >
               <Plus size={16} />
             </button>
@@ -285,7 +348,7 @@ export function EventMapExplorer({
               type="button"
               onClick={handleZoomOut}
               title="Zoom Out"
-              className="w-8 h-8 rounded-xl bg-slate-950/90 border border-slate-700 hover:bg-slate-800 text-white flex items-center justify-center transition-colors cursor-pointer shadow-md"
+              className="w-8 h-8 rounded-xl bg-slate-950/90 dark:bg-gray-900/90 border border-slate-700 dark:border-gray-700 hover:bg-slate-800 dark:hover:bg-gray-800 text-white flex items-center justify-center transition-colors cursor-pointer shadow-md"
             >
               <Minus size={16} />
             </button>
@@ -293,7 +356,7 @@ export function EventMapExplorer({
               type="button"
               onClick={handleResetZoom}
               title="Reset View"
-              className="w-8 h-8 rounded-xl bg-slate-950/90 border border-slate-700 hover:bg-slate-800 text-amber-400 flex items-center justify-center transition-colors cursor-pointer shadow-md"
+              className="w-8 h-8 rounded-xl bg-slate-950/90 dark:bg-gray-900/90 border border-slate-700 dark:border-gray-700 hover:bg-slate-800 dark:hover:bg-gray-800 text-amber-400 flex items-center justify-center transition-colors cursor-pointer shadow-md"
             >
               <RotateCcw size={15} />
             </button>
@@ -301,10 +364,10 @@ export function EventMapExplorer({
 
           {/* Bottom-Left Interactive Event Preview Overlay Card */}
           {selectedEvent && (
-            <div className="absolute bottom-4 left-4 right-4 sm:right-auto z-30 p-4 sm:p-5 max-w-[340px] w-full bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl text-white space-y-3 pointer-events-auto shadow-[#0758fc]/20 animate-in fade-in slide-in-from-bottom-2">
+            <div className="absolute bottom-4 left-4 right-4 sm:right-auto z-30 p-4 sm:p-5 max-w-[340px] w-full bg-slate-950/95 dark:bg-gray-900/95 backdrop-blur-xl border border-slate-700 dark:border-gray-700 rounded-2xl shadow-2xl text-white space-y-3 pointer-events-auto shadow-[#0758fc]/20 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-start gap-3">
                 {selectedEvent.cover_image_url && (
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-700">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-700 dark:border-gray-700">
                     <Image
                       src={selectedEvent.cover_image_url}
                       alt={selectedEvent.title}
@@ -337,7 +400,7 @@ export function EventMapExplorer({
                     {selectedEvent.title}
                   </h4>
                   
-                  <div className="space-y-0.5 mt-1 text-[11px] text-slate-300">
+                  <div className="space-y-0.5 mt-1 text-[11px] text-slate-300 dark:text-gray-300">
                     <p className="flex items-center gap-1.5">
                       <Calendar size={12} className="text-amber-400 shrink-0" />
                       <span>{new Date(selectedEvent.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -351,7 +414,7 @@ export function EventMapExplorer({
               </div>
 
               {/* Get Directions Link */}
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+              <div className="pt-2 border-t border-slate-800 dark:border-gray-800 flex items-center justify-between text-xs">
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                     `${selectedEvent.venue_name || ""} ${selectedEvent.city || "Bengaluru"}`
@@ -373,7 +436,7 @@ export function EventMapExplorer({
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <Link
                   href={`/events/${selectedEvent.slug}`}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-2 px-3 rounded-xl transition-colors text-center flex items-center justify-center gap-1"
+                  className="w-full bg-slate-800 dark:bg-gray-800 hover:bg-slate-700 dark:hover:bg-gray-700 text-white font-bold text-xs py-2 px-3 rounded-xl transition-colors text-center flex items-center justify-center gap-1"
                 >
                   <span>Details</span>
                   <ChevronRight size={13} />
@@ -396,11 +459,11 @@ export function EventMapExplorer({
         <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
           
           <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-sm font-black text-gray-900 tracking-wider uppercase">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-wider uppercase">
                 FILTERED RESULTS ({filteredEvents.length})
               </h3>
-              <span className="text-xs text-gray-500 font-semibold">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
                 Click event to inspect on map
               </span>
             </div>
@@ -408,7 +471,7 @@ export function EventMapExplorer({
             {/* Event List Items */}
             <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
               {filteredEvents.length === 0 ? (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-500">
+                <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl text-xs text-gray-500 dark:text-gray-400">
                   No events found for the selected city filter.
                 </div>
               ) : (
@@ -431,12 +494,12 @@ export function EventMapExplorer({
                       }}
                       className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
-                          ? "bg-blue-50/70 border-[#0758fc] shadow-xs"
-                          : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                          ? "bg-blue-50/80 dark:bg-blue-950/50 border-[#0758fc] dark:border-[#0758fc] shadow-xs"
+                          : "bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800"
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
                           {evt.cover_image_url ? (
                             <Image
                               src={evt.cover_image_url}
@@ -451,15 +514,15 @@ export function EventMapExplorer({
                         </div>
 
                         <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-gray-900 truncate">{evt.title}</h4>
-                          <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">{evt.title}</h4>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
                             {evt.city || "Bengaluru"} · {new Date(evt.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-gray-900 block">
+                        <span className="text-xs font-black text-gray-900 dark:text-white block">
                           {getMinPrice(evt.saas_ticket_tiers)}
                         </span>
                         <Link
@@ -478,7 +541,7 @@ export function EventMapExplorer({
           </div>
 
           {/* Bottom Bar Controls */}
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-semibold">
+          <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-semibold">
             <span>Showing current map bounds</span>
             <button
               type="button"

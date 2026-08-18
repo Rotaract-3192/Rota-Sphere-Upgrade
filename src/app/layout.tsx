@@ -19,6 +19,7 @@ import { CookieConsentBanner } from "@/components/shared/CookieConsentBanner";
 import { FloatingContactButton } from "@/components/shared/FloatingContactButton";
 import { BottomNav } from "@/components/shared/BottomNav";
 import { GlobalCommandPalette } from "@/components/shared/GlobalCommandPalette";
+import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
 import { UtmTracker } from "@/lib/analytics/utmTracker";
 
 const openSans = Open_Sans({
@@ -147,6 +148,7 @@ export default function RootLayout({
         <FloatingContactButton />
         <ScrollToTop />
         <CookieConsentBanner />
+        <PwaInstallPrompt />
         <BottomNav />
       </body>
     </html>

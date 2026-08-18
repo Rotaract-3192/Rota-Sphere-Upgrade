@@ -10,9 +10,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, ChevronUp, ShieldCheck, Mail, Sparkles, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronUp, ShieldCheck, Mail, Sparkles, ExternalLink, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { triggerPwaInstall } from "@/components/shared/PwaInstallPrompt";
 
 const FOOTER_COLUMNS = [
   {
@@ -208,6 +209,17 @@ export function Footer() {
               </div>
               <ThemeToggle />
             </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => triggerPwaInstall()}
+                className="w-full flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-[#0758fc] dark:text-blue-400 font-extrabold text-xs py-2.5 px-4 rounded-2xl hover:bg-blue-100 dark:hover:bg-blue-900/80 transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <Download size={14} />
+                <span>Install RotaSphere as App</span>
+              </button>
+            </div>
           </div>
 
           {/* Copyright & DPDP */}
@@ -320,8 +332,17 @@ export function Footer() {
                 </Link>
               </div>
 
-              {/* Social icons & Theme toggle */}
-              <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
+              {/* Install App Button, Social icons & Theme toggle */}
+              <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                <button
+                  type="button"
+                  onClick={() => triggerPwaInstall()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 text-xs font-black text-[#0758fc] dark:text-blue-400 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                  title="Install Web App on your device"
+                >
+                  <Download size={13} />
+                  <span>Install App</span>
+                </button>
                 <ThemeToggle />
                 <a
                   href="https://instagram.com/rotaract3192"
