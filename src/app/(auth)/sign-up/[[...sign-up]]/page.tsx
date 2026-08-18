@@ -19,7 +19,11 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const envKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const hasClerkKey =
+    Boolean(envKey) &&
+    !envKey?.includes("replace_me") &&
+    (envKey?.startsWith("pk_test_") || envKey?.startsWith("pk_live_"));
 
   function handlePreviewSignUp(e: React.FormEvent) {
     e.preventDefault();
