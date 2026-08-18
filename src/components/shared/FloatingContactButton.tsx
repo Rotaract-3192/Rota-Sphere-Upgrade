@@ -44,11 +44,11 @@ export function FloatingContactButton() {
               <span>Contact District Team</span>
             </Link>
             <a
-              href="mailto:support@rotaract3192.org"
+              href="mailto:tech.rotaract3192@gmail.com"
               className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/10 transition-colors text-gray-200 font-bold"
             >
               <Phone size={15} className="text-[#f472b6]" />
-              <span>support@rotaract3192.org</span>
+              <span>tech.rotaract3192@gmail.com</span>
             </a>
           </div>
         </div>

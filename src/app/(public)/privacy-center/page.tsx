@@ -32,7 +32,7 @@ export default async function PrivacyCenterPage() {
           Under the Digital Personal Data Protection Act 2023, you have rights over your personal data. Manage your consents, request your data, raise concerns, or delete your account here.
         </p>
         <p className="text-[11px] text-gray-400 dark:text-gray-600">
-          Privacy contact: <a href="mailto:privacy@rotaract3192.org" className="underline">privacy@rotaract3192.org</a>
+          Privacy contact: <a href="mailto:tech.rotaract3192@gmail.com" className="underline">tech.rotaract3192@gmail.com</a>
         </p>
       </div>
       <PrivacyCenterClient userEmail={user.email!} userName={user.profile.full_name ?? user.email ?? "User"} userId={user.clerkId} />

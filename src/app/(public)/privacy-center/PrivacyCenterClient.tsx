@@ -84,7 +84,7 @@ export function PrivacyCenterClient({ userId, userEmail, userName }: Props) {
         <Info size={14} className="shrink-0 mt-0.5" />
         <p>
           This Privacy Center is provided under the Digital Personal Data Protection Act, 2023 (India).
-          For assistance, contact <a href="mailto:privacy@rotaract3192.org" className="underline">privacy@rotaract3192.org</a>.
+          For assistance, contact <a href="mailto:tech.rotaract3192@gmail.com" className="underline">tech.rotaract3192@gmail.com</a>.
           Compliance configuration does not constitute legal certification.
           This platform should be reviewed by an Indian privacy/legal professional before commercial launch.
         </p>
@@ -656,7 +656,7 @@ function DeletionTab({ userEmail }: { userEmail: string }) {
 
         <p className="text-[11px] text-red-600 dark:text-red-500">
           This submits a deletion request to our privacy team. Your account remains active until the request is processed.
-          For immediate concerns contact <a href="mailto:privacy@rotaract3192.org" className="underline">privacy@rotaract3192.org</a>.
+          For immediate concerns contact <a href="mailto:tech.rotaract3192@gmail.com" className="underline">tech.rotaract3192@gmail.com</a>.
         </p>
       </div>
     </div>
