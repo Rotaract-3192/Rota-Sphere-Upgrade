@@ -33,9 +33,9 @@ export function ScrollToTop() {
       type="button"
       onClick={scrollToTop}
       aria-label="Scroll to top of page"
-      className="fixed bottom-20 right-6 z-40 p-3 rounded-2xl bg-gray-900/80 hover:bg-gray-900 text-white backdrop-blur-md border border-white/20 shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center group"
+      className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-40 p-3 rounded-2xl bg-gray-900/85 hover:bg-gray-900 text-white backdrop-blur-md border border-white/20 shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center group"
     >
-      <ArrowUp size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+      <ArrowUp size={16} className="group-hover:-translate-y-0.5 transition-transform" />
     </button>
   );
 }
