@@ -3,6 +3,7 @@
 /**
  * Mobile Bottom Navigation Bar (Dock / Tab Bar)
  * High-end tactile native mobile experience with fluid Framer Motion animations:
+ * - Home button at the leading edge for instant return to discovery feed
  * - Sliding active pill capsule background with spring physics
  * - Bouncy icon micro-interactions on selection and tap
  * - Elevated pulsating center action button for "My Tickets"
@@ -12,8 +13,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { Calendar, Users, Ticket, PlusCircle, Shield, Image as ImageIcon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Home, Calendar, Users, Ticket, Shield, Image as ImageIcon } from "lucide-react";
+import { motion } from "framer-motion";
 
 function useSafeUser() {
   try {
@@ -35,23 +36,26 @@ export function BottomNav() {
   }
 
   const isTabActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
     if (href === "/events") {
-      return pathname === "/" || pathname === "/events" || pathname.startsWith("/events/");
+      return pathname === "/events" || pathname.startsWith("/events/");
     }
     return pathname === href || pathname.startsWith(href + "/");
   };
 
   const navItems = [
     {
-      label: "Events",
-      href: "/events",
-      icon: Calendar,
+      label: "Home",
+      href: "/",
+      icon: Home,
       isCenter: false,
     },
     {
-      label: "Clubs",
-      href: "/clubs",
-      icon: Users,
+      label: "Events",
+      href: "/events",
+      icon: Calendar,
       isCenter: false,
     },
     {
@@ -61,9 +65,9 @@ export function BottomNav() {
       isCenter: true,
     },
     {
-      label: "Host",
-      href: "/dashboard",
-      icon: PlusCircle,
+      label: "Clubs",
+      href: "/clubs",
+      icon: Users,
       isCenter: false,
     },
     isSuperAdmin

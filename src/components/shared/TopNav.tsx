@@ -2,7 +2,7 @@
 
 /**
  * TopNav — Premium RotaSphere SaaS Header
- * Clean navbar with event discovery, gallery, pass access, organizer hub, admin panel, and Clerk auth.
+ * Clean navbar with Home navigation, event discovery, gallery, pass access, organizer hub, admin panel, and Clerk auth.
  */
 
 import { useState } from "react";
@@ -10,12 +10,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton } from "@clerk/nextjs";
-import { Menu, X, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Home, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { PushNotificationBell } from "@/components/shared/PushNotificationBell";
 
 const NAV_TABS = [
+  { label: "Home", href: "/", icon: Home, isNew: false },
   { label: "Explore Events", href: "/events", icon: Calendar, isNew: false },
   { label: "Clubs", href: "/clubs", icon: Users, isNew: false },
   { label: "My Tickets", href: "/tickets", icon: Ticket, isNew: false },
@@ -31,13 +32,15 @@ function useSafeUser() {
 }
 
 export function TopNav() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { isSignedIn, isLoaded, user } = useSafeUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const isAdminUser = userEmail === "tech.rotaract3192@gmail.com";
 
   function isActive(href: string) {
+    if (href === "/") {
+      return pathname === "/";
+    }
     return pathname === href || pathname.startsWith(href + "/");
   }
 
