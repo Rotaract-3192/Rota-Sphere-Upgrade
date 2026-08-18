@@ -27,8 +27,12 @@ export function BottomNav() {
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const isSuperAdmin = userEmail === "tech.rotaract3192@gmail.com";
 
-  // Hide BottomNav on scanner or full-screen view if needed
-  if (pathname.startsWith("/check-in")) {
+  // Hide BottomNav on scanner, auth pages, or full-screen views
+  if (
+    pathname.startsWith("/check-in") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up")
+  ) {
     return null;
   }
 

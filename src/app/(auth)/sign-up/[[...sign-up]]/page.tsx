@@ -35,10 +35,10 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0d12] text-white flex flex-col justify-center items-center px-4 py-12">
-      <div className="flex flex-col items-center mb-6 text-center">
-        <Link href="/" className="flex flex-col items-center gap-2 group">
-          <div className="relative w-20 h-20 group-hover:scale-105 transition-transform">
+    <div className="min-h-[100dvh] bg-[#0b0d12] text-white flex flex-col justify-center items-center px-4 py-6 sm:py-10 selection:bg-[#0758fc]/30">
+      <div className="flex flex-col items-center mb-3 sm:mb-5 text-center">
+        <Link href="/" className="flex flex-col items-center gap-1.5 group">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 group-hover:scale-105 transition-transform">
             <Image
               src="/brand/logo.png"
               alt="Rotaract District 3192 Ticketing"
@@ -47,17 +47,17 @@ export default function SignUpPage() {
               priority
             />
           </div>
-          <span className="font-black text-2xl tracking-tight text-white">
+          <span className="font-black text-xl sm:text-2xl tracking-tight text-white">
             Rota<span className="text-[#3b82f6]">Sphere</span>
           </span>
         </Link>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
-          <Sparkles size={13} /> District 3192 Registration
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+          <Sparkles size={12} /> District 3192 Registration
         </div>
       </div>
 
       {hasClerkKey ? (
-        <div className="flex justify-center items-center w-full">
+        <div className="flex justify-center items-center w-full max-w-[420px] mx-auto">
           <SignUp
             routing="path"
             path="/sign-up"
@@ -65,15 +65,15 @@ export default function SignUpPage() {
             fallbackRedirectUrl="/dashboard"
             appearance={{
               elements: {
-                rootBox: "w-full max-w-[440px] mx-auto",
-                card: "rounded-3xl shadow-2xl border border-white/10 bg-[#121620] backdrop-blur-xl",
-                headerTitle: "text-white text-xl font-bold",
-                headerSubtitle: "text-gray-400 text-sm",
+                rootBox: "w-full max-w-[420px] mx-auto",
+                card: "rounded-3xl shadow-2xl border border-white/10 bg-[#121620] backdrop-blur-xl w-full",
+                headerTitle: "text-white text-lg sm:text-xl font-bold",
+                headerSubtitle: "text-gray-400 text-xs sm:text-sm",
                 socialButtonsBlockButton: "bg-white/10 border-white/15 text-white hover:bg-white/15",
                 formButtonPrimary: "bg-[#0758fc] hover:bg-[#054fe0] text-white font-semibold text-sm rounded-xl py-3",
                 footerActionLink: "text-amber-400 hover:text-amber-300 font-semibold",
                 formFieldInput: "bg-black/50 border-white/15 text-white rounded-xl",
-                formFieldLabel: "text-gray-300 text-xs font-semibold uppercase tracking-wider",
+                formFieldLabel: "text-gray-300 text-[11px] font-semibold uppercase tracking-wider",
                 dividerLine: "bg-white/10",
                 dividerText: "text-gray-400 text-xs",
               },
@@ -81,9 +81,9 @@ export default function SignUpPage() {
           />
         </div>
       ) : (
-        <div className="w-full max-w-[440px] bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="w-full max-w-[420px] bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl mx-auto">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Create your account</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Create your account</h1>
             <p className="text-sm text-gray-400 mt-1">Join Rotaractors across District 3192</p>
           </div>
 
