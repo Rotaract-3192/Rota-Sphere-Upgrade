@@ -58,6 +58,7 @@ import {
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 import { CreateEventWizardModal } from "@/components/dashboard/CreateEventWizardModal";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
+import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
 import type { SaasEvent, TicketTierType } from "@/types/saas";
 
 interface OrganizerDashboardClientProps {
@@ -99,6 +100,7 @@ export function OrganizerDashboardClient({
   // Bulk Email Broadcast State
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
   const [selectedBroadcastEventId, setSelectedBroadcastEventId] = useState<string>("");
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
@@ -730,12 +732,21 @@ export function OrganizerDashboardClient({
                 </p>
               </div>
 
-              <button
-                onClick={handleOpenCreateModal}
-                className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105"
-              >
-                <PlusCircle size={16} /> Create New Event
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setIsGalleryModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Camera size={15} className="text-[#1e9df1]" />
+                  <span>Add Gallery Photos</span>
+                </button>
+                <button
+                  onClick={handleOpenCreateModal}
+                  className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
+                >
+                  <PlusCircle size={16} /> Create New Event
+                </button>
+              </div>
             </div>
 
             {/* Metric KPI Cards */}
@@ -2037,6 +2048,12 @@ export function OrganizerDashboardClient({
           </div>
         </div>
       )}
+
+      {/* Gallery Multi-Photo Upload Modal */}
+      <GalleryUploadModal
+        isOpen={isGalleryModalOpen}
+        onClose={() => setIsGalleryModalOpen(false)}
+      />
     </div>
   );
 }

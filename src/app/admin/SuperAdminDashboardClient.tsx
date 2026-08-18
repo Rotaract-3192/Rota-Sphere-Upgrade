@@ -60,8 +60,10 @@ import {
   Megaphone,
   Menu,
   AlertTriangle,
+  Image as ImageIcon,
 } from "lucide-react";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
+import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
 import {
   approveOrganizationKycAction,
   rejectOrganizationKycAction,
@@ -275,6 +277,7 @@ export function SuperAdminDashboardClient({
   const [isEditClubOpen, setIsEditClubOpen] = useState(false);
   const [editingClub, setEditingClub] = useState<any | null>(null);
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
   const [clubForm, setClubForm] = useState({
     id: "",
@@ -1094,13 +1097,20 @@ export function SuperAdminDashboardClient({
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsGalleryModalOpen(true)}
+              className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <ImageIcon size={14} className="text-[#1e9df1]" />
+              <span>Add Gallery Photos</span>
+            </button>
+            <button
               onClick={() => setIsBulkEmailOpen(true)}
               className="bg-[#1e9df1] hover:bg-[#1583cd] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Megaphone size={14} />
               <span>Broadcast Email</span>
             </button>
-            <span className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-2 rounded-xl flex items-center gap-1.5">
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center gap-1.5">
               <ShieldCheck size={13} className="text-[#1e9df1]" />
               {user?.email || "tech.rotaract3192@gmail.com"}
             </span>
@@ -3396,6 +3406,11 @@ export function SuperAdminDashboardClient({
           </div>
         </div>
       )}
+      {/* Gallery Multi-Photo Upload Modal */}
+      <GalleryUploadModal
+        isOpen={isGalleryModalOpen}
+        onClose={() => setIsGalleryModalOpen(false)}
+      />
     </div>
   </div>
   );
