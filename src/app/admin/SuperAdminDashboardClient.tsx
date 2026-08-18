@@ -334,7 +334,7 @@ export function SuperAdminDashboardClient({
     [checkIns, tickets]
   );
 
-  // ─── REVENUE VELOCITY CHART DATA GENERATION ────────────────────────────
+  // ─── REVENUE VELOCITY CHART DATA GENERATION (100% Real Database Queries) ────
   const chartData = useMemo(() => {
     const days = dateRange === "7d" ? 7 : dateRange === "30d" ? 14 : 30;
     const now = Date.now();
@@ -343,20 +343,61 @@ export function SuperAdminDashboardClient({
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
-      
-      const daySeed = (d.getDate() * 137 + d.getMonth() * 41) % 100;
-      const dayGmv = (totalGmv / days) * (0.6 + (daySeed / 100) * 0.8);
-      const dayTickets = Math.max(1, Math.round(dayGmv / 250));
+      const isoDate = d.toISOString().slice(0, 10);
+
+      const dayOrders = orders.filter((o: any) => {
+        if (!o.created_at || (o.status !== "PAID" && o.status !== "COMPLETED")) return false;
+        return o.created_at.slice(0, 10) === isoDate;
+      });
+
+      const dayGmv = dayOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
+      const dayTickets = tickets.filter((t: any) => {
+        if (!t.created_at) return false;
+        return t.created_at.slice(0, 10) === isoDate;
+      }).length;
 
       data.push({
         date: dateStr,
-        gmv: Math.round(dayGmv * 100) / 100,
+        gmv: dayGmv,
         tickets: dayTickets,
         revenue: 0,
       });
     }
     return data;
-  }, [totalGmv, dateRange]);
+  }, [orders, tickets, dateRange]);
+
+  const tierDistribution = useMemo(() => {
+    if (totalTicketsSold === 0) {
+      return { vipPct: 0, generalPct: 0, earlyBirdPct: 0 };
+    }
+    const vipCount = tickets.filter((t: any) => {
+      const name = (t.ticket_tier_name || t.tier_name || "").toLowerCase();
+      return name.includes("vip") || name.includes("delegate") || name.includes("pass");
+    }).length;
+    const generalCount = tickets.filter((t: any) => {
+      const name = (t.ticket_tier_name || t.tier_name || "").toLowerCase();
+      return name.includes("general") || name.includes("student") || name.includes("admission");
+    }).length;
+    const earlyBirdCount = tickets.filter((t: any) => {
+      const name = (t.ticket_tier_name || t.tier_name || "").toLowerCase();
+      return name.includes("early") || name.includes("fellowship");
+    }).length;
+
+    const remaining = totalTicketsSold - (vipCount + generalCount + earlyBirdCount);
+    const effectiveVip = vipCount + (remaining > 0 ? remaining : 0);
+
+    return {
+      vipPct: Math.round((effectiveVip / totalTicketsSold) * 100),
+      generalPct: Math.round((generalCount / totalTicketsSold) * 100),
+      earlyBirdPct: Math.round((earlyBirdCount / totalTicketsSold) * 100),
+    };
+  }, [tickets, totalTicketsSold]);
+
+  const conversionRate = useMemo(() => {
+    if (orders.length === 0) return "0.0%";
+    const paid = orders.filter((o: any) => o.status === "PAID" || o.status === "COMPLETED").length;
+    return `${((paid / orders.length) * 100).toFixed(1)}%`;
+  }, [orders]);
 
   const svgWidth = 700;
   const svgHeight = 220;
@@ -1253,16 +1294,18 @@ export function SuperAdminDashboardClient({
                   <div className="p-3 bg-gray-50 rounded-2xl">
                     <span className="text-[10px] text-gray-500 uppercase font-bold block">Avg Order Value</span>
                     <span className="text-sm font-extrabold text-gray-900">
-                      ₹{orders.length > 0 ? (totalGmv / (orders.length || 1)).toFixed(0) : "450"}
+                      ₹{orders.length > 0 && totalGmv > 0 ? (totalGmv / orders.length).toFixed(0) : "0"}
                     </span>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-2xl">
                     <span className="text-[10px] text-gray-500 uppercase font-bold block">Peak Volume</span>
-                    <span className="text-sm font-extrabold text-emerald-600">₹{maxGmv.toFixed(0)}</span>
+                    <span className="text-sm font-extrabold text-emerald-600">
+                      ₹{totalGmv > 0 ? maxGmv.toFixed(0) : "0"}
+                    </span>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-2xl">
                     <span className="text-[10px] text-gray-500 uppercase font-bold block">Conversion Rate</span>
-                    <span className="text-sm font-extrabold text-gray-900">68.4%</span>
+                    <span className="text-sm font-extrabold text-gray-900">{conversionRate}</span>
                   </div>
                 </div>
 
@@ -1284,11 +1327,15 @@ export function SuperAdminDashboardClient({
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-emerald-900">Gate Clearance Rate</p>
-                        <p className="text-[11px] text-emerald-700">98.2% valid on first scan</p>
+                        <p className="text-[11px] text-emerald-700">
+                          {totalTicketsSold > 0
+                            ? `${((totalCheckInsCount / totalTicketsSold) * 100).toFixed(1)}% checked in`
+                            : "0% (No passes issued)"}
+                        </p>
                       </div>
                     </div>
                     <span className="text-lg font-black text-emerald-900">
-                      {totalCheckInsCount}/{totalTicketsSold || 1}
+                      {totalCheckInsCount}/{totalTicketsSold}
                     </span>
                   </div>
 
@@ -1297,30 +1344,30 @@ export function SuperAdminDashboardClient({
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-gray-700">
                         <span>VIP &amp; Delegate Passes</span>
-                        <span className="text-[#1e9df1]">45%</span>
+                        <span className="text-[#1e9df1]">{tierDistribution.vipPct}%</span>
                       </div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#1e9df1] rounded-full" style={{ width: "45%" }} />
+                        <div className="h-full bg-[#1e9df1] rounded-full transition-all duration-500" style={{ width: `${tierDistribution.vipPct}%` }} />
                       </div>
                     </div>
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-gray-700">
                         <span>General &amp; Student Admission</span>
-                        <span className="text-amber-500">38%</span>
+                        <span className="text-amber-500">{tierDistribution.generalPct}%</span>
                       </div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-400 rounded-full" style={{ width: "38%" }} />
+                        <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${tierDistribution.generalPct}%` }} />
                       </div>
                     </div>
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-gray-700">
                         <span>Early Bird &amp; Fellowship</span>
-                        <span className="text-purple-600">17%</span>
+                        <span className="text-purple-600">{tierDistribution.earlyBirdPct}%</span>
                       </div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500 rounded-full" style={{ width: "17%" }} />
+                        <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${tierDistribution.earlyBirdPct}%` }} />
                       </div>
                     </div>
                   </div>
