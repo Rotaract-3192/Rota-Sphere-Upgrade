@@ -13,7 +13,6 @@ import { useUser, UserButton } from "@clerk/nextjs";
 import { Home, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { PushNotificationBell } from "@/components/shared/PushNotificationBell";
 
 const NAV_TABS = [
   { label: "Home", href: "/", icon: Home, isNew: false },
@@ -119,8 +118,6 @@ export function TopNav() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Dark Mode Toggle */}
           <ThemeToggle />
-          {/* Push Notifications Bell */}
-          <PushNotificationBell />
 
           {/* Admin panel link */}
           {isAdminUser && (
