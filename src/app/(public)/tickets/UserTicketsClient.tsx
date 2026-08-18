@@ -466,23 +466,23 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
   const displayedTickets = activeTab === "upcoming" ? upcomingTickets : previousTickets;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
 
       {/* ── TAB SWITCHER ──────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
+      <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit border border-gray-200 dark:border-gray-700">
         <button
           type="button"
           onClick={() => setActiveTab("upcoming")}
-          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
             activeTab === "upcoming"
-              ? "bg-white text-[#1e9df1] shadow-sm"
-              : "text-gray-500 hover:text-gray-800"
+              ? "bg-white dark:bg-gray-900 text-[#1e9df1] shadow-xs"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           }`}
         >
-          Upcoming Events
+          Upcoming Passes
           {upcomingTickets.length > 0 && (
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-              activeTab === "upcoming" ? "bg-[#1e9df1] text-white" : "bg-gray-300 text-gray-600"
+              activeTab === "upcoming" ? "bg-[#1e9df1] text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             }`}>
               {upcomingTickets.length}
             </span>
@@ -491,16 +491,16 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
         <button
           type="button"
           onClick={() => setActiveTab("previous")}
-          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+          className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
             activeTab === "previous"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-800"
+              ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           }`}
         >
-          Previous Events
+          Previous Passes
           {previousTickets.length > 0 && (
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-              activeTab === "previous" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600"
+              activeTab === "previous" ? "bg-gray-900 dark:bg-gray-700 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             }`}>
               {previousTickets.length}
             </span>
@@ -510,18 +510,18 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
       {/* ── EMPTY STATE FOR ACTIVE TAB ────────────────────────────────── */}
       {displayedTickets.length === 0 && (
-        <div className="w-full text-center py-12 border-2 border-dashed border-gray-200 rounded-3xl bg-white space-y-4">
-          <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto">
+        <div className="w-full text-center py-12 sm:py-16 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl bg-white dark:bg-gray-900 space-y-4">
+          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center mx-auto">
             <TicketIcon size={24} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-700">
-              {activeTab === "upcoming" ? "No upcoming tickets" : "No previous event tickets"}
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              {activeTab === "upcoming" ? "No upcoming passes" : "No previous event passes"}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               {activeTab === "upcoming"
-                ? "Book a ticket to see it here."
-                : "Attended events will appear here after they\'ve passed."}
+                ? "Book an event pass to see your digital QR code here."
+                : "Attended events will appear here after they\'ve concluded."}
             </p>
           </div>
         </div>
@@ -529,7 +529,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
       {/* ── TICKETS GRID ──────────────────────────────────────────────── */}
       {displayedTickets.length > 0 && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
         {displayedTickets.map((ticket) => {
           const event = ticket.saas_events;
           const tier = ticket.saas_ticket_tiers;
@@ -545,7 +545,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           return (
             <div
               key={ticket.id}
-              className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between"
             >
               {/* Ticket Card Top */}
               <div className="p-6 sm:p-7 space-y-4">

@@ -7,6 +7,7 @@ import {
   Search, Building, Mail, Sparkles, Filter, CheckCircle2, UserCheck
 } from "lucide-react";
 import { ClubRecord } from "@/app/actions/clubActions";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ClubsDirectoryClientProps {
   initialClubs: ClubRecord[];
@@ -46,10 +47,10 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
   }, [initialClubs, selectedZone, selectedType, searchQuery]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       {/* ── Search & Filter Control Strip ── */}
-      <div className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-center">
           {/* Search Input */}
           <div className="md:col-span-8 relative">
             <Search size={18} className="absolute left-4 top-3.5 text-gray-400" />
@@ -58,7 +59,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
               placeholder="Search by club name, institution, zone, or partner Rotary club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-gray-900 placeholder:text-gray-400 outline-none transition-all"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
             />
           </div>
 
@@ -67,7 +68,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 outline-none transition-all cursor-pointer"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none transition-all cursor-pointer"
             >
               <option value="All">All Club Types (Community &amp; College)</option>
               <option value="Community Based">Community Based Clubs</option>
@@ -77,7 +78,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
         </div>
 
         {/* Zone Pills Filter */}
-        <div className="space-y-2 pt-2 border-t border-gray-100">
+        <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-400 flex items-center gap-1">
               <Filter size={12} /> Filter by Zone
@@ -87,7 +88,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {ZONES.map((zone) => {
               const active = selectedZone === zone;
               const count = zone === "All" 
@@ -99,15 +100,15 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                   key={zone}
                   type="button"
                   onClick={() => setSelectedZone(zone)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                     active
-                      ? "bg-[#1e9df1] text-white shadow-sm"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      ? "bg-[#1e9df1] text-white shadow-xs"
+                      : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   <span>{zone === "All" ? "All Zones" : `Zone ${zone}`}</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    active ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                    active ? "bg-white/20 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                   }`}>
                     {count}
                   </span>
@@ -120,10 +121,10 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
 
       {/* ── Clubs Grid ── */}
       {filteredClubs.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-gray-200 rounded-3xl p-8 space-y-3">
-          <Building size={40} className="mx-auto text-gray-300" />
-          <h3 className="text-lg font-black text-gray-900">No Rotaract clubs found</h3>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+        <div className="text-center py-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-8 space-y-3">
+          <Building size={40} className="mx-auto text-gray-300 dark:text-gray-700" />
+          <h3 className="text-lg font-black text-gray-900 dark:text-white">No Rotaract clubs found</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
             We couldn&apos;t find any clubs matching your current search and zone filters. Try adjusting your search query.
           </p>
           <button
@@ -133,27 +134,35 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
               setSelectedZone("All");
               setSelectedType("All");
             }}
-            className="text-xs font-bold text-[#1e9df1] hover:underline pt-2 inline-block cursor-pointer"
+            className="text-xs font-bold text-[#1e9df1] hover:underline pt-2 inline-block cursor-pointer active:scale-95"
           >
             Clear all filters
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div 
+          layout
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6"
+        >
           {filteredClubs.map((club) => {
             const isInstitution = club.club_type?.toLowerCase().includes("institution");
             return (
-              <div
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.2 }}
                 key={club.id || club.name}
-                className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between group"
+                className="bg-white dark:bg-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between group active:scale-[0.99]"
               >
                 <div className="space-y-4">
                   {/* Zone and Type Badges */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-extrabold text-[#1e9df1] bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-extrabold text-[#1e9df1] bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
                       Zone {club.zone}
                     </span>
-                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                       {isInstitution ? "Campus Base" : "Community Base"}
                     </span>
                   </div>
@@ -207,10 +216,10 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                     View Events <ArrowRight size={13} />
                   </Link>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* ── Organizer Bottom Callout ── */}

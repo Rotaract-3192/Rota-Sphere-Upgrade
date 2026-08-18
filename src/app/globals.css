@@ -555,6 +555,109 @@ html.dark .shadow-xl {
   0%, 100% { opacity: 0.18; transform: scale(0.82) rotate(0deg); }
   50%      { opacity: 0.72; transform: scale(1.08) rotate(8deg); }
 }
+/* ── Subtle UI Micro-Animations & Motion Spells ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 
+@keyframes softPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(30, 157, 241, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgba(30, 157, 241, 0.28);
+  }
+}
 
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes subtleShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-soft-pulse {
+  animation: softPulseGlow 3s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animate-subtle-float {
+  animation: subtleFloat 3.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: subtleShimmer 2.5s infinite;
+}
+
+/* ── Mobile Touch Ergonomics & Smooth Scrolling ── */
+@layer utilities {
+  .tap-highlight-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 16px);
+  }
+}
+
+/* Universal interactive elements touch & hover micro-interactions */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth transition defaults for all cards */
+.interactive-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+}
+
+.interactive-card:active {
+  transform: scale(0.98);
+}
