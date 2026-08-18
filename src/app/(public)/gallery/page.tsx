@@ -138,7 +138,7 @@ export default function GalleryPage() {
             <button
               type="button"
               onClick={() => setIsUploadOpen(true)}
-              className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-md transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={16} /> Add Photos to Gallery
             </button>
@@ -156,7 +156,7 @@ export default function GalleryPage() {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer touch-manipulation active:scale-95 whitespace-nowrap ${
                     active
-                      ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/25"
+                      ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/25"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                   }`}
                 >
@@ -172,12 +172,12 @@ export default function GalleryPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {loading ? (
           <div className="py-20 text-center space-y-3">
-            <Loader2 size={32} className="animate-spin text-[#1e9df1] mx-auto" />
+            <Loader2 size={32} className="animate-spin text-[#0758fc] mx-auto" />
             <p className="text-xs text-gray-400 font-bold">Loading District Moments...</p>
           </div>
         ) : items.length === 0 ? (
           <div className="w-full max-w-xl mx-auto text-center py-16 sm:py-20 border border-gray-200 dark:border-gray-800 rounded-3xl bg-white dark:bg-gray-900 p-6 sm:p-8 shadow-xs animate-fade-in-up space-y-4">
-            <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#1e9df1] flex items-center justify-center mx-auto">
+            <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] flex items-center justify-center mx-auto">
               <Camera size={28} />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function GalleryPage() {
             <button
               type="button"
               onClick={() => setIsUploadOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={15} /> Upload Photos
             </button>
@@ -284,7 +284,7 @@ export default function GalleryPage() {
                       <button
                         onClick={(e) => handleToggleLike(item.id, e)}
                         className={`w-8 h-8 rounded-full backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-xs cursor-pointer ${
-                          isLiked ? "bg-[#1e9df1] text-white" : "bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200"
+                          isLiked ? "bg-[#0758fc] text-white" : "bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200"
                         }`}
                         aria-label="Like moment"
                       >
@@ -297,11 +297,11 @@ export default function GalleryPage() {
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-2.5">
                     <div>
                       <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                        <span className="text-[#1e9df1] font-black">{item.category}</span>
+                        <span className="text-[#0758fc] font-black">{item.category}</span>
                         <span>·</span>
                         <span className="flex items-center gap-1"><MapPin size={11} /> {item.city || "District 3192"}</span>
                       </div>
-                      <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-snug group-hover:text-[#1e9df1] transition-colors line-clamp-2">
+                      <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-snug group-hover:text-[#0758fc] transition-colors line-clamp-2">
                         {item.title}
                       </h3>
                     </div>
@@ -311,7 +311,7 @@ export default function GalleryPage() {
                         <Calendar size={13} className="text-gray-400" /> {item.date}
                       </span>
                       <span className="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
-                        <Heart size={13} className={isLiked ? "text-[#1e9df1] fill-[#1e9df1]" : "text-gray-400"} />
+                        <Heart size={13} className={isLiked ? "text-[#0758fc] fill-[#0758fc]" : "text-gray-400"} />
                         {item.likes}
                       </span>
                     </div>
@@ -380,7 +380,7 @@ export default function GalleryPage() {
                         <div
                           key={i}
                           className={`w-2 h-2 rounded-full transition-all ${
-                            lightboxIndex === i ? "bg-[#1e9df1] w-5" : "bg-white/50"
+                            lightboxIndex === i ? "bg-[#0758fc] w-5" : "bg-white/50"
                           }`}
                         />
                       ))}
@@ -401,7 +401,7 @@ export default function GalleryPage() {
               <div className="w-full md:w-2/5 p-5 sm:p-6 md:p-8 flex flex-col justify-between space-y-4 sm:space-y-6">
                 <div className="space-y-3 sm:space-y-4">
                   <div className="hidden sm:flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#1e9df1]/10 text-[#1e9df1] tracking-wider">
+                    <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#0758fc]/10 text-[#0758fc] tracking-wider">
                       {activeItem.category}
                     </span>
                     <button
@@ -424,7 +424,7 @@ export default function GalleryPage() {
                     <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
                       <span className="font-semibold">Location:</span>
                       <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
-                        <MapPin size={13} className="text-[#1e9df1]" /> {activeItem.city || "District 3192"}
+                        <MapPin size={13} className="text-[#0758fc]" /> {activeItem.city || "District 3192"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
@@ -443,7 +443,7 @@ export default function GalleryPage() {
                     onClick={(e) => handleToggleLike(activeItem.id, e)}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer active:scale-95 touch-manipulation ${
                       likedMap[activeItem.id]
-                        ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/20"
+                        ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/20"
                         : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
                     }`}
                   >

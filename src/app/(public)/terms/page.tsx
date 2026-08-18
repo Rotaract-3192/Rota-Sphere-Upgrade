@@ -50,10 +50,10 @@ export default function TermsPage() {
           {/* 1. Acceptance */}
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <FileCheck className="text-[#1e9df1]" size={20} /> 1. Acceptance of Terms
+              <FileCheck className="text-[#0758fc]" size={20} /> 1. Acceptance of Terms
             </h2>
             <p>
-              By accessing, browsing, registering for an account, purchasing a ticket, or hosting an event on <strong>RotaSphere</strong> (operated by <em>RotaSphere Platform Operations / Rotaract District 3192 Secretariat</em>), you agree to be bound by these Terms of Service, our <Link href="/privacy" className="text-[#1e9df1] hover:underline font-bold">Privacy Policy</Link>, <Link href="/cancellation-policy" className="text-[#1e9df1] hover:underline font-bold">Cancellation Policy</Link>, and <Link href="/refund-policy" className="text-[#1e9df1] hover:underline font-bold">Refund Policy</Link>.
+              By accessing, browsing, registering for an account, purchasing a ticket, or hosting an event on <strong>RotaSphere</strong> (operated by <em>RotaSphere Platform Operations / Rotaract District 3192 Secretariat</em>), you agree to be bound by these Terms of Service, our <Link href="/privacy" className="text-[#0758fc] hover:underline font-bold">Privacy Policy</Link>, <Link href="/cancellation-policy" className="text-[#0758fc] hover:underline font-bold">Cancellation Policy</Link>, and <Link href="/refund-policy" className="text-[#0758fc] hover:underline font-bold">Refund Policy</Link>.
             </p>
             <p>
               If you do not agree to these Terms, you must not use our website, organizer studios, ticketing services, or gate scanner tools.
@@ -101,7 +101,7 @@ export default function TermsPage() {
               Users must be at least 18 years old to create an account and purchase passes. Minors attending youth or school-level events must have tickets booked through a parent, legal guardian, or authorized faculty coordinator.
             </p>
             <p>
-              You are responsible for maintaining the confidentiality of your login credentials (via Clerk SSO) and for all actions conducted under your account. You agree to notify us immediately of any unauthorized access at <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] underline font-medium">tech.rotaract3192@gmail.com</a>.
+              You are responsible for maintaining the confidentiality of your login credentials (via Clerk SSO) and for all actions conducted under your account. You agree to notify us immediately of any unauthorized access at <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] underline font-medium">tech.rotaract3192@gmail.com</a>.
             </p>
           </div>
 
@@ -157,7 +157,7 @@ export default function TermsPage() {
               <Clock className="text-amber-600" size={20} /> 8. Event Changes, Rescheduling &amp; Cancellations
             </h2>
             <p>
-              If an event is cancelled by the host club, attendees are entitled to a full 100% refund of the ticket price as set forth in our <Link href="/refund-policy" className="text-[#1e9df1] hover:underline font-bold">Refund Policy</Link>.
+              If an event is cancelled by the host club, attendees are entitled to a full 100% refund of the ticket price as set forth in our <Link href="/refund-policy" className="text-[#0758fc] hover:underline font-bold">Refund Policy</Link>.
             </p>
             <p>
               If an event is postponed or relocated, existing tickets remain valid for the revised date. Attendees unable to attend on the rescheduled date may request a refund within the specified window.
@@ -206,7 +206,7 @@ export default function TermsPage() {
             </div>
             <Link
               href="/contact"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               Contact Legal Desk <ArrowRight size={14} />
             </Link>

@@ -52,7 +52,7 @@ export default function DisputeResolutionPage() {
           
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <Scale className="text-[#1e9df1]" size={20} /> 5-Tier Dispute Resolution Hierarchy
+              <Scale className="text-[#0758fc]" size={20} /> 5-Tier Dispute Resolution Hierarchy
             </h2>
             <p>
               To ensure speedy and fair resolution of any ticketing, payment, or gate check-in grievance, RotaSphere follows a structured, multi-tier escalation framework:
@@ -62,7 +62,7 @@ export default function DisputeResolutionPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
             {/* Level 1 */}
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-1.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1e9df1]">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0758fc]">
                 Level 1 — Instant Triage
               </span>
               <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">Platform Support Desk</h3>
@@ -123,7 +123,7 @@ export default function DisputeResolutionPage() {
             </div>
             <Link
               href="/contact"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               Contact Secretariat <ArrowRight size={14} />
             </Link>

@@ -191,7 +191,7 @@ export function HelpCenterClient() {
             placeholder="Search help topics (e.g. UTR payment, duplicate charge, download pass, QR scanner, DPDP data)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
           />
         </div>
 
@@ -209,7 +209,7 @@ export function HelpCenterClient() {
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isSelected
-                    ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/25"
+                    ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/25"
                     : "bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-400"
                 }`}
               >
@@ -230,7 +230,7 @@ export function HelpCenterClient() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-xs text-[#1e9df1] hover:underline font-bold cursor-pointer"
+              className="text-xs text-[#0758fc] hover:underline font-bold cursor-pointer"
             >
               Clear search
             </button>
@@ -248,7 +248,7 @@ export function HelpCenterClient() {
             </p>
             <Link
               href="/contact"
-              className="inline-flex items-center gap-1.5 bg-[#1e9df1] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm mt-2"
+              className="inline-flex items-center gap-1.5 bg-[#0758fc] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm mt-2"
             >
               Contact Support
             </Link>
@@ -289,9 +289,9 @@ export function HelpCenterClient() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
         <Link
           href="/tickets"
-          className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs hover:border-[#1e9df1] transition-all space-y-2 group"
+          className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs hover:border-[#0758fc] transition-all space-y-2 group"
         >
-          <Ticket size={22} className="text-[#1e9df1] group-hover:scale-110 transition-transform" />
+          <Ticket size={22} className="text-[#0758fc] group-hover:scale-110 transition-transform" />
           <h4 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">My Passes</h4>
           <p className="text-xs text-gray-500">View, download, transfer, or cancel your active event tickets.</p>
         </Link>

@@ -27,7 +27,7 @@ export function PasswordInput({
         <input
           type={showPassword ? "text" : "password"}
           className={`w-full bg-gray-50 dark:bg-gray-800 border ${
-            error ? "border-rose-400 focus:border-rose-500" : "border-gray-200 dark:border-gray-700 focus:border-[#1e9df1]"
+            error ? "border-rose-400 focus:border-rose-500" : "border-gray-200 dark:border-gray-700 focus:border-[#0758fc]"
           } rounded-2xl pl-4 pr-12 py-3 text-xs font-medium text-gray-900 dark:text-white outline-none transition-all ${className}`}
           {...props}
         />

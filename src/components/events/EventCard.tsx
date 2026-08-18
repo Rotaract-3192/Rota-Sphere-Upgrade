@@ -85,7 +85,7 @@ export function EventCard({
         >
           <Heart
             size={15}
-            className={saved ? "fill-[#1e9df1] text-[#1e9df1]" : "text-white"}
+            className={saved ? "fill-[#0758fc] text-[#0758fc]" : "text-white"}
           />
         </button>
 
@@ -103,17 +103,17 @@ export function EventCard({
       {/* ── Content & Title ────────────────────────────────────────────── */}
       <Link href={`/events/${slug}`} className="flex flex-col gap-1.5 focus:outline-hidden group-hover:opacity-95">
         {/* Title — High contrast dark text visible at all times */}
-        <h3 className={`font-black text-base leading-snug line-clamp-1 transition-colors ${isDark ? "text-white group-hover:text-amber-400" : "text-gray-900 group-hover:text-[#1e9df1]"}`}>
+        <h3 className={`font-black text-base leading-snug line-clamp-1 transition-colors ${isDark ? "text-white group-hover:text-amber-400" : "text-gray-900 group-hover:text-[#0758fc]"}`}>
           {title}
         </h3>
 
         {/* Location & Details */}
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span className="flex items-center gap-1">
-            <MapPin size={13} className="text-[#1e9df1]" />
+            <MapPin size={13} className="text-[#0758fc]" />
             <span className="font-medium text-gray-600">{city || "District 3192"}</span>
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#1e9df1] group-hover:translate-x-0.5 transition-transform">
+          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#0758fc] group-hover:translate-x-0.5 transition-transform">
             Book Pass <ArrowRight size={12} />
           </span>
         </div>

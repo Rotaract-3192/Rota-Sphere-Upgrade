@@ -161,13 +161,13 @@ export function EventMapExplorer({
           className: "custom-map-pin-container",
           html: `
             <div class="relative cursor-pointer group">
-              ${isSelected ? '<span class="absolute -inset-2 rounded-full bg-[#1e9df1]/40 animate-ping"></span>' : ''}
+              ${isSelected ? '<span class="absolute -inset-2 rounded-full bg-[#0758fc]/40 animate-ping"></span>' : ''}
               <div className="px-3 py-1.5 rounded-full border text-xs font-black transition-all flex items-center gap-1.5 shadow-xl ${
                 isSelected
-                  ? 'bg-[#1e9df1] border-white text-white scale-110 shadow-[#1e9df1]/60'
+                  ? 'bg-[#0758fc] border-white text-white scale-110 shadow-[#0758fc]/60'
                   : 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
-              }" style="background-color: ${isSelected ? '#1e9df1' : '#0f172a'}; color: #ffffff; padding: 6px 12px; border-radius: 9999px; border: 1.5px solid ${isSelected ? '#ffffff' : '#334155'}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: ${isSelected ? '#ffffff' : '#1e9df1'};"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              }" style="background-color: ${isSelected ? '#0758fc' : '#0f172a'}; color: #ffffff; padding: 6px 12px; border-radius: 9999px; border: 1.5px solid ${isSelected ? '#ffffff' : '#334155'}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: ${isSelected ? '#ffffff' : '#0758fc'};"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span>${evt.city || 'Venue'}</span>
               </div>
             </div>
@@ -219,7 +219,7 @@ export function EventMapExplorer({
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <span className="text-[11px] font-black uppercase tracking-widest text-[#1e9df1] flex items-center gap-1.5 mb-1">
+          <span className="text-[11px] font-black uppercase tracking-widest text-[#0758fc] flex items-center gap-1.5 mb-1">
             <Compass size={14} /> District 3192 Location Intelligence
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{title}</h2>
@@ -233,7 +233,7 @@ export function EventMapExplorer({
               onClick={() => setActiveCityFilter("ALL")}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeCityFilter === "ALL"
-                  ? "bg-[#1e9df1] text-white shadow-xs"
+                  ? "bg-[#0758fc] text-white shadow-xs"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -245,7 +245,7 @@ export function EventMapExplorer({
                 onClick={() => setActiveCityFilter(city)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeCityFilter === city
-                    ? "bg-[#1e9df1] text-white shadow-xs"
+                    ? "bg-[#0758fc] text-white shadow-xs"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -301,7 +301,7 @@ export function EventMapExplorer({
 
           {/* Bottom-Left Interactive Event Preview Overlay Card */}
           {selectedEvent && (
-            <div className="absolute bottom-4 left-4 right-4 sm:right-auto z-30 p-4 sm:p-5 max-w-[340px] w-full bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl text-white space-y-3 pointer-events-auto shadow-[#1e9df1]/20 animate-in fade-in slide-in-from-bottom-2">
+            <div className="absolute bottom-4 left-4 right-4 sm:right-auto z-30 p-4 sm:p-5 max-w-[340px] w-full bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl text-white space-y-3 pointer-events-auto shadow-[#0758fc]/20 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-start gap-3">
                 {selectedEvent.cover_image_url && (
                   <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-700">
@@ -316,7 +316,7 @@ export function EventMapExplorer({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1e9df1]">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0758fc]">
                       {selectedEvent.city || "Karnataka"}
                     </span>
                     
@@ -343,7 +343,7 @@ export function EventMapExplorer({
                       <span>{new Date(selectedEvent.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </p>
                     <p className="flex items-center gap-1.5">
-                      <MapPin size={12} className="text-[#1e9df1] shrink-0" />
+                      <MapPin size={12} className="text-[#0758fc] shrink-0" />
                       <span className="truncate">{selectedEvent.venue_name || selectedEvent.city || "Venue TBD"}</span>
                     </p>
                   </div>
@@ -358,7 +358,7 @@ export function EventMapExplorer({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-bold text-[#1e9df1] hover:underline flex items-center gap-1"
+                  className="text-xs font-bold text-[#0758fc] hover:underline flex items-center gap-1"
                 >
                   <Navigation size={13} />
                   <span>Get Directions</span>
@@ -381,7 +381,7 @@ export function EventMapExplorer({
 
                 <Link
                   href={`/events/${selectedEvent.slug}`}
-                  className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-black text-xs py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1 shadow-md"
+                  className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-black text-xs py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1 shadow-md"
                 >
                   <Ticket size={13} />
                   <span>Book Tickets</span>
@@ -431,7 +431,7 @@ export function EventMapExplorer({
                       }}
                       className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
-                          ? "bg-blue-50/70 border-[#1e9df1] shadow-xs"
+                          ? "bg-blue-50/70 border-[#0758fc] shadow-xs"
                           : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                       }`}
                     >
@@ -446,7 +446,7 @@ export function EventMapExplorer({
                               className="object-cover w-full h-full"
                             />
                           ) : (
-                            <MapPin size={18} className="text-[#1e9df1]" />
+                            <MapPin size={18} className="text-[#0758fc]" />
                           )}
                         </div>
 
@@ -464,7 +464,7 @@ export function EventMapExplorer({
                         </span>
                         <Link
                           href={`/events/${evt.slug}`}
-                          className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[#1e9df1] hover:underline"
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[#0758fc] hover:underline"
                         >
                           <span>Book</span>
                           <ChevronRight size={12} />
@@ -483,7 +483,7 @@ export function EventMapExplorer({
             <button
               type="button"
               onClick={handleResetZoom}
-              className="text-[#1e9df1] hover:underline font-bold text-xs cursor-pointer"
+              className="text-[#0758fc] hover:underline font-bold text-xs cursor-pointer"
             >
               RESET MAP ZOOM
             </button>

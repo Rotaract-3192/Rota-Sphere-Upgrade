@@ -99,15 +99,15 @@ export function BottomNav() {
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 ${
                     active
-                      ? "bg-gradient-to-tr from-[#1e9df1] to-blue-600 text-white shadow-blue-500/40 ring-4 ring-white dark:ring-gray-950"
-                      : "bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-blue-500/30 ring-4 ring-white dark:ring-gray-950 group-hover:scale-105"
+                      ? "bg-gradient-to-tr from-[#0758fc] to-blue-600 text-white shadow-blue-500/40 ring-4 ring-white dark:ring-gray-950"
+                      : "bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-blue-500/30 ring-4 ring-white dark:ring-gray-950 group-hover:scale-105"
                   }`}
                 >
                   <Icon size={22} className="transition-transform group-hover:scale-110" />
                 </div>
                 <span
                   className={`text-[10px] font-extrabold mt-1 tracking-tight ${
-                    active ? "text-[#1e9df1]" : "text-gray-600 dark:text-gray-400"
+                    active ? "text-[#0758fc]" : "text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {item.label}
@@ -127,14 +127,14 @@ export function BottomNav() {
                   size={20}
                   className={`transition-colors duration-200 ${
                     active
-                      ? "text-[#1e9df1]"
+                      ? "text-[#0758fc]"
                       : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                   }`}
                 />
                 {active && (
                   <motion.div
                     layoutId="bottom-nav-indicator"
-                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1e9df1]"
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0758fc]"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -142,7 +142,7 @@ export function BottomNav() {
               <span
                 className={`text-[10px] font-bold mt-1 tracking-tight truncate max-w-[60px] ${
                   active
-                    ? "text-[#1e9df1] font-extrabold"
+                    ? "text-[#0758fc] font-extrabold"
                     : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                 }`}
               >

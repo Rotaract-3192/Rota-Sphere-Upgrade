@@ -64,7 +64,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => handleAccept("all")}
-            className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-2 px-3 rounded-xl transition-all shadow-md cursor-pointer text-center"
+            className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-2 px-3 rounded-xl transition-all shadow-md cursor-pointer text-center"
           >
             Accept All
           </button>

@@ -21,7 +21,7 @@ const SITEMAP_SECTIONS = [
   {
     title: "1. Event Discovery & District 3192",
     icon: Compass,
-    color: "text-[#1e9df1] bg-blue-50 dark:bg-blue-950/50",
+    color: "text-[#0758fc] bg-blue-50 dark:bg-blue-950/50",
     links: [
       { label: "Home / Platform Overview", href: "/" },
       { label: "Events Discovery & Filters", href: "/events" },
@@ -133,7 +133,7 @@ export default function SitemapPage() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-[#1e9df1] dark:hover:text-[#1e9df1] hover:underline transition-colors flex items-center gap-1.5"
+                      className="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-[#0758fc] dark:hover:text-[#0758fc] hover:underline transition-colors flex items-center gap-1.5"
                     >
                       <ArrowRight size={12} className="text-gray-400 shrink-0" />
                       <span>{link.label}</span>

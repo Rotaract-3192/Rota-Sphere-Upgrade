@@ -26,7 +26,7 @@ export default function District3192Page() {
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 space-y-3 shadow-xs text-center">
-            <div className="w-12 h-12 bg-blue-50 text-[#1e9df1] rounded-2xl flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 bg-blue-50 text-[#0758fc] rounded-2xl flex items-center justify-center mx-auto">
               <Users size={24} />
             </div>
             <h2 className="text-2xl font-black text-gray-900">50+</h2>

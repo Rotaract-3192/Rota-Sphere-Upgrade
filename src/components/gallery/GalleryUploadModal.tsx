@@ -116,7 +116,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#1e9df1] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] flex items-center justify-center">
               <ImageIcon size={20} />
             </div>
             <div>
@@ -163,7 +163,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., District Assembly Synergy 2026 Keynote"
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#1e9df1]"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
               />
             </div>
 
@@ -176,7 +176,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#1e9df1] cursor-pointer"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] cursor-pointer"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -195,7 +195,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="e.g., Bengaluru / Tumakuru / Kolar"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                 />
               </div>
             </div>
@@ -210,7 +210,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 placeholder="e.g., Feb 2026 or 18 Aug 2026"
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#1e9df1]"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
               />
             </div>
 
@@ -223,7 +223,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                 <button
                   type="button"
                   onClick={handleAddImageUrl}
-                  className="text-xs font-bold text-[#1e9df1] hover:underline flex items-center gap-1 cursor-pointer active:scale-95"
+                  className="text-xs font-bold text-[#0758fc] hover:underline flex items-center gap-1 cursor-pointer active:scale-95"
                 >
                   <Plus size={14} /> Add Another Photo
                 </button>
@@ -242,7 +242,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                         onChange={(e) => handleImageUrlChange(index, e.target.value)}
                         placeholder={`Photo ${index + 1} Image URL (https://...)`}
                         disabled={url.startsWith("data:")}
-                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#1e9df1]"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                       />
                     </div>
 
@@ -284,7 +284,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Share key highlights or context about this moment..."
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#1e9df1] resize-none"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#0758fc] resize-none"
               />
             </div>
 
@@ -300,7 +300,7 @@ export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUpload
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
               >
                 {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 Publish Moment

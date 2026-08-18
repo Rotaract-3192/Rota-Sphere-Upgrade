@@ -167,7 +167,7 @@ export default function StatusPage() {
 
           <div className="pt-2 flex items-center justify-between text-xs text-gray-500 border-t border-gray-100 dark:border-gray-800">
             <span>Experiencing an issue with a live pass?</span>
-            <Link href="/contact" className="text-[#1e9df1] font-bold hover:underline">
+            <Link href="/contact" className="text-[#0758fc] font-bold hover:underline">
               Contact Tech Support →
             </Link>
           </div>

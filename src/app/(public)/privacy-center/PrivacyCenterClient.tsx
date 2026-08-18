@@ -60,7 +60,7 @@ export function PrivacyCenterClient({ userId, userEmail, userName }: Props) {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === tab.id
-                ? "bg-[#1e9df1] text-white shadow-md shadow-[#1e9df1]/25"
+                ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/25"
                 : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-400"
             }`}
           >
@@ -204,7 +204,7 @@ function ConsentsTab({ userId, userEmail }: { userId: string; userEmail: string 
                     {isSaving ? (
                       <Loader2 size={22} className="animate-spin text-gray-400" />
                     ) : isGranted ? (
-                      <ToggleRight size={28} className="text-[#1e9df1]" />
+                      <ToggleRight size={28} className="text-[#0758fc]" />
                     ) : (
                       <ToggleLeft size={28} className="text-gray-400" />
                     )}
@@ -275,7 +275,7 @@ function RequestsTab({ userId, userEmail, userName }: { userId: string; userEmai
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-[#1e9df1] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#1583cd] transition-colors cursor-pointer"
+          className="flex items-center gap-2 bg-[#0758fc] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#054fe0] transition-colors cursor-pointer"
         >
           <Send size={13} /> New Request
         </button>
@@ -315,7 +315,7 @@ function RequestsTab({ userId, userEmail, userName }: { userId: string; userEmai
             />
           </div>
           <div className="flex items-center gap-3">
-            <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#1e9df1] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#1583cd] cursor-pointer disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#0758fc] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#054fe0] cursor-pointer disabled:opacity-50">
               {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
               Submit Request
             </button>
@@ -428,7 +428,7 @@ function ExportTab({ userId, userEmail }: { userId: string; userEmail: string })
               type="button"
               onClick={requestExport}
               disabled={loading}
-              className="flex items-center gap-2 bg-[#1e9df1] text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-[#1583cd] cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 bg-[#0758fc] text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-[#054fe0] cursor-pointer disabled:opacity-50"
             >
               {loading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
               {loading ? "Preparing Export..." : "Generate Export"}

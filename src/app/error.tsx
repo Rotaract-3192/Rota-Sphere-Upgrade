@@ -34,7 +34,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={() => reset()}
-            className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
+            className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 px-5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
           >
             <RefreshCw size={15} /> Try Again
           </button>

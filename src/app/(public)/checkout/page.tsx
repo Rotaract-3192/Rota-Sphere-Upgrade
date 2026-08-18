@@ -87,7 +87,7 @@ function CheckoutContent() {
             <div className="pt-2">
               <a
                 href={`/sign-in?redirect_url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/events")}`}
-                className="inline-flex items-center gap-1.5 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
               >
                 Sign In Now →
               </a>
@@ -103,7 +103,7 @@ function CheckoutContent() {
           {selectedTiers.map((item, idx) => (
             <div key={idx} className="flex justify-between text-gray-800">
               <span>{item.quantity}× Ticket Tier</span>
-              <span className="font-bold text-[#1e9df1]">Selected</span>
+              <span className="font-bold text-[#0758fc]">Selected</span>
             </div>
           ))}
         </div>
@@ -122,7 +122,7 @@ function CheckoutContent() {
       <button
         onClick={handleCheckout}
         disabled={loading}
-        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
+        className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
       >
         <Lock size={16} />
         {loading ? "Processing..." : "Complete Pass Registration"}

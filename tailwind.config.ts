@@ -39,7 +39,7 @@ const config: Config = {
           hover: "#c51824",
         },
         // Sub-brands
-        luxe: "#1e9df1",
+        luxe: "#0758fc",
         plus: "#00b87a",
         // Text
         ink: "var(--foreground)",

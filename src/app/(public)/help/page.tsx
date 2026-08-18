@@ -48,7 +48,7 @@ export default function HelpPage() {
           </div>
           <Link
             href="/contact"
-            className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+            className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
           >
             Contact Support Team <ArrowRight size={14} />
           </Link>

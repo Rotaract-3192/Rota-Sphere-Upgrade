@@ -21,7 +21,7 @@ export default async function PrivacyCenterPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="space-y-2 mb-8">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-[#1e9df1] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-extrabold uppercase tracking-widest text-[#0758fc] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
             DPDP Act 2023
           </span>
         </div>

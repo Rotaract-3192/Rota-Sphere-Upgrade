@@ -27,7 +27,7 @@ export default function AboutPage() {
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 space-y-3 shadow-xs">
-            <div className="w-12 h-12 bg-blue-50 text-[#1e9df1] rounded-2xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-blue-50 text-[#0758fc] rounded-2xl flex items-center justify-center">
               <Shield size={24} />
             </div>
             <h2 className="text-base font-black text-gray-900">0% Platform Fees</h2>
@@ -64,7 +64,7 @@ export default function AboutPage() {
           </div>
           <Link
             href="/events"
-            className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-8 py-4 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+            className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-8 py-4 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
           >
             Explore Events <ArrowRight size={16} />
           </Link>

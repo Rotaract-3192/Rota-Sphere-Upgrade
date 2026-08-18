@@ -68,7 +68,7 @@ export function TopNav() {
               <span className="font-extrabold text-base sm:text-lg tracking-tight text-gray-900 dark:text-white">
                 RotaSphere
               </span>
-              <span className="text-[10px] font-black text-[#1e9df1] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-1.5 py-0.2 rounded-md">
+              <span className="text-[10px] font-black text-[#0758fc] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-1.5 py-0.2 rounded-md">
                 3192
               </span>
             </div>
@@ -89,11 +89,11 @@ export function TopNav() {
                 className={[
                   "relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all",
                   active
-                    ? "text-[#1e9df1] bg-blue-50/80 dark:bg-blue-950/40"
+                    ? "text-[#0758fc] bg-blue-50/80 dark:bg-blue-950/40"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800",
                 ].join(" ")}
               >
-                <Icon size={16} className={active ? "text-[#1e9df1]" : "text-gray-400"} />
+                <Icon size={16} className={active ? "text-[#0758fc]" : "text-gray-400"} />
                 <span>{label}</span>
                 {isNew && (
                   <span className="text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 rounded-full px-1.5 py-0.2">
@@ -103,7 +103,7 @@ export function TopNav() {
                 {active && (
                   <motion.div
                     layoutId="activeNavIndicator"
-                    className="absolute bottom-0 inset-x-3.5 h-0.5 bg-[#1e9df1] rounded-full"
+                    className="absolute bottom-0 inset-x-3.5 h-0.5 bg-[#0758fc] rounded-full"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -143,7 +143,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
-              className="text-xs sm:text-sm font-bold text-white bg-[#1e9df1] hover:bg-[#1583cd] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95"
+              className="text-xs sm:text-sm font-bold text-white bg-[#0758fc] hover:bg-[#054fe0] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95"
             >
               Sign In
             </Link>

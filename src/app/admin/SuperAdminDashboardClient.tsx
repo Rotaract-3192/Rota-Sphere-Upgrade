@@ -815,7 +815,7 @@ export function SuperAdminDashboardClient({
                     <Image src="/brand/logo.png" alt="Logo" fill className="object-contain" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#1e9df1] block">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#0758fc] block">
                       SUPER ADMIN
                     </span>
                     <span className="text-sm font-extrabold text-white leading-tight block">
@@ -849,7 +849,7 @@ export function SuperAdminDashboardClient({
                       }}
                       className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isActive
-                          ? "bg-[#1e9df1] text-white shadow-sm"
+                          ? "bg-[#0758fc] text-white shadow-sm"
                           : isUrgent
                           ? "text-amber-300 hover:bg-gray-800 hover:text-white"
                           : "text-gray-400 hover:bg-gray-800 hover:text-white"
@@ -923,7 +923,7 @@ export function SuperAdminDashboardClient({
                 />
               </div>
               <div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#1e9df1] block leading-none">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#0758fc] block leading-none">
                   SUPER ADMIN
                 </span>
                 <span className="text-sm font-extrabold text-white leading-tight block">
@@ -952,7 +952,7 @@ export function SuperAdminDashboardClient({
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? "bg-[#1e9df1] text-white shadow-sm"
+                      ? "bg-[#0758fc] text-white shadow-sm"
                       : isUrgent
                       ? "text-amber-300 hover:bg-gray-800 hover:text-white"
                       : "text-gray-400 hover:bg-gray-800 hover:text-white"
@@ -1024,14 +1024,14 @@ export function SuperAdminDashboardClient({
               </div>
               <div>
                 <span className="text-xs font-black text-white block leading-tight">RotaSphere</span>
-                <span className="text-[9px] font-bold text-[#1e9df1] block leading-none">SUPER ADMIN</span>
+                <span className="text-[9px] font-bold text-[#0758fc] block leading-none">SUPER ADMIN</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsBulkEmailOpen(true)}
-              className="p-2 rounded-xl bg-[#1e9df1] hover:bg-[#1583cd] text-white flex items-center justify-center cursor-pointer shadow-xs"
+              className="p-2 rounded-xl bg-[#0758fc] hover:bg-[#054fe0] text-white flex items-center justify-center cursor-pointer shadow-xs"
               title="Broadcast Email"
             >
               <Megaphone size={15} />
@@ -1053,7 +1053,7 @@ export function SuperAdminDashboardClient({
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   isActive
-                    ? "bg-[#1e9df1] text-white shadow-xs"
+                    ? "bg-[#0758fc] text-white shadow-xs"
                     : isUrgent
                     ? "bg-amber-50 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -1100,18 +1100,18 @@ export function SuperAdminDashboardClient({
               onClick={() => setIsGalleryModalOpen(true)}
               className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <ImageIcon size={14} className="text-[#1e9df1]" />
+              <ImageIcon size={14} className="text-[#0758fc]" />
               <span>Add Gallery Photos</span>
             </button>
             <button
               onClick={() => setIsBulkEmailOpen(true)}
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Megaphone size={14} />
               <span>Broadcast Email</span>
             </button>
             <span className="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-[#1e9df1]" />
+              <ShieldCheck size={13} className="text-[#0758fc]" />
               {user?.email || "tech.rotaract3192@gmail.com"}
             </span>
           </div>
@@ -1132,7 +1132,7 @@ export function SuperAdminDashboardClient({
               <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Platform GMV</span>
-                  <div className="w-9 h-9 rounded-2xl bg-rose-50 text-[#1e9df1] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-2xl bg-rose-50 text-[#0758fc] flex items-center justify-center">
                     <TrendingUp size={18} />
                   </div>
                 </div>
@@ -1144,7 +1144,7 @@ export function SuperAdminDashboardClient({
                     <ArrowUpRight size={14} /> {totalGmv > 0 ? "Live Settlement Velocity" : "0% Platform Fee · Direct UPI"}
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-[#1e9df1] to-rose-400 rounded-full w-full opacity-70" />
+                <div className="h-1 bg-gradient-to-r from-[#0758fc] to-rose-400 rounded-full w-full opacity-70" />
               </div>
 
               <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
@@ -1241,11 +1241,11 @@ export function SuperAdminDashboardClient({
                   >
                     <defs>
                       <linearGradient id="gmvAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1e9df1" stopOpacity="0.28" />
-                        <stop offset="100%" stopColor="#1e9df1" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#0758fc" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#0758fc" stopOpacity="0.0" />
                       </linearGradient>
                       <linearGradient id="gmvLineGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#1e9df1" />
+                        <stop offset="0%" stopColor="#0758fc" />
                         <stop offset="100%" stopColor="#e11d48" />
                       </linearGradient>
                     </defs>
@@ -1272,8 +1272,8 @@ export function SuperAdminDashboardClient({
                           r={activeHoverPoint === idx ? 6 : 4}
                           className={`transition-all duration-150 ${
                             activeHoverPoint === idx
-                              ? "fill-[#1e9df1] stroke-white stroke-2 shadow-lg"
-                              : "fill-white stroke-[#1e9df1] stroke-2"
+                              ? "fill-[#0758fc] stroke-white stroke-2 shadow-lg"
+                              : "fill-white stroke-[#0758fc] stroke-2"
                           }`}
                         />
                       </g>
@@ -1286,7 +1286,7 @@ export function SuperAdminDashboardClient({
                       className="absolute top-4 left-6 bg-gray-900 text-white text-xs px-3.5 py-2 rounded-xl shadow-xl space-y-0.5 animate-in fade-in-50"
                     >
                       <p className="text-[10px] text-gray-400 uppercase font-bold">{points[activeHoverPoint].date}</p>
-                      <p className="font-extrabold text-[#1e9df1]">₹{points[activeHoverPoint].gmv.toLocaleString()} GMV</p>
+                      <p className="font-extrabold text-[#0758fc]">₹{points[activeHoverPoint].gmv.toLocaleString()} GMV</p>
                       <p className="text-[11px] text-gray-300">~{points[activeHoverPoint].tickets} tickets sold</p>
                     </div>
                   )}
@@ -1354,10 +1354,10 @@ export function SuperAdminDashboardClient({
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-gray-700">
                         <span>VIP &amp; Delegate Passes</span>
-                        <span className="text-[#1e9df1]">{tierDistribution.vipPct}%</span>
+                        <span className="text-[#0758fc]">{tierDistribution.vipPct}%</span>
                       </div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#1e9df1] rounded-full transition-all duration-500" style={{ width: `${tierDistribution.vipPct}%` }} />
+                        <div className="h-full bg-[#0758fc] rounded-full transition-all duration-500" style={{ width: `${tierDistribution.vipPct}%` }} />
                       </div>
                     </div>
 
@@ -1448,7 +1448,7 @@ export function SuperAdminDashboardClient({
                             </td>
                             <td className="px-6 py-4">
                               <p className="font-bold text-gray-900">{req.club_name}</p>
-                              <p className="text-[11px] text-[#1e9df1] font-extrabold">{req.position}</p>
+                              <p className="text-[11px] text-[#0758fc] font-extrabold">{req.position}</p>
                             </td>
                             <td className="px-6 py-4 max-w-xs">
                               <p className="text-xs text-gray-800 line-clamp-2">{req.reason}</p>
@@ -1546,7 +1546,7 @@ export function SuperAdminDashboardClient({
                   placeholder="Search by Order Ref, Attendee, UTR number, or Event..."
                   value={upiSearch}
                   onChange={(e) => setUpiSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -1641,7 +1641,7 @@ export function SuperAdminDashboardClient({
                                     <button
                                       type="button"
                                       onClick={() => setProofModalOrder(ord)}
-                                      className="text-[11px] text-[#1e9df1] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                                      className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
                                     >
                                       <Camera size={12} /> View Payment Photo Proof
                                     </button>
@@ -1783,7 +1783,7 @@ export function SuperAdminDashboardClient({
 
               <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">DPDP Rights Requests</span>
-                <div className="text-2xl font-black text-[#1e9df1]">
+                <div className="text-2xl font-black text-[#0758fc]">
                   {privacyRequests.filter((r: any) => r.status === "open" || r.status === "in_progress").length}
                 </div>
                 <p className="text-[11px] text-gray-500 font-medium">Access, Erasure &amp; Portability</p>
@@ -1825,7 +1825,7 @@ export function SuperAdminDashboardClient({
                         onClick={() => setGrievanceFilter(filterVal)}
                         className={`text-xs font-extrabold px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                           grievanceFilter === filterVal
-                            ? "bg-[#1e9df1] text-white shadow-xs"
+                            ? "bg-[#0758fc] text-white shadow-xs"
                             : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                         }`}
                       >
@@ -1849,7 +1849,7 @@ export function SuperAdminDashboardClient({
                     placeholder="Search by case #, name, email..."
                     value={grievanceSearch}
                     onChange={(e) => setGrievanceSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#1e9df1] focus:bg-white"
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0758fc] focus:bg-white"
                   />
                 </div>
               </div>
@@ -1940,7 +1940,7 @@ export function SuperAdminDashboardClient({
                                   setSelectedComplaint(comp);
                                   setResolutionInput(comp.resolution || "");
                                 }}
-                                className="text-[11px] font-bold text-[#1e9df1] hover:underline px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
+                                className="text-[11px] font-bold text-[#0758fc] hover:underline px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
                               >
                                 Inspect
                               </button>
@@ -2027,7 +2027,7 @@ export function SuperAdminDashboardClient({
                             <p className="text-[11px] text-gray-500 font-mono">{req.user_email}</p>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#1e9df1] border border-blue-200">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
                               {req.request_type}
                             </span>
                           </td>
@@ -2087,7 +2087,7 @@ export function SuperAdminDashboardClient({
             {/* Header & Controls */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-xs">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e9df1] border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0758fc] border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
                   <Award size={12} /> DISTRICT 3192 GOVERNANCE
                 </div>
                 <h2 className="text-xl font-black text-gray-900">District Clubs &amp; Organizations Directory</h2>
@@ -2109,7 +2109,7 @@ export function SuperAdminDashboardClient({
 
                 <button
                   onClick={handleOpenAddClub}
-                  className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus size={14} /> Add New Club
                 </button>
@@ -2126,7 +2126,7 @@ export function SuperAdminDashboardClient({
                     placeholder="Search by club name, partner rotary, president, or zone..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-gray-900 outline-none transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#0758fc] focus:bg-white rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-gray-900 outline-none transition-all"
                   />
                 </div>
 
@@ -2134,7 +2134,7 @@ export function SuperAdminDashboardClient({
                   <select
                     value={kycFilter}
                     onChange={(e) => setKycFilter(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#1e9df1] focus:bg-white rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none cursor-pointer transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#0758fc] focus:bg-white rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none cursor-pointer transition-all"
                   >
                     <option value="ALL">All KYC &amp; Verification Statuses</option>
                     <option value="VERIFIED">Verified Active Clubs</option>
@@ -2156,7 +2156,7 @@ export function SuperAdminDashboardClient({
                     onClick={() => setSelectedZoneFilter(z)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       selectedZoneFilter === z
-                        ? "bg-[#1e9df1] text-white shadow-xs"
+                        ? "bg-[#0758fc] text-white shadow-xs"
                         : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                     }`}
                   >
@@ -2198,7 +2198,7 @@ export function SuperAdminDashboardClient({
                             <div className="space-y-0.5">
                               <span className="font-extrabold text-gray-900 block text-sm">{org.name}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-[#1e9df1] font-extrabold bg-blue-50 border border-blue-200/60 px-2 py-0.2 rounded-md">
+                                <span className="text-[10px] text-[#0758fc] font-extrabold bg-blue-50 border border-blue-200/60 px-2 py-0.2 rounded-md">
                                   Zone {org.zone || "District 3192"}
                                 </span>
                                 <span className="text-[10px] text-gray-400 font-mono">slug: {org.slug}</span>
@@ -2226,7 +2226,7 @@ export function SuperAdminDashboardClient({
                                 <span className="text-gray-400 italic">No president listed</span>
                               )}
                               {org.contact_email && (
-                                <a href={`mailto:${org.contact_email}`} className="text-[11px] text-[#1e9df1] hover:underline block truncate max-w-[180px]">
+                                <a href={`mailto:${org.contact_email}`} className="text-[11px] text-[#0758fc] hover:underline block truncate max-w-[180px]">
                                   {org.contact_email}
                                 </a>
                               )}
@@ -2300,7 +2300,7 @@ export function SuperAdminDashboardClient({
                 <div key={evt.id} className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-50 text-[#1e9df1]">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-50 text-[#0758fc]">
                         {evt.category || "Flagship"}
                       </span>
                       <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
@@ -2377,7 +2377,7 @@ export function SuperAdminDashboardClient({
               </div>
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-1">
                 <span className="text-xs font-bold text-gray-400 uppercase">Platform Commission (0%)</span>
-                <p className="text-2xl font-black text-[#1e9df1]">₹{totalPlatformFees.toFixed(2)}</p>
+                <p className="text-2xl font-black text-[#0758fc]">₹{totalPlatformFees.toFixed(2)}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-1">
                 <span className="text-xs font-bold text-gray-400 uppercase">Net Organizer Payouts</span>
@@ -2402,7 +2402,7 @@ export function SuperAdminDashboardClient({
                       <tr key={ord.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="px-6 py-4 font-mono font-bold text-gray-900">{ord.order_number || "ORD-LIVE"}</td>
                         <td className="px-6 py-4 font-extrabold text-gray-900">₹{Number(ord.total_amount || 0).toFixed(2)}</td>
-                        <td className="px-6 py-4 font-mono font-bold text-[#1e9df1]">
+                        <td className="px-6 py-4 font-mono font-bold text-[#0758fc]">
                           ₹{Number(ord.platform_fee || 0).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 uppercase font-bold text-gray-500">{ord.payment_gateway || "UPI_QR"}</td>
@@ -2544,7 +2544,7 @@ export function SuperAdminDashboardClient({
                   placeholder="Filter by action, actor email, or entity ID..."
                   value={auditSearch}
                   onChange={(e) => setAuditSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -2610,7 +2610,7 @@ export function SuperAdminDashboardClient({
                           onClick={() => setSelectedAuditLog(log)}
                           className="hover:bg-rose-50/40 transition-colors cursor-pointer group"
                         >
-                          <td className="px-6 py-4 font-mono font-bold text-[#1e9df1]">
+                          <td className="px-6 py-4 font-mono font-bold text-[#0758fc]">
                             <span className="bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg">
                               {log.action}
                             </span>
@@ -2630,7 +2630,7 @@ export function SuperAdminDashboardClient({
                             {log.created_at ? new Date(log.created_at).toLocaleString("en-IN") : "Just now"}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 group-hover:text-[#1e9df1] transition-colors">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 group-hover:text-[#0758fc] transition-colors">
                               Inspect <ChevronRight size={13} />
                             </span>
                           </td>
@@ -2683,7 +2683,7 @@ export function SuperAdminDashboardClient({
                     type="button"
                     onClick={() => handleToggleFlag(flag.id || flag.name, flag.is_enabled)}
                     className={`w-14 h-8 rounded-full transition-colors cursor-pointer relative shrink-0 p-1 flex items-center ${
-                      flag.is_enabled ? "bg-[#1e9df1]" : "bg-gray-200"
+                      flag.is_enabled ? "bg-[#0758fc]" : "bg-gray-200"
                     }`}
                     title={flag.is_enabled ? "Click to disable" : "Click to enable"}
                   >
@@ -2730,7 +2730,7 @@ export function SuperAdminDashboardClient({
             <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 space-y-1 text-xs">
               <p className="font-bold text-gray-900">Order Ref: {rejectModalOrder.order_number}</p>
               <p className="text-gray-600">Attendee: {rejectModalOrder.customer_name} ({rejectModalOrder.customer_email})</p>
-              <p className="font-mono text-[#1e9df1] font-bold">UTR: {rejectModalOrder.upi_transaction_id || "None"}</p>
+              <p className="font-mono text-[#0758fc] font-bold">UTR: {rejectModalOrder.upi_transaction_id || "None"}</p>
             </div>
 
             <form onSubmit={handleRejectPaymentSubmit} className="space-y-4">
@@ -2744,7 +2744,7 @@ export function SuperAdminDashboardClient({
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="e.g. UTR not found on statement, Amount underpaid, Duplicate transaction ID..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs outline-none focus:border-[#1e9df1] shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs outline-none focus:border-[#0758fc] shadow-sm"
                 />
               </div>
 
@@ -2804,7 +2804,7 @@ export function SuperAdminDashboardClient({
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   CRYPTOGRAPHIC LOG ENTRY
                 </span>
                 <h3 className="text-xl font-black text-gray-900">{selectedAuditLog.action}</h3>
@@ -2850,7 +2850,7 @@ export function SuperAdminDashboardClient({
                 </span>
                 <button
                   onClick={() => handleCopyJson(selectedAuditLog)}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1e9df1] hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0758fc] hover:underline cursor-pointer"
                 >
                   <Copy size={13} /> {copiedPayload ? "Copied!" : "Copy Payload"}
                 </button>
@@ -2924,7 +2924,7 @@ export function SuperAdminDashboardClient({
                   placeholder="e.g. Rotaract Club of Bengaluru Central"
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -2937,7 +2937,7 @@ export function SuperAdminDashboardClient({
                     type="text"
                     value={newOrgDistrict}
                     onChange={(e) => setNewOrgDistrict(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
                   />
                 </div>
                 <div>
@@ -2949,7 +2949,7 @@ export function SuperAdminDashboardClient({
                     step="0.1"
                     value={newOrgFee}
                     onChange={(e) => setNewOrgFee(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
@@ -2963,7 +2963,7 @@ export function SuperAdminDashboardClient({
                   placeholder="president@rotaract3192.org"
                   value={newOrgEmail}
                   onChange={(e) => setNewOrgEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -3001,7 +3001,7 @@ export function SuperAdminDashboardClient({
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   DISTRICT 3192 DIRECTORY
                 </span>
                 <h3 className="text-xl font-black text-gray-900">
@@ -3034,7 +3034,7 @@ export function SuperAdminDashboardClient({
                   placeholder="e.g. Rotaract Club of Bengaluru Central"
                   value={clubForm.name}
                   onChange={(e) => setClubForm({ ...clubForm, name: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
                 />
               </div>
 
@@ -3046,7 +3046,7 @@ export function SuperAdminDashboardClient({
                   <select
                     value={clubForm.zone}
                     onChange={(e) => setClubForm({ ...clubForm, zone: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white cursor-pointer"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
                   >
                     <option value="Taranga">Zone Taranga</option>
                     <option value="Varuna">Zone Varuna</option>
@@ -3065,7 +3065,7 @@ export function SuperAdminDashboardClient({
                   <select
                     value={clubForm.clubType}
                     onChange={(e) => setClubForm({ ...clubForm, clubType: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white cursor-pointer"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
                   >
                     <option value="Community Based">Community Based</option>
                     <option value="Institution Based">Institution / College</option>
@@ -3083,7 +3083,7 @@ export function SuperAdminDashboardClient({
                     placeholder="e.g. Bangalore West"
                     value={clubForm.partnerClub}
                     onChange={(e) => setClubForm({ ...clubForm, partnerClub: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
                   />
                 </div>
 
@@ -3096,7 +3096,7 @@ export function SuperAdminDashboardClient({
                     placeholder="rotaract@gmail.com"
                     value={clubForm.contactEmail}
                     onChange={(e) => setClubForm({ ...clubForm, contactEmail: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#1e9df1] focus:bg-white"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
                   />
                 </div>
               </div>
@@ -3114,7 +3114,7 @@ export function SuperAdminDashboardClient({
                       placeholder="Rtr. John Doe"
                       value={clubForm.presidentName}
                       onChange={(e) => setClubForm({ ...clubForm, presidentName: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                   <div>
@@ -3124,7 +3124,7 @@ export function SuperAdminDashboardClient({
                       placeholder="9876543210"
                       value={clubForm.presidentPhone}
                       onChange={(e) => setClubForm({ ...clubForm, presidentPhone: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                   <div>
@@ -3134,7 +3134,7 @@ export function SuperAdminDashboardClient({
                       placeholder="president@gmail.com"
                       value={clubForm.presidentEmail}
                       onChange={(e) => setClubForm({ ...clubForm, presidentEmail: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#1e9df1]"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 </div>
@@ -3151,7 +3151,7 @@ export function SuperAdminDashboardClient({
                 <button
                   type="submit"
                   disabled={clubSaving || !clubForm.name.trim()}
-                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {clubSaving ? <Loader2 size={14} className="animate-spin" /> : editingClub ? "Save Changes" : "Create Club"}
                 </button>
@@ -3174,7 +3174,7 @@ export function SuperAdminDashboardClient({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#1e9df1] block">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0758fc] block">
                   District Super Admin • Verify Payment Screenshot
                 </span>
                 <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
@@ -3275,7 +3275,7 @@ export function SuperAdminDashboardClient({
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   STATUTORY GRIEVANCE REDRESSAL
                 </span>
                 <h3 className="text-xl font-black text-gray-900">
@@ -3303,7 +3303,7 @@ export function SuperAdminDashboardClient({
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Category</span>
-                <span className="font-bold text-[#1e9df1]">{selectedComplaint.category || "General"}</span>
+                <span className="font-bold text-[#0758fc]">{selectedComplaint.category || "General"}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Filed Date</span>
@@ -3341,7 +3341,7 @@ export function SuperAdminDashboardClient({
                 value={resolutionInput}
                 onChange={(e) => setResolutionInput(e.target.value)}
                 placeholder="Enter statutory resolution notes for the complainant audit record..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs outline-none focus:border-[#1e9df1] focus:bg-white"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs outline-none focus:border-[#0758fc] focus:bg-white"
               />
 
               <div className="flex flex-wrap gap-1.5">

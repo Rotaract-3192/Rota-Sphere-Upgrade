@@ -50,7 +50,7 @@ export function EventsPageClient({ events, clubName }: EventsPageClientProps) {
             onClick={() => setViewMode("MAP")}
             className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
               viewMode === "MAP"
-                ? "bg-[#1e9df1] text-white shadow-xs"
+                ? "bg-[#0758fc] text-white shadow-xs"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >

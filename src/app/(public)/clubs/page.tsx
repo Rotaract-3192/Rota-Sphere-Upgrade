@@ -20,7 +20,7 @@ export default async function ClubsPage() {
         
         {/* Header */}
         <div className="max-w-3xl space-y-3 mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#1e9df1] border border-blue-200 text-xs font-extrabold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0758fc] border border-blue-200 text-xs font-extrabold uppercase tracking-wider">
             <Award size={12} /> DISTRICT 3192 OFFICIAL NETWORK
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight">

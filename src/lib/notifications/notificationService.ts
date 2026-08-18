@@ -146,7 +146,7 @@ export async function sendTicketEmailWithQR({
       <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 4px rgba(0,0,0,0.02);">
         <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px border-gray-100;padding-bottom:12px;margin-bottom:12px;">
           <div>
-            <span style="font-size:11px;font-weight:700;color:#1e9df1;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:2px;">OFFICIAL DELEGATE PASS</span>
+            <span style="font-size:11px;font-weight:700;color:#0758fc;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:2px;">OFFICIAL DELEGATE PASS</span>
             <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0;">${t.tierName}</h3>
           </div>
           <span style="font-family:monospace;font-size:12px;font-weight:700;background:#f1f5f9;color:#334155;padding:4px 8px;border-radius:6px;">${t.code}</span>
@@ -173,7 +173,7 @@ export async function sendTicketEmailWithQR({
       <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
         
         <!-- Header Banner -->
-        <div style="background:#1e9df1;padding:28px 32px;text-align:left;">
+        <div style="background:#0758fc;padding:28px 32px;text-align:left;">
           <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0;letter-spacing:-0.5px;">RotaSphere</h1>
           <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:700;margin:6px 0 0;text-transform:uppercase;letter-spacing:1px;">Registration Confirmed ✓</p>
         </div>
@@ -205,7 +205,7 @@ export async function sendTicketEmailWithQR({
           <!-- Buttons -->
           <div style="margin-top:28px;text-align:center;">
             <a href="${appUrl}/tickets" 
-               style="display:inline-block;background:#1e9df1;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(30,157,241,0.3);">
+               style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(30,157,241,0.3);">
               View My Passes Dashboard →
             </a>
           </div>
@@ -215,7 +215,7 @@ export async function sendTicketEmailWithQR({
         <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="font-size:12px;color:#94a3b8;margin:0;">
             © ${new Date().getFullYear()} RotaSphere Platform · District 3192 Rotaract<br/>
-            <a href="${appUrl}" style="color:#1e9df1;text-decoration:none;">Visit RotaSphere</a>
+            <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">Visit RotaSphere</a>
           </p>
         </div>
       </div>
@@ -261,7 +261,7 @@ export async function sendBulkBroadcastEmail({
       <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
         
         <div style="background:#0f172a;padding:24px 32px;">
-          <span style="font-size:11px;font-weight:700;color:#1e9df1;text-transform:uppercase;letter-spacing:1px;">OFFICIAL ANNOUNCEMENT</span>
+          <span style="font-size:11px;font-weight:700;color:#0758fc;text-transform:uppercase;letter-spacing:1px;">OFFICIAL ANNOUNCEMENT</span>
           <h1 style="color:#ffffff;font-size:20px;font-weight:800;margin:4px 0 0;">${eventTitle ? eventTitle : "RotaSphere Platform Notice"}</h1>
         </div>
 
@@ -279,7 +279,7 @@ export async function sendBulkBroadcastEmail({
 
         <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="font-size:12px;color:#94a3b8;margin:0;">
-            © ${new Date().getFullYear()} RotaSphere · <a href="${appUrl}" style="color:#1e9df1;text-decoration:none;">rotasphere.in</a>
+            © ${new Date().getFullYear()} RotaSphere · <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">rotasphere.in</a>
           </p>
         </div>
       </div>

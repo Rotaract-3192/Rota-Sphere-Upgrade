@@ -108,7 +108,7 @@ export function CookiePreferencesClient() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-5">
         <div>
           <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <Cookie className="text-[#1e9df1]" size={18} /> Manage Cookie Preferences
+            <Cookie className="text-[#0758fc]" size={18} /> Manage Cookie Preferences
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
             Configure which cookie categories are stored on your device.
@@ -126,7 +126,7 @@ export function CookiePreferencesClient() {
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-extrabold px-5 py-2 rounded-xl bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-sm transition-all cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-extrabold px-5 py-2 rounded-xl bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-sm transition-all cursor-pointer"
           >
             {saved ? (
               <>
@@ -172,7 +172,7 @@ export function CookiePreferencesClient() {
                 disabled={cat.required}
                 onClick={() => handleToggle(cat.id)}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                  cat.enabled ? "bg-[#1e9df1]" : "bg-gray-300 dark:bg-gray-600"
+                  cat.enabled ? "bg-[#0758fc]" : "bg-gray-300 dark:bg-gray-600"
                 } ${cat.required ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 <span

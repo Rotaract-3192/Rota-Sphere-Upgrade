@@ -350,16 +350,16 @@ function CheckInScannerContent() {
         {/* ── 2. VENUE & CHECKPOINT CONFIGURATION ────────────────────────── */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#121721] border border-gray-800/80 p-4 rounded-3xl">
           <div className="space-y-1">
-            <label className="text-[10px] font-extrabold text-[#1e9df1] uppercase tracking-wider block">
+            <label className="text-[10px] font-extrabold text-[#0758fc] uppercase tracking-wider block">
               Event Venue
             </label>
             {isUrlLocked ? (
               /* LOCKED — opened via ?eventId= from dashboard. Operator cannot switch. */
-              <div className="w-full bg-[#1b2230] text-xs font-semibold text-white px-3.5 py-2.5 rounded-xl border border-[#1e9df1]/50 flex items-center justify-between gap-2">
+              <div className="w-full bg-[#1b2230] text-xs font-semibold text-white px-3.5 py-2.5 rounded-xl border border-[#0758fc]/50 flex items-center justify-between gap-2">
                 <span className="truncate">
                   {eventsList.find((e) => e.id === selectedEventId)?.title || "Loading event..."}
                 </span>
-                <span className="shrink-0 px-1.5 py-0.5 bg-[#1e9df1]/20 text-[#1e9df1] text-[9px] font-extrabold uppercase tracking-wider rounded-full border border-[#1e9df1]/30">
+                <span className="shrink-0 px-1.5 py-0.5 bg-[#0758fc]/20 text-[#0758fc] text-[9px] font-extrabold uppercase tracking-wider rounded-full border border-[#0758fc]/30">
                   LOCKED
                 </span>
               </div>
@@ -373,7 +373,7 @@ function CheckInScannerContent() {
                 className={`w-full bg-[#1b2230] text-xs font-semibold px-3.5 py-2.5 rounded-xl border outline-none cursor-pointer ${
                   !isEventLocked
                     ? "border-amber-500/60 text-amber-400"
-                    : "border-gray-700/80 text-white focus:border-[#1e9df1]"
+                    : "border-gray-700/80 text-white focus:border-[#0758fc]"
                 }`}
               >
                 <option value="">⚠ Select Event to Unlock Scanner</option>
@@ -391,7 +391,7 @@ function CheckInScannerContent() {
 
 
           <div className="space-y-1">
-            <label className="text-[10px] font-extrabold text-[#1e9df1] uppercase tracking-wider block">
+            <label className="text-[10px] font-extrabold text-[#0758fc] uppercase tracking-wider block">
               Gate Checkpoint
             </label>
             <div className="w-full bg-[#1b2230] text-xs font-semibold text-white px-3.5 py-2.5 rounded-xl border border-gray-700/80">
@@ -437,15 +437,15 @@ function CheckInScannerContent() {
 
               {/* Laser scanning beam line */}
               {cameraActive && (
-                <div className="absolute inset-x-4 h-0.5 bg-gradient-to-r from-transparent via-[#1e9df1] to-transparent animate-bounce opacity-90 z-20 shadow-[0_0_12px_#1e9df1]" />
+                <div className="absolute inset-x-4 h-0.5 bg-gradient-to-r from-transparent via-[#0758fc] to-transparent animate-bounce opacity-90 z-20 shadow-[0_0_12px_#0758fc]" />
               )}
 
               {/* Corner target reticles */}
               <div className="absolute inset-10 pointer-events-none z-10">
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#1e9df1] rounded-tl-xl" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#1e9df1] rounded-tr-xl" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#1e9df1] rounded-bl-xl" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#1e9df1] rounded-br-xl" />
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#0758fc] rounded-tl-xl" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#0758fc] rounded-tr-xl" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#0758fc] rounded-bl-xl" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#0758fc] rounded-br-xl" />
               </div>
 
               {/* Result Overlay Card */}
@@ -544,7 +544,7 @@ function CheckInScannerContent() {
                 className={`inline-flex items-center justify-center gap-2 font-black text-xs sm:text-sm px-8 py-3.5 rounded-2xl transition-all shadow-lg cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                   cameraActive
                     ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30"
-                    : "bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-[#1e9df1]/30 hover:scale-105 disabled:hover:scale-100"
+                    : "bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-[#0758fc]/30 hover:scale-105 disabled:hover:scale-100"
                 }`}
               >
                 {cameraActive ? (
@@ -592,7 +592,7 @@ function CheckInScannerContent() {
                   value={inputToken}
                   onChange={(e) => setInputToken(e.target.value)}
                   placeholder="Type ticket code or paste token (e.g. TKT-M-213H-1)..."
-                  className="flex-1 bg-[#1b2230] border border-gray-700/80 rounded-2xl px-4 py-3 text-xs font-mono text-white placeholder-gray-500 outline-none focus:border-[#1e9df1] shadow-inner"
+                  className="flex-1 bg-[#1b2230] border border-gray-700/80 rounded-2xl px-4 py-3 text-xs font-mono text-white placeholder-gray-500 outline-none focus:border-[#0758fc] shadow-inner"
                 />
                 <button
                   type="submit"
@@ -628,7 +628,7 @@ function CheckInScannerContent() {
             {/* Quick Test Simulator Tags */}
             <div className="bg-[#121721] border border-gray-800/80 p-5 rounded-3xl space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   Live Test Passes
                 </span>
                 <span className="text-[10px] text-gray-400">Click to simulate instant scan</span>
@@ -663,7 +663,7 @@ function CheckInScannerContent() {
             <div className="bg-[#121721] border border-gray-800/80 p-5 rounded-3xl space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Activity size={14} className="text-[#1e9df1]" /> Live Clearance Log
+                  <Activity size={14} className="text-[#0758fc]" /> Live Clearance Log
                 </span>
                 {recentScans.length > 0 && (
                   <button

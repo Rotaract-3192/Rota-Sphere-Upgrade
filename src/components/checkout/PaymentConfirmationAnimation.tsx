@@ -295,7 +295,7 @@ export function PaymentConfirmationAnimation({
               </span>
             )}
             {eventName && (
-              <span className="bg-blue-50/90 text-[#1e9df1] border border-blue-200/90 px-3 py-1 rounded-xl text-[11px] font-bold max-w-[200px] truncate shadow-xs">
+              <span className="bg-blue-50/90 text-[#0758fc] border border-blue-200/90 px-3 py-1 rounded-xl text-[11px] font-bold max-w-[200px] truncate shadow-xs">
                 {eventName}
               </span>
             )}

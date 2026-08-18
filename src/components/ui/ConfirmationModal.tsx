@@ -40,7 +40,7 @@ export function ConfirmationModal({
               className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                 isDestructive
                   ? "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400"
-                  : "bg-blue-50 dark:bg-blue-950/50 text-[#1e9df1]"
+                  : "bg-blue-50 dark:bg-blue-950/50 text-[#0758fc]"
               }`}
             >
               <AlertTriangle size={20} />
@@ -76,7 +76,7 @@ export function ConfirmationModal({
             className={`flex-1 font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md cursor-pointer disabled:opacity-50 text-white ${
               isDestructive
                 ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20"
-                : "bg-[#1e9df1] hover:bg-[#1583cd] shadow-[#1e9df1]/20"
+                : "bg-[#0758fc] hover:bg-[#054fe0] shadow-[#0758fc]/20"
             }`}
           >
             {isLoading ? "Processing..." : confirmLabel}

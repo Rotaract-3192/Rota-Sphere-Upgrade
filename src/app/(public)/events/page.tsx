@@ -117,7 +117,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
           {/* Active Club Filter Pill / Banner */}
           {(clubName || clubId) && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1e9df1]/15 border border-[#1e9df1]/30 rounded-2xl p-4 text-xs text-white max-w-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0758fc]/15 border border-[#0758fc]/30 rounded-2xl p-4 text-xs text-white max-w-2xl">
               <div className="flex items-center gap-2.5">
                 <Users size={18} className="text-[#60a5fa] shrink-0" />
                 <span>
@@ -142,12 +142,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
                 name="q"
                 defaultValue={q}
                 placeholder="Search events, clubs, cities..."
-                className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-[#1e9df1]"
+                className="w-full bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-400 outline-none focus:border-[#0758fc]"
               />
             </div>
             <button
               type="submit"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-lg transition-all cursor-pointer"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-lg transition-all cursor-pointer"
             >
               Search
             </button>
@@ -159,7 +159,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
               <Link
                 href={clubName ? `/events?club=${encodeURIComponent(clubName)}` : "/events"}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-                  !category ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  !category ? "bg-[#0758fc] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
                 }`}
               >
                 All Events
@@ -169,7 +169,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
                   key={cat.id}
                   href={`/events?category=${cat.id}${clubName ? `&club=${encodeURIComponent(clubName)}` : ""}`}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-                    category === cat.id ? "bg-[#1e9df1] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
+                    category === cat.id ? "bg-[#0758fc] text-white" : "bg-white/10 text-gray-300 hover:bg-white/20"
                   }`}
                 >
                   {cat.name}

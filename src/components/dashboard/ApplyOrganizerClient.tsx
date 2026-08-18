@@ -220,7 +220,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
               <div className="pt-2">
                 <Link
                   href="/events"
-                  className="inline-flex items-center gap-2 text-xs font-extrabold text-[#1e9df1] hover:underline"
+                  className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0758fc] hover:underline"
                 >
                   <ArrowLeft size={14} /> Return to Event Registrations &amp; Discovery
                 </Link>
@@ -264,7 +264,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                   <div 
                     onClick={() => setIsDropdownOpen(true)}
                     className={`w-full bg-gray-50 border ${
-                      isDropdownOpen ? "border-[#1e9df1] bg-white ring-2 ring-[#1e9df1]/10" : "border-gray-200"
+                      isDropdownOpen ? "border-[#0758fc] bg-white ring-2 ring-[#0758fc]/10" : "border-gray-200"
                     } rounded-2xl pl-10 pr-10 py-3 text-xs font-bold text-gray-900 flex items-center cursor-pointer transition-all relative`}
                   >
                     <Building2 size={16} className="absolute left-3.5 text-gray-400" />
@@ -308,7 +308,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                               }}
                               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
                                 isSelected 
-                                  ? "bg-blue-50 text-[#1e9df1] font-bold" 
+                                  ? "bg-blue-50 text-[#0758fc] font-bold" 
                                   : "hover:bg-gray-50 text-gray-800 font-medium"
                               }`}
                             >
@@ -318,7 +318,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                                   Zone {club.zone} · {club.club_type || "Community Based"}
                                 </p>
                               </div>
-                              {isSelected && <Check size={14} className="text-[#1e9df1] shrink-0" />}
+                              {isSelected && <Check size={14} className="text-[#0758fc] shrink-0" />}
                             </button>
                           );
                         })
@@ -347,7 +347,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                       placeholder="e.g. Club President, Secretary, Event Chair, Director"
                       value={position}
                       onChange={(e) => setPosition(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1] focus:bg-white transition-all"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white transition-all"
                     />
                   </div>
 
@@ -360,7 +360,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                         onClick={() => setPosition(pos)}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                           position === pos 
-                            ? "bg-[#1e9df1] text-white border-[#1e9df1]" 
+                            ? "bg-[#0758fc] text-white border-[#0758fc]" 
                             : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
                         }`}
                       >
@@ -383,7 +383,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                       placeholder="Briefly describe the upcoming event you plan to publish on RotaSphere (e.g. Annual District Cultural Fest, Sports Tournament, Community Blood Drive)..."
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1] focus:bg-white transition-all"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white transition-all"
                     />
                   </div>
                 </div>
@@ -398,7 +398,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
                   <button
                     type="submit"
                     disabled={loading || (!selectedClub && !clubSearch.trim()) || !position.trim() || !reason.trim()}
-                    className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-95"
+                    className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-95"
                   >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
                     Submit Request to District Admin

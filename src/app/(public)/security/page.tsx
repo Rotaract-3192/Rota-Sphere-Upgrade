@@ -46,7 +46,7 @@ export default function SecurityPage() {
           
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <KeyRound className="text-[#1e9df1]" size={20} /> 1. Cryptographic Single-Use QR Pass Integrity
+              <KeyRound className="text-[#0758fc]" size={20} /> 1. Cryptographic Single-Use QR Pass Integrity
             </h2>
             <p>
               Traditional static barcode tickets can be screenshotted and shared across multiple attendees. RotaSphere eliminates ticket fraud through <strong>SHA-256 HMAC cryptographic tokenization</strong>:
@@ -86,7 +86,7 @@ export default function SecurityPage() {
               We welcome security researchers to test and improve our platform security. If you discover a vulnerability, please report it directly to:
             </p>
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 font-medium space-y-1">
-              <p>Email: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] underline">tech.rotaract3192@gmail.com</a></p>
+              <p>Email: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] underline">tech.rotaract3192@gmail.com</a></p>
               <p className="text-gray-500">Please provide reproduction steps and allow 48 hours for our security team to investigate before any public disclosure.</p>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function SecurityPage() {
             </div>
             <Link
               href="/status"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               View System Status <ArrowRight size={14} />
             </Link>

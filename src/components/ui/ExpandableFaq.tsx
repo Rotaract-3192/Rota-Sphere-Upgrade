@@ -28,7 +28,7 @@ export function ExpandableFaq({
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#1e9df1] text-xs font-bold border border-blue-200 dark:border-blue-900/50">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#0758fc] text-xs font-bold border border-blue-200 dark:border-blue-900/50">
           <HelpCircle size={14} />
           <span>HELP &amp; FAQS</span>
         </div>
@@ -59,7 +59,7 @@ export function ExpandableFaq({
                 </span>
                 <div
                   className={`w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                    isOpen ? "rotate-180 bg-[#1e9df1] text-white" : ""
+                    isOpen ? "rotate-180 bg-[#0758fc] text-white" : ""
                   }`}
                 >
                   <ChevronDown size={16} />

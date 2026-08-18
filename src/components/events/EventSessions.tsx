@@ -23,7 +23,7 @@ export function EventSessions({ sessions }: EventSessionsProps) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h3 className="text-sm sm:text-base font-bold text-gray-900">{session.title}</h3>
             <span className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold bg-white border border-gray-200 px-3 py-1 rounded-full w-fit">
-              <Clock size={12} className="text-[#1e9df1]" />
+              <Clock size={12} className="text-[#0758fc]" />
               {formatTime(session.start_time)} - {formatTime(session.end_time)}
             </span>
           </div>

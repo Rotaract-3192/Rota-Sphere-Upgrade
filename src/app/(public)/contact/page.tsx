@@ -48,7 +48,7 @@ export default function ContactPage() {
       email: "tech.rotaract3192@gmail.com",
       desc: "Ticket passes, app assistance, and general inquiries",
       icon: HelpCircle,
-      color: "text-[#1e9df1] bg-blue-50 dark:bg-blue-950/50",
+      color: "text-[#0758fc] bg-blue-50 dark:bg-blue-950/50",
     },
     {
       label: "Payments & Refunds",
@@ -118,7 +118,7 @@ export default function ContactPage() {
                   </span>
                   <a
                     href={`mailto:${ch.email}`}
-                    className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white hover:text-[#1e9df1] transition-colors"
+                    className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white hover:text-[#0758fc] transition-colors"
                   >
                     {ch.email}
                   </a>
@@ -159,7 +159,7 @@ export default function ContactPage() {
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
               <div className="flex items-center gap-2">
-                <Shield size={20} className="text-[#1e9df1]" />
+                <Shield size={20} className="text-[#0758fc]" />
                 <h3 className="font-black text-base text-gray-900 dark:text-white">
                   Statutory Grievance Redressal
                 </h3>
@@ -172,7 +172,7 @@ export default function ContactPage() {
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-1.5 font-medium">
                   <p><strong>Grievance Officer:</strong> Thejaswin P. S.</p>
                   <p><strong>Designation:</strong> District Ombudsman &amp; Redressal Lead</p>
-                  <p><strong>Email:</strong> <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] underline">tech.rotaract3192@gmail.com</a></p>
+                  <p><strong>Email:</strong> <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] underline">tech.rotaract3192@gmail.com</a></p>
                   <p><strong>Acknowledgement SLA:</strong> Within 24 Hours</p>
                   <p><strong>Resolution SLA:</strong> Within 15 Business Days</p>
                 </div>
@@ -250,7 +250,7 @@ export default function ContactPage() {
                         placeholder="e.g. Rahul Sharma"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
                       />
                     </div>
                     <div>
@@ -263,7 +263,7 @@ export default function ContactPage() {
                         placeholder="e.g. rahul@example.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
                       />
                     </div>
                   </div>
@@ -278,7 +278,7 @@ export default function ContactPage() {
                         placeholder="e.g. +91 98765 43210"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
                       />
                     </div>
                     <div>
@@ -288,7 +288,7 @@ export default function ContactPage() {
                       <select
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
                       >
                         <option value="Pass Booking / UTR Query">Pass Booking / UTR Payment Verification</option>
                         <option value="Payment Failure / Duplicate Charge">Payment Failure / Duplicate Charge</option>
@@ -338,14 +338,14 @@ export default function ContactPage() {
                       placeholder="Please provide complete context regarding your inquiry, transaction timestamps, or event name..."
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1] focus:outline-hidden"
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc] focus:outline-hidden"
                     />
                   </div>
 
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3.5 rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
                       <Send size={15} /> Submit Support Case (Generate Tracking ID)
                     </button>

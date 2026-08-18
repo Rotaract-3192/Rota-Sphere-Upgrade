@@ -50,7 +50,7 @@ export function DirectoryVerificationModal({ isOpen, onClose }: DirectoryVerific
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700/60 space-y-3.5 text-xs">
           <div className="flex items-center justify-between py-1 border-b border-gray-200/50 dark:border-gray-700/50">
             <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5">
-              <Building size={14} className="text-[#1e9df1]" /> Organization Authority
+              <Building size={14} className="text-[#0758fc]" /> Organization Authority
             </span>
             <span className="font-bold text-gray-900 dark:text-white">
               Rotaract District 3192 Council
@@ -110,7 +110,7 @@ export function DirectoryVerificationModal({ isOpen, onClose }: DirectoryVerific
           <button
             type="button"
             onClick={onClose}
-            className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 rounded-2xl shadow-md transition-all cursor-pointer"
+            className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 rounded-2xl shadow-md transition-all cursor-pointer"
           >
             Acknowledge &amp; Close
           </button>

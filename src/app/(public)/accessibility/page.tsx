@@ -36,7 +36,7 @@ export default function AccessibilityPage() {
           {/* Conformance Commitment */}
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="text-[#1e9df1]" size={20} /> Conformance Standard: WCAG 2.1 Level AA
+              <ShieldCheck className="text-[#0758fc]" size={20} /> Conformance Standard: WCAG 2.1 Level AA
             </h2>
             <p>
               RotaSphere is engineered to conform with the <strong>Web Content Accessibility Guidelines (WCAG) 2.1 Level AA</strong> standards. We continually audit our UI components, ticketing checkout flows, and gate check-in screens to remove digital barriers for people with auditory, cognitive, neurological, physical, speech, and visual disabilities.
@@ -52,7 +52,7 @@ export default function AccessibilityPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-1.5">
                 <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white text-xs sm:text-sm">
-                  <Keyboard size={16} className="text-[#1e9df1]" /> Keyboard-First Navigation
+                  <Keyboard size={16} className="text-[#0758fc]" /> Keyboard-First Navigation
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   All interactive controls, modals, tabs, dropdowns, and forms can be navigated seamlessly using Tab, Enter, Space, and Arrow keys.
@@ -91,14 +91,14 @@ export default function AccessibilityPage() {
           {/* Feedback & Assistance */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-4">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <Mail className="text-[#1e9df1]" size={20} /> Accessibility Assistance &amp; Feedback
+              <Mail className="text-[#0758fc]" size={20} /> Accessibility Assistance &amp; Feedback
             </h2>
             <p>
               If you experience any difficulty accessing any part of RotaSphere, purchasing tickets, or viewing your digital pass, please reach out to our accessibility team:
             </p>
             <div className="bg-gray-50 dark:bg-gray-800/80 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 space-y-2 text-xs">
               <p className="font-bold text-gray-900 dark:text-white">
-                Accessibility Desk: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] hover:underline font-normal">tech.rotaract3192@gmail.com</a>
+                Accessibility Desk: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] hover:underline font-normal">tech.rotaract3192@gmail.com</a>
               </p>
               <p className="font-bold text-gray-900 dark:text-white">
                 Support SLA: <span className="font-normal text-gray-700 dark:text-gray-300">Accessibility tickets receive prioritized review within 24 hours.</span>
@@ -113,7 +113,7 @@ export default function AccessibilityPage() {
             </div>
             <Link
               href="/contact"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               Contact Support <ArrowRight size={14} />
             </Link>

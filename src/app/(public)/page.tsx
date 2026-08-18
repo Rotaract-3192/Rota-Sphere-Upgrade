@@ -103,7 +103,7 @@ export default async function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="max-w-2xl space-y-6">
             <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-white">
-              Discover <span className="text-[#1e9df1]">Verified</span> Events &amp; Masterclasses
+              Discover <span className="text-[#0758fc]">Verified</span> Events &amp; Masterclasses
             </h1>
 
             <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
@@ -113,7 +113,7 @@ export default async function HomePage() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link
                 href="/events"
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-sm px-7 py-3.5 rounded-2xl transition-all shadow-lg shadow-[#1e9df1]/30 hover:scale-105"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-sm px-7 py-3.5 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/30 hover:scale-105"
               >
                 Explore Flagship Events
               </Link>
@@ -132,7 +132,7 @@ export default async function HomePage() {
                 <span>Verified by District 3192</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <QrCode size={14} className="text-[#1e9df1]" />
+                <QrCode size={14} className="text-[#0758fc]" />
                 <span>Instant QR Gate Pass</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -152,7 +152,7 @@ export default async function HomePage() {
               const Icon = stat.icon;
               return (
                 <div key={i} className="flex flex-col items-center justify-center gap-1 py-6 px-4 text-center">
-                  <Icon size={18} className="text-[#1e9df1] mb-1" />
+                  <Icon size={18} className="text-[#0758fc] mb-1" />
                   <span className="text-2xl font-black text-gray-900">{stat.value}</span>
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</span>
                 </div>
@@ -173,7 +173,7 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-widest mb-2">
               <Calendar size={14} /> Upcoming Flagship Events
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
@@ -182,7 +182,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/events"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1e9df1] hover:text-[#1583cd] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0758fc] hover:text-[#054fe0] transition-colors"
           >
             Explore all events <ArrowRight size={16} />
           </Link>
@@ -208,7 +208,7 @@ export default async function HomePage() {
       <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-widest mb-3">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-widest mb-3">
               <Calendar size={14} /> The Rotasphere Journey
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
@@ -231,7 +231,7 @@ export default async function HomePage() {
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="bg-blue-50 rounded-2xl p-4 text-center">
-                  <p className="text-3xl font-black text-[#1e9df1]">
+                  <p className="text-3xl font-black text-[#0758fc]">
                     {stats.events > 0 ? stats.events : "—"}
                   </p>
                   <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Published Events</p>
@@ -246,15 +246,15 @@ export default async function HomePage() {
             </div>
 
             {/* Right Timeline */}
-            <div className="lg:col-span-8 space-y-6 relative pl-6 border-l-2 border-[#1e9df1]/20">
+            <div className="lg:col-span-8 space-y-6 relative pl-6 border-l-2 border-[#0758fc]/20">
               {mapEvents.slice(0, 4).map((item: any, i: number) => (
                 <div key={item.id || i} className="relative group">
                   {/* Timeline dot */}
-                  <div className="absolute -left-[31px] top-5 w-4 h-4 rounded-full bg-[#1e9df1] border-4 border-white shadow-md group-hover:scale-125 transition-transform" />
+                  <div className="absolute -left-[31px] top-5 w-4 h-4 rounded-full bg-[#0758fc] border-4 border-white shadow-md group-hover:scale-125 transition-transform" />
 
-                  <div className="bg-gray-50 border border-gray-100 hover:border-[#1e9df1]/30 rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                  <div className="bg-gray-50 border border-gray-100 hover:border-[#0758fc]/30 rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-bold text-[#1e9df1] uppercase tracking-wider">
+                      <span className="text-xs font-bold text-[#0758fc] uppercase tracking-wider">
                         {new Date(item.start_date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} · {item.city || "Karnataka"}
                       </span>
                     </div>
@@ -280,7 +280,7 @@ export default async function HomePage() {
           <div className="bg-white dark:bg-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-xs space-y-6 sm:space-y-0">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-center">
               <div className="lg:col-span-5 space-y-3 sm:space-y-4">
-                <div className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-black text-[#1e9df1] uppercase tracking-widest">
+                <div className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-black text-[#0758fc] uppercase tracking-widest">
                   <Mail size={14} /> Get in Touch
                 </div>
                 <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-snug">
@@ -292,12 +292,12 @@ export default async function HomePage() {
                 <div className="space-y-2 pt-2 text-xs text-gray-600 dark:text-gray-300">
                   <a
                     href="mailto:tech.rotaract3192@gmail.com"
-                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-[#1e9df1] transition-colors"
+                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-[#0758fc] transition-colors"
                   >
-                    <Mail size={14} className="text-[#1e9df1] shrink-0" /> tech.rotaract3192@gmail.com
+                    <Mail size={14} className="text-[#0758fc] shrink-0" /> tech.rotaract3192@gmail.com
                   </a>
                   <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <Phone size={14} className="text-[#1e9df1] shrink-0" /> District 3192 Helpline
+                    <Phone size={14} className="text-[#0758fc] shrink-0" /> District 3192 Helpline
                   </p>
                 </div>
               </div>

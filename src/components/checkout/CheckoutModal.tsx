@@ -363,7 +363,7 @@ export function CheckoutModal({
         {/* ── 1. GATED STATE: NOT LOGGED IN ─────────────────────────────── */}
         {!userEmail ? (
           <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6">
-            <div className="w-16 h-16 bg-blue-50 text-[#1e9df1] rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
+            <div className="w-16 h-16 bg-blue-50 text-[#0758fc] rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
               <Lock size={32} />
             </div>
 
@@ -379,7 +379,7 @@ export function CheckoutModal({
             <div className="w-full max-w-sm mx-auto flex flex-col sm:flex-row gap-3 pt-2">
               <Link
                 href={`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`}
-                className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
+                className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
               >
                 Sign In to Continue <ArrowRight size={15} />
               </Link>
@@ -482,7 +482,7 @@ export function CheckoutModal({
             <div className="space-y-4 p-5 bg-blue-50/60 border border-blue-200/80 rounded-3xl">
               <div className="space-y-1">
                 <label className="block text-xs font-black uppercase tracking-wider text-gray-900 flex items-center gap-1.5 w-full">
-                  <Clock size={15} className="text-[#1e9df1] shrink-0" />
+                  <Clock size={15} className="text-[#0758fc] shrink-0" />
                   Enter 12-Digit UPI Reference / UTR Number *
                 </label>
                 <p className="text-xs text-gray-600 w-full block leading-relaxed">
@@ -500,14 +500,14 @@ export function CheckoutModal({
                   setUpiTransactionId(e.target.value);
                   setErrorMessage(null);
                 }}
-                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10 block"
+                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
               />
 
               {/* Prominent Payment Screenshot Attachment Field */}
               <div className="pt-3 space-y-2 border-t border-blue-200">
                 <label className="block text-xs font-extrabold text-gray-900 flex items-center justify-between w-full">
                   <span className="flex items-center gap-1.5">
-                    <Camera size={15} className="text-[#1e9df1] shrink-0" />
+                    <Camera size={15} className="text-[#0758fc] shrink-0" />
                     Attach Payment Screenshot Proof (Recommended)
                   </span>
                   <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
@@ -533,9 +533,9 @@ export function CheckoutModal({
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full border-2 border-dashed border-blue-300 hover:border-[#1e9df1] bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 group text-center space-y-1">
-                    <Upload size={22} className="text-[#1e9df1] group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-extrabold text-gray-900 group-hover:text-[#1e9df1] transition-colors block w-full text-center">
+                  <label className="w-full border-2 border-dashed border-blue-300 hover:border-[#0758fc] bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 group text-center space-y-1">
+                    <Upload size={22} className="text-[#0758fc] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-extrabold text-gray-900 group-hover:text-[#0758fc] transition-colors block w-full text-center">
                       Click to Upload Payment Receipt Screenshot
                     </span>
                     <span className="text-[10px] text-gray-500 block w-full text-center">PNG, JPG, or WebP screenshot from GPay / PhonePe / Paytm</span>
@@ -611,7 +611,7 @@ export function CheckoutModal({
                             key={tier.id}
                             className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
                               count > 0
-                                ? "border-[#1e9df1] bg-blue-50/20 shadow-xs"
+                                ? "border-[#0758fc] bg-blue-50/20 shadow-xs"
                                 : isSoldOut
                                 ? "border-gray-200 bg-gray-50 opacity-75"
                                 : "border-gray-200 bg-white"
@@ -630,7 +630,7 @@ export function CheckoutModal({
                                 )}
                               </div>
                               <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                              <p className="text-sm font-black text-[#1e9df1]">
+                              <p className="text-sm font-black text-[#0758fc]">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
                             </div>
@@ -681,7 +681,7 @@ export function CheckoutModal({
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-extrabold text-[#1e9df1] flex items-center gap-1">
+                      <span className="text-xs font-extrabold text-[#0758fc] flex items-center gap-1">
                         {showGeneralDropdown ? (
                           <>Hide General Tickets <ChevronUp size={14} /></>
                         ) : (
@@ -698,7 +698,7 @@ export function CheckoutModal({
                             <div
                               key={tier.id}
                               className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                                count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                                count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
                               }`}
                             >
                               <div className="space-y-1 min-w-0">
@@ -709,7 +709,7 @@ export function CheckoutModal({
                                   </span>
                                 </div>
                                 <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                                <p className="text-sm font-black text-[#1e9df1]">
+                                <p className="text-sm font-black text-[#0758fc]">
                                   {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                                 </p>
                               </div>
@@ -749,7 +749,7 @@ export function CheckoutModal({
                         <div
                           key={tier.id}
                           className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                            count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                            count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
                           }`}
                         >
                           <div className="space-y-1 min-w-0">
@@ -760,7 +760,7 @@ export function CheckoutModal({
                               </span>
                             </div>
                             <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                            <p className="text-sm font-black text-[#1e9df1]">
+                            <p className="text-sm font-black text-[#0758fc]">
                               {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                             </p>
                           </div>
@@ -804,7 +804,7 @@ export function CheckoutModal({
                           <div
                             key={tier.id}
                             className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                              count > 0 ? "border-[#1e9df1] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                              count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
                             }`}
                           >
                             <div className="space-y-1 min-w-0">
@@ -815,7 +815,7 @@ export function CheckoutModal({
                                 </span>
                               </div>
                               <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                              <p className="text-sm font-black text-[#1e9df1]">
+                              <p className="text-sm font-black text-[#0758fc]">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
                             </div>
@@ -857,7 +857,7 @@ export function CheckoutModal({
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                   {attendees.map((att, idx) => (
                     <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
-                      <span className="text-[10px] font-bold uppercase text-[#1e9df1] tracking-wider block">
+                      <span className="text-[10px] font-bold uppercase text-[#0758fc] tracking-wider block">
                         Attendee #{idx + 1}
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -871,7 +871,7 @@ export function CheckoutModal({
                             updated[idx].name = e.target.value;
                             setAttendees(updated);
                           }}
-                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#0758fc]"
                         />
                         <input
                           type="email"
@@ -883,7 +883,7 @@ export function CheckoutModal({
                             updated[idx].email = e.target.value;
                             setAttendees(updated);
                           }}
-                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1e9df1]"
+                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#0758fc]"
                         />
                       </div>
 
@@ -906,7 +906,7 @@ export function CheckoutModal({
                                     updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
                                     setAttendees(updated);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                                 >
                                   <option value="">Select an option...</option>
                                   {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
@@ -923,7 +923,7 @@ export function CheckoutModal({
                                     updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
                                     setAttendees(updated);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                                 />
                               )}
                             </div>
@@ -944,7 +944,7 @@ export function CheckoutModal({
                   placeholder="Promo or Discount Code"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs uppercase font-mono outline-none focus:border-[#1e9df1]"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs uppercase font-mono outline-none focus:border-[#0758fc]"
                 />
                 <button
                   type="button"
@@ -987,7 +987,7 @@ export function CheckoutModal({
               )}
               <div className="pt-2 border-t border-gray-200 flex justify-between text-sm font-black text-gray-900">
                 <span>Total Payable</span>
-                <span className="text-[#1e9df1]">₹{fees.totalPayable.toFixed(2)}</span>
+                <span className="text-[#0758fc]">₹{fees.totalPayable.toFixed(2)}</span>
               </div>
             </div>
 
@@ -997,7 +997,7 @@ export function CheckoutModal({
                 type="button"
                 disabled={loading || totalTicketCount === 0}
                 onClick={handleProceedToPayment}
-                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg shadow-[#1e9df1]/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <><Loader2 size={18} className="animate-spin" /> Processing...</>

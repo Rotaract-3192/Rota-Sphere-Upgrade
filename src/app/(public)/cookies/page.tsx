@@ -37,7 +37,7 @@ export default function CookiePolicyPage() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-8">
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="text-[#1e9df1]" size={20} /> What Are Cookies?
+              <ShieldCheck className="text-[#0758fc]" size={20} /> What Are Cookies?
             </h2>
             <p>
               Cookies and local storage objects are small text files placed on your browser or device when you visit websites. They enable the website to recognize your device, maintain authenticated sessions (via Clerk SSO), keep items in your checkout basket, and deliver seamless gate check-in scanning.
@@ -69,7 +69,7 @@ export default function CookiePolicyPage() {
             </div>
             <Link
               href="/privacy-center"
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               Open Privacy Center <ArrowRight size={14} />
             </Link>

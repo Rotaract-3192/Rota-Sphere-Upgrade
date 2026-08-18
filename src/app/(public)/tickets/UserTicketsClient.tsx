@@ -176,7 +176,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.stroke();
 
       // Top Brand Color Header Strip (Azure Electric)
-      ctx.fillStyle = "#1e9df1";
+      ctx.fillStyle = "#0758fc";
       ctx.beginPath();
       ctx.roundRect(0, 0, width, 18, [36, 36, 0, 0]);
       ctx.fill();
@@ -272,7 +272,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.fillText(attendeeEmail, 90, cardBoxY + 105);
 
       // Tier Pill (e.g. Early Bird / Delegate Pass)
-      ctx.fillStyle = "#1e9df1";
+      ctx.fillStyle = "#0758fc";
       ctx.beginPath();
       ctx.roundRect(90, cardBoxY + 130, 200, 36, 18);
       ctx.fill();
@@ -310,7 +310,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.font = "900 17px sans-serif";
       ctx.fillText("ROTASPHERE", 895, 110);
 
-      ctx.fillStyle = "#1e9df1";
+      ctx.fillStyle = "#0758fc";
       ctx.font = "bold 11px sans-serif";
       ctx.fillText("DISTRICT 3192 ENTRY", 895, 126);
 
@@ -428,7 +428,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
   if (tickets.length === 0) {
     return (
       <div className="w-full text-center py-16 sm:py-20 border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 bg-white shadow-xs space-y-6">
-        <div className="w-16 h-16 rounded-full bg-blue-50 text-[#1e9df1] flex items-center justify-center mx-auto shadow-inner shrink-0">
+        <div className="w-16 h-16 rounded-full bg-blue-50 text-[#0758fc] flex items-center justify-center mx-auto shadow-inner shrink-0">
           <TicketIcon size={32} />
         </div>
         <div className="max-w-md mx-auto space-y-2">
@@ -442,7 +442,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
         <div className="pt-2">
           <Link
             href="/events"
-            className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer active:scale-95 text-center"
+            className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer active:scale-95 text-center"
           >
             Explore Events
           </Link>
@@ -475,14 +475,14 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           onClick={() => setActiveTab("upcoming")}
           className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
             activeTab === "upcoming"
-              ? "bg-white dark:bg-gray-900 text-[#1e9df1] shadow-xs"
+              ? "bg-white dark:bg-gray-900 text-[#0758fc] shadow-xs"
               : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           }`}
         >
           Upcoming Passes
           {upcomingTickets.length > 0 && (
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-              activeTab === "upcoming" ? "bg-[#1e9df1] text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              activeTab === "upcoming" ? "bg-[#0758fc] text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             }`}>
               {upcomingTickets.length}
             </span>
@@ -704,7 +704,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     <button
                       onClick={() => handleDownloadTicket(ticket)}
                       disabled={isDownloading}
-                      className="flex-1 flex items-center justify-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md shadow-[#1e9df1]/20 cursor-pointer active:scale-95 disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md shadow-[#0758fc]/20 cursor-pointer active:scale-95 disabled:opacity-50"
                     >
                       {isDownloading ? (
                         <>
@@ -802,7 +802,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
             <div className="space-y-1">
               <p className="text-base font-black text-gray-900">{qrModalTicket.attendee_name || "Delegate"}</p>
-              <p className="text-xs font-mono font-bold text-[#1e9df1]">{qrModalTicket.ticket_code}</p>
+              <p className="text-xs font-mono font-bold text-[#0758fc]">{qrModalTicket.ticket_code}</p>
               <p className="text-xs text-gray-500">{qrModalTicket.saas_events?.title}</p>
             </div>
 
@@ -812,7 +812,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
             <button
               onClick={() => handleDownloadTicket(qrModalTicket)}
-              className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <Download size={14} /> Download Pass Badge
             </button>
@@ -833,7 +833,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   PASS REASSIGNMENT
                 </span>
                 <h3 className="text-xl font-black text-gray-900">Transfer Ticket Pass</h3>
@@ -871,7 +871,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="e.g. Rahul Sharma"
                   value={transferName}
                   onChange={(e) => setTransferName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -885,7 +885,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="rahul@rotaract.org"
                   value={transferEmail}
                   onChange={(e) => setTransferEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -898,7 +898,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="+91 98765 43210"
                   value={transferPhone}
                   onChange={(e) => setTransferPhone(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -913,7 +913,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 <button
                   type="submit"
                   disabled={transferLoading}
-                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {transferLoading ? <Loader2 size={14} className="animate-spin" /> : "Transfer Now"}
                 </button>
@@ -974,7 +974,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="Please state why you are requesting a refund (e.g. scheduling conflict, emergency)..."
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-900 outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -1019,7 +1019,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   PAYMENT VERIFICATION
                 </span>
                 <h3 className="text-xl font-black text-gray-900">Update UPI UTR Reference</h3>
@@ -1058,7 +1058,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   placeholder="e.g. 421893821034"
                   value={utrInput}
                   onChange={(e) => setUtrInput(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -1066,7 +1066,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
               <div className="space-y-1.5 pt-1">
                 <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Camera size={14} className="text-[#1e9df1]" />
+                    <Camera size={14} className="text-[#0758fc]" />
                     Upload Payment Receipt Screenshot (Optional)
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal">GPay / PhonePe / Paytm</span>
@@ -1090,9 +1090,9 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full border-2 border-dashed border-gray-200 hover:border-[#1e9df1] bg-gray-50/50 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/20 group text-center space-y-1">
-                    <Upload size={18} className="text-gray-400 group-hover:text-[#1e9df1] transition-colors" />
-                    <span className="text-xs font-bold text-gray-700 group-hover:text-[#1e9df1] transition-colors">
+                  <label className="w-full border-2 border-dashed border-gray-200 hover:border-[#0758fc] bg-gray-50/50 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/20 group text-center space-y-1">
+                    <Upload size={18} className="text-gray-400 group-hover:text-[#0758fc] transition-colors" />
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-[#0758fc] transition-colors">
                       Click to upload payment screenshot
                     </span>
                     <span className="text-[10px] text-gray-400">PNG, JPG or WebP</span>
@@ -1135,7 +1135,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 <button
                   type="submit"
                   disabled={utrLoading || !utrInput.trim()}
-                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {utrLoading ? <Loader2 size={14} className="animate-spin" /> : "Submit UTR"}
                 </button>

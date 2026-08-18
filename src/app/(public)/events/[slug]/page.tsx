@@ -133,7 +133,7 @@ export default async function EventDetailPage({ params }: PageProps) {
 
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300 font-medium">
             <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-[#1e9df1]" />
+              <Calendar size={18} className="text-[#0758fc]" />
               <span>{formattedDate}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-6">
               <div className="flex items-center justify-between border-b border-gray-100 pb-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] bg-blue-50 px-2.5 py-0.5 rounded-full">
                     Transparency &amp; Governance
                   </span>
                   <h2 className="text-xl font-bold text-gray-900 tracking-tight">Event Policies &amp; Data Notice</h2>
@@ -309,7 +309,7 @@ export default async function EventDetailPage({ params }: PageProps) {
               </div>
 
               <div className="pt-2 text-[11px] text-gray-400 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100">
-                <span>Subject to RotaSphere <Link href="/terms" className="text-[#1e9df1] hover:underline font-bold">Terms of Service</Link> and <Link href="/privacy" className="text-[#1e9df1] hover:underline font-bold">Privacy Policy</Link>.</span>
+                <span>Subject to RotaSphere <Link href="/terms" className="text-[#0758fc] hover:underline font-bold">Terms of Service</Link> and <Link href="/privacy" className="text-[#0758fc] hover:underline font-bold">Privacy Policy</Link>.</span>
                 <Link href="/disputes" className="text-gray-600 hover:text-gray-900 hover:underline font-semibold">Report an Issue with this Event →</Link>
               </div>
             </section>

@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
           </div>
           <Link
             href="/privacy-center"
-            className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+            className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
           >
             Open Privacy Center <ArrowRight size={14} />
           </Link>
@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
           {/* Section 1: Introduction */}
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <FileText className="text-[#1e9df1]" size={20} /> 1. Introduction &amp; Data Fiduciary Scope
+              <FileText className="text-[#0758fc]" size={20} /> 1. Introduction &amp; Data Fiduciary Scope
             </h2>
             <p>
               This Privacy Policy explains how <strong>RotaSphere</strong> (operated by <em>RotaSphere Platform Operations / Rotaract District 3192 Secretariat</em>, hereinafter &quot;RotaSphere&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) collects, uses, stores, shares, and protects personal data when you use the RotaSphere platform, including our websites, event registration services, ticketing infrastructure, organizer dashboards, gate check-in systems, and related communications.
@@ -206,7 +206,7 @@ export default function PrivacyPolicyPage() {
           {/* Section 8: Consent & Withdrawal */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <RefreshCw className="text-[#1e9df1]" size={20} /> 8. Notice, Consent &amp; Consent Withdrawal
+              <RefreshCw className="text-[#0758fc]" size={20} /> 8. Notice, Consent &amp; Consent Withdrawal
             </h2>
             <p>
               In strict accordance with the DPDP Rules 2025, RotaSphere enforces a clear separation between <strong>Necessary Transactional Processing</strong> and <strong>Optional Promotional Processing</strong>:
@@ -214,7 +214,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-5 space-y-1.5 text-gray-600 dark:text-gray-400">
               <li><strong>Necessary Processing:</strong> Providing your email and name is required to generate and deliver your event ticket, process your payment, and grant gate entry.</li>
               <li><strong>Optional Communications:</strong> Subscribing to district newsletters, promotional WhatsApp updates, or marketing emails is entirely voluntary and is never pre-bundled into Terms of Service acceptance.</li>
-              <li><strong>Ease of Withdrawal:</strong> You can withdraw consent for any optional processing at any time with an ease comparable to giving it, via the <Link href="/privacy-center" className="text-[#1e9df1] font-bold hover:underline">Privacy Center</Link>.</li>
+              <li><strong>Ease of Withdrawal:</strong> You can withdraw consent for any optional processing at any time with an ease comparable to giving it, via the <Link href="/privacy-center" className="text-[#0758fc] font-bold hover:underline">Privacy Center</Link>.</li>
             </ul>
           </div>
 
@@ -315,7 +315,7 @@ export default function PrivacyPolicyPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 pt-1">
-              You can exercise all the above rights instantly via our self-serve <Link href="/privacy-center" className="text-[#1e9df1] font-bold hover:underline">Privacy Center Dashboard</Link>.
+              You can exercise all the above rights instantly via our self-serve <Link href="/privacy-center" className="text-[#0758fc] font-bold hover:underline">Privacy Center Dashboard</Link>.
             </p>
           </div>
 
@@ -360,7 +360,7 @@ export default function PrivacyPolicyPage() {
           {/* Section 15: Grievance Redressal Contact */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-8 space-y-4">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <Mail className="text-[#1e9df1]" size={20} /> 15. Grievance Officer &amp; Statutory Redressal
+              <Mail className="text-[#0758fc]" size={20} /> 15. Grievance Officer &amp; Statutory Redressal
             </h2>
             <p>
               If you have any questions, concerns, or grievances regarding the processing of your personal data, you may contact our designated Grievance Officer under the DPDP Act 2023:
@@ -371,7 +371,7 @@ export default function PrivacyPolicyPage() {
                 Grievance Officer: <span className="font-normal text-gray-700 dark:text-gray-300">Thejaswin P. S.</span>
               </p>
               <p className="font-bold text-gray-900 dark:text-white">
-                Official Email: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] hover:underline font-normal">tech.rotaract3192@gmail.com</a>
+                Official Email: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] hover:underline font-normal">tech.rotaract3192@gmail.com</a>
               </p>
               <p className="font-bold text-gray-900 dark:text-white">
                 Postal Address: <span className="font-normal text-gray-700 dark:text-gray-300">District Secretariat, Rotaract District 3192, Bengaluru, Karnataka 560001, India</span>

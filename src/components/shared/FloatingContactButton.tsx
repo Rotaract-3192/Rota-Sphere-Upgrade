@@ -14,7 +14,7 @@ export function FloatingContactButton() {
         <div className="mb-3 bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl text-white space-y-3 w-64 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between border-b border-white/10 pb-2">
             <span className="text-xs font-black text-white flex items-center gap-1.5">
-              <MessageCircle size={14} className="text-[#1e9df1]" /> Need Help?
+              <MessageCircle size={14} className="text-[#0758fc]" /> Need Help?
             </span>
             <button
               type="button"
@@ -59,7 +59,7 @@ export function FloatingContactButton() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open support and contact options"
-        className="p-3.5 rounded-2xl bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center gap-2 font-bold text-xs group"
+        className="p-3.5 rounded-2xl bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center gap-2 font-bold text-xs group"
       >
         <MessageCircle size={18} className="group-hover:rotate-12 transition-transform" />
         <span className="hidden sm:inline">Support</span>

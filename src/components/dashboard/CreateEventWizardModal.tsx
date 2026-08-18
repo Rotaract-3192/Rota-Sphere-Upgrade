@@ -2,7 +2,7 @@
 
 /**
  * Premium 5-Step Event Creation & Editing Wizard Modal
- * Matches website theme (#1e9df1 brand, crisp white canvas, dark ink text, smooth borders, local device image upload, Google Maps auto-fill, and full Edit Mode support).
+ * Matches website theme (#0758fc brand, crisp white canvas, dark ink text, smooth borders, local device image upload, Google Maps auto-fill, and full Edit Mode support).
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -458,7 +458,7 @@ export function CreateEventWizardModal({
         {/* ── TOP HEADER (CREATE / EDIT EVENT & SEARCH) ────────────────── */}
         <div className="bg-white border-b border-gray-100 px-6 sm:px-10 py-5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1] block">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] block">
               {isEditMode ? "Edit Event Listing" : "Event Management Studio"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-serif tracking-tight mt-0.5">
@@ -472,7 +472,7 @@ export function CreateEventWizardModal({
               <input
                 type="text"
                 placeholder="Search presets & tags..."
-                className="bg-gray-50 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 outline-none w-48 focus:w-64 focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/10 transition-all"
+                className="bg-gray-50 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 outline-none w-48 focus:w-64 focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 transition-all"
               />
             </div>
 
@@ -480,7 +480,7 @@ export function CreateEventWizardModal({
               <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                 <Bell size={16} />
               </div>
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#1e9df1] border-2 border-white" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#0758fc] border-2 border-white" />
             </div>
 
             <button
@@ -511,7 +511,7 @@ export function CreateEventWizardModal({
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
                         isCurrent
-                          ? "bg-[#1e9df1] text-white ring-4 ring-[#1e9df1]/25 shadow-lg shadow-[#1e9df1]/30 scale-110 font-bold"
+                          ? "bg-[#0758fc] text-white ring-4 ring-[#0758fc]/25 shadow-lg shadow-[#0758fc]/30 scale-110 font-bold"
                           : isCompleted
                           ? "bg-gray-900 text-white shadow-sm"
                           : "bg-white text-gray-400 border border-gray-200 group-hover:border-gray-400 group-hover:text-gray-700"
@@ -522,7 +522,7 @@ export function CreateEventWizardModal({
                     <span
                       className={`text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap transition-colors ${
                         isCurrent
-                          ? "text-[#1e9df1]"
+                          ? "text-[#0758fc]"
                           : isCompleted
                           ? "text-gray-800"
                           : "text-gray-400"
@@ -536,7 +536,7 @@ export function CreateEventWizardModal({
                   {hasNext && (
                     <div
                       className={`absolute top-5 left-1/2 w-full h-[2px] -z-0 transition-all duration-500 ${
-                        currentStep > s.num ? "bg-[#1e9df1]" : "bg-gray-200"
+                        currentStep > s.num ? "bg-[#0758fc]" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -550,7 +550,7 @@ export function CreateEventWizardModal({
         <div className="p-6 sm:p-12 space-y-8 flex-1 overflow-y-auto max-h-[72vh] bg-white">
           
           {/* Top highlight bar */}
-          <div className="h-[3px] w-full bg-gradient-to-r from-[#1e9df1] via-[#1583cd] to-amber-500 rounded-full -mt-4 mb-6 opacity-90" />
+          <div className="h-[3px] w-full bg-gradient-to-r from-[#0758fc] via-[#054fe0] to-amber-500 rounded-full -mt-4 mb-6 opacity-90" />
 
           {errorMessage && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
@@ -582,7 +582,7 @@ export function CreateEventWizardModal({
                     value={title}
                     onChange={(e) => handleTitleChange(e.target.value)}
                     placeholder="e.g. RotaSphere Global Tech Summit 2026"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                   />
                 </div>
 
@@ -596,7 +596,7 @@ export function CreateEventWizardModal({
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     placeholder="rotasphere-global-tech-summit-2026"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all font-mono shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all font-mono shadow-sm"
                   />
                   <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                     Unique URL string: eventsphere.com/events/[slug]
@@ -614,7 +614,7 @@ export function CreateEventWizardModal({
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="A concise, one-sentence description summarizing the event main theme."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                 />
                 <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                   Appears on the homepage event card grid (max 160 characters).
@@ -631,7 +631,7 @@ export function CreateEventWizardModal({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe details, schedules, keynote presenters, food offerings, networking schedules..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-3xl p-6 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all leading-relaxed shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-3xl p-6 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all leading-relaxed shadow-sm"
                 />
                 <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
                   Explain all features in markdown format.
@@ -677,7 +677,7 @@ export function CreateEventWizardModal({
                       onClick={() => bannerInputRef.current?.click()}
                       className="w-full bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                     >
-                      <UploadCloud size={16} className="text-[#1e9df1]" />
+                      <UploadCloud size={16} className="text-[#0758fc]" />
                       <span>{bannerFileName ? "Change Banner from Device" : "Upload Banner from Device"}</span>
                     </button>
                   </div>
@@ -695,12 +695,12 @@ export function CreateEventWizardModal({
                     <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
                       EVENT CARD THUMBNAIL IMAGE *
                     </label>
-                    <span className="text-[10px] text-[#1e9df1] font-bold">Local Device Upload</span>
+                    <span className="text-[10px] text-[#0758fc] font-bold">Local Device Upload</span>
                   </div>
 
                   <div
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border-2 border-dashed border-gray-300 hover:border-[#1e9df1] bg-gray-50/80 shadow-md group cursor-pointer transition-all flex flex-col items-center justify-center p-4"
+                    className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border-2 border-dashed border-gray-300 hover:border-[#0758fc] bg-gray-50/80 shadow-md group cursor-pointer transition-all flex flex-col items-center justify-center p-4"
                   >
                     {thumbnailUrl ? (
                       <>
@@ -713,7 +713,7 @@ export function CreateEventWizardModal({
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2 text-center p-4">
-                        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-[#1e9df1] flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-[#0758fc] flex items-center justify-center">
                           <UploadCloud size={24} />
                         </div>
                         <span className="text-xs font-bold text-gray-800">Choose thumbnail from your computer</span>
@@ -733,7 +733,7 @@ export function CreateEventWizardModal({
                   <button
                     type="button"
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="w-full bg-[#1e9df1]/10 hover:bg-[#1e9df1]/15 text-[#1e9df1] border border-[#1e9df1]/30 rounded-2xl py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+                    className="w-full bg-[#0758fc]/10 hover:bg-[#0758fc]/15 text-[#0758fc] border border-[#0758fc]/30 rounded-2xl py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                   >
                     <FolderOpen size={16} />
                     <span>{thumbnailFileName ? "Select Different File from Device" : "Browse & Upload from Device"}</span>
@@ -768,7 +768,7 @@ export function CreateEventWizardModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#1e9df1]">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#0758fc]">
                     EVENT START DATE &amp; TIME *
                   </label>
                   <div className="relative">
@@ -783,7 +783,7 @@ export function CreateEventWizardModal({
                       className={`w-full bg-gray-50 border rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none transition-all shadow-sm ${
                         !startDate
                           ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
-                          : "border-gray-200 focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15"
+                          : "border-gray-200 focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
                       }`}
                     />
                   </div>
@@ -804,7 +804,7 @@ export function CreateEventWizardModal({
                       required
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -818,7 +818,7 @@ export function CreateEventWizardModal({
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all cursor-pointer appearance-none shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all cursor-pointer appearance-none shadow-sm"
                   >
                     <option value="India Standard Time (IST) - UTC+05:30">India Standard Time (IST) - UTC+05:30</option>
                     <option value="Eastern Standard Time (EST) - UTC-5">Eastern Standard Time (EST) - UTC-5</option>
@@ -854,11 +854,11 @@ export function CreateEventWizardModal({
                     onClick={() => handlePriceModelChange("FREE")}
                     className={`p-6 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
                       priceModel === "FREE"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Ticket size={28} className={priceModel === "FREE" ? "text-[#1e9df1]" : "text-gray-400"} />
+                    <Ticket size={28} className={priceModel === "FREE" ? "text-[#0758fc]" : "text-gray-400"} />
                     <h4 className="text-base font-bold text-gray-900">Free Event</h4>
                     <p className="text-xs text-gray-500">No charges apply for passes</p>
                   </button>
@@ -868,7 +868,7 @@ export function CreateEventWizardModal({
                     onClick={() => handlePriceModelChange("PAID")}
                     className={`p-6 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
                       priceModel === "PAID"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
@@ -884,7 +884,7 @@ export function CreateEventWizardModal({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
                   <div>
                     <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
-                      <Ticket size={18} className="text-[#1e9df1]" />
+                      <Ticket size={18} className="text-[#0758fc]" />
                       Ticket Passes &amp; Tier Pricing
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -933,7 +933,7 @@ export function CreateEventWizardModal({
                             value={tier.name}
                             onChange={(e) => updateTierField(idx, "name", e.target.value)}
                             placeholder="e.g. Early Bird Pass, General Release..."
-                            className="font-bold text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-[#1e9df1] outline-none px-1 py-0.5 w-48 sm:w-64"
+                            className="font-bold text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-[#0758fc] outline-none px-1 py-0.5 w-48 sm:w-64"
                           />
                         </div>
 
@@ -968,7 +968,7 @@ export function CreateEventWizardModal({
                               className={`w-full border rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none transition-all ${
                                 priceModel === "FREE"
                                   ? "bg-gray-100/80 border-gray-200 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-50 border-gray-200 focus:bg-white focus:border-[#1e9df1]"
+                                  : "bg-gray-50 border-gray-200 focus:bg-white focus:border-[#0758fc]"
                               }`}
                             />
                           </div>
@@ -989,7 +989,7 @@ export function CreateEventWizardModal({
                             value={tier.totalCapacity}
                             onChange={(e) => updateTierField(idx, "totalCapacity", parseInt(e.target.value) || 100)}
                             placeholder="100"
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1]"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#0758fc]"
                           />
                         </div>
 
@@ -1001,7 +1001,7 @@ export function CreateEventWizardModal({
                           <select
                             value={tier.tierType}
                             onChange={(e) => updateTierField(idx, "tierType", e.target.value as any)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] cursor-pointer"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] cursor-pointer"
                           >
                             <option value="EARLY_BIRD">Early Bird Pass</option>
                             <option value="REGULAR">General Release Pass</option>
@@ -1019,7 +1019,7 @@ export function CreateEventWizardModal({
                           value={tier.description || ""}
                           onChange={(e) => updateTierField(idx, "description", e.target.value)}
                           placeholder="Perks description (e.g. Includes delegate badge, lunch kit & certificate)"
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1]"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc]"
                         />
                       </div>
                     </div>
@@ -1029,7 +1029,7 @@ export function CreateEventWizardModal({
                 <button
                   type="button"
                   onClick={addNewTier}
-                  className="w-full bg-white hover:bg-gray-50 border border-dashed border-gray-300 hover:border-[#1e9df1] text-gray-700 hover:text-[#1e9df1] font-bold text-xs py-3 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                  className="w-full bg-white hover:bg-gray-50 border border-dashed border-gray-300 hover:border-[#0758fc] text-gray-700 hover:text-[#0758fc] font-bold text-xs py-3 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                 >
                   <Plus size={16} /> Add Custom Ticket Pass Tier
                 </button>
@@ -1046,12 +1046,12 @@ export function CreateEventWizardModal({
                     onClick={() => setVisibility("PUBLIC")}
                     className={`p-5 rounded-full border text-left transition-all cursor-pointer flex items-center gap-4 px-6 ${
                       visibility === "PUBLIC"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#1e9df1]/10 flex items-center justify-center flex-shrink-0">
-                      <Lock size={18} className={visibility === "PUBLIC" ? "text-[#1e9df1]" : "text-gray-400"} />
+                    <div className="w-10 h-10 rounded-full bg-[#0758fc]/10 flex items-center justify-center flex-shrink-0">
+                      <Lock size={18} className={visibility === "PUBLIC" ? "text-[#0758fc]" : "text-gray-400"} />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-gray-900">Public Listing</h4>
@@ -1064,12 +1064,12 @@ export function CreateEventWizardModal({
                     onClick={() => setVisibility("PRIVATE")}
                     className={`p-5 rounded-full border text-left transition-all cursor-pointer flex items-center gap-4 px-6 ${
                       visibility === "PRIVATE"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      <Lock size={18} className={visibility === "PRIVATE" ? "text-[#1e9df1]" : "text-gray-400"} />
+                      <Lock size={18} className={visibility === "PRIVATE" ? "text-[#0758fc]" : "text-gray-400"} />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-gray-900">Private Invite</h4>
@@ -1092,7 +1092,7 @@ export function CreateEventWizardModal({
                     onChange={(e) => setHostingClub(e.target.value)}
                     list="clubs-datalist"
                     placeholder="Select host club name..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                   />
                   <Users size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <datalist id="clubs-datalist">
@@ -1114,11 +1114,11 @@ export function CreateEventWizardModal({
                     onClick={() => setLocationDeliveryType("IN_PERSON")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "IN_PERSON"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <MapPin size={22} className={locationDeliveryType === "IN_PERSON" ? "text-[#1e9df1]" : "text-gray-400"} />
+                    <MapPin size={22} className={locationDeliveryType === "IN_PERSON" ? "text-[#0758fc]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">In-Person</h4>
                     <p className="text-[11px] text-gray-500">Physical venue location</p>
                   </button>
@@ -1128,11 +1128,11 @@ export function CreateEventWizardModal({
                     onClick={() => setLocationDeliveryType("ONLINE")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "ONLINE"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Globe size={22} className={locationDeliveryType === "ONLINE" ? "text-[#1e9df1]" : "text-gray-400"} />
+                    <Globe size={22} className={locationDeliveryType === "ONLINE" ? "text-[#0758fc]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">Online Virtual</h4>
                     <p className="text-[11px] text-gray-500">Zoom, Meet, or streaming Link</p>
                   </button>
@@ -1142,11 +1142,11 @@ export function CreateEventWizardModal({
                     onClick={() => setLocationDeliveryType("HYBRID")}
                     className={`p-5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       locationDeliveryType === "HYBRID"
-                        ? "bg-[#1e9df1]/5 border-[#1e9df1] ring-2 ring-[#1e9df1]/20 shadow-sm"
+                        ? "bg-[#0758fc]/5 border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
                         : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
                     }`}
                   >
-                    <Sparkles size={22} className={locationDeliveryType === "HYBRID" ? "text-[#1e9df1]" : "text-gray-400"} />
+                    <Sparkles size={22} className={locationDeliveryType === "HYBRID" ? "text-[#0758fc]" : "text-gray-400"} />
                     <h4 className="text-sm font-bold text-gray-900">Hybrid format</h4>
                     <p className="text-[11px] text-gray-500">Both physical and streaming</p>
                   </button>
@@ -1220,7 +1220,7 @@ export function CreateEventWizardModal({
               <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-[#1e9df1] text-white flex items-center justify-center font-black">
+                    <span className="w-8 h-8 rounded-xl bg-[#0758fc] text-white flex items-center justify-center font-black">
                       <QrCode size={16} />
                     </span>
                     <div>
@@ -1243,7 +1243,7 @@ export function CreateEventWizardModal({
                       value={upiId}
                       onChange={(e) => setUpiId(e.target.value)}
                       placeholder="e.g. rotaractclub@okaxis or 9876543210@paytm"
-                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] shadow-sm"
+                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] shadow-sm"
                     />
                   </div>
 
@@ -1257,7 +1257,7 @@ export function CreateEventWizardModal({
                       value={upiPayeeName}
                       onChange={(e) => setUpiPayeeName(e.target.value)}
                       placeholder="e.g. Rotaract Club of Bengaluru"
-                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] shadow-sm"
+                      className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] shadow-sm"
                     />
                   </div>
                 </div>
@@ -1281,8 +1281,8 @@ export function CreateEventWizardModal({
                 <div className="space-y-6 pt-2">
                   <div className="p-5 bg-gradient-to-r from-rose-50/80 via-orange-50/50 to-amber-50/40 border border-rose-200/90 rounded-3xl space-y-3 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#1e9df1] uppercase tracking-wider">
-                        <Sparkles size={14} className="text-[#1e9df1]" />
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-wider">
+                        <Sparkles size={14} className="text-[#0758fc]" />
                         <span>Auto-Fill with Google Maps Link or Place Name</span>
                       </div>
                     </div>
@@ -1304,7 +1304,7 @@ export function CreateEventWizardModal({
                             }
                           }}
                           placeholder="Paste Google Maps link or type place name (e.g. NIMHANS Convention Centre)"
-                          className="w-full bg-white border border-rose-200 rounded-full pl-12 pr-6 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/20 transition-all font-mono shadow-sm"
+                          className="w-full bg-white border border-rose-200 rounded-full pl-12 pr-6 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/20 transition-all font-mono shadow-sm"
                         />
                       </div>
 
@@ -1337,7 +1337,7 @@ export function CreateEventWizardModal({
                         value={venueName}
                         onChange={(e) => setVenueName(e.target.value)}
                         placeholder="e.g. Moscone Convention Center"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1350,7 +1350,7 @@ export function CreateEventWizardModal({
                         value={venueDirections}
                         onChange={(e) => setVenueDirections(e.target.value)}
                         placeholder="e.g. Enter through West Lobby building doors"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -1366,7 +1366,7 @@ export function CreateEventWizardModal({
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
                         placeholder="United States"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1379,7 +1379,7 @@ export function CreateEventWizardModal({
                         value={stateRegion}
                         onChange={(e) => setStateRegion(e.target.value)}
                         placeholder="California"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1393,7 +1393,7 @@ export function CreateEventWizardModal({
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="San Francisco"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -1409,7 +1409,7 @@ export function CreateEventWizardModal({
                         value={streetAddress}
                         onChange={(e) => setStreetAddress(e.target.value)}
                         placeholder="747 Howard St"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
 
@@ -1423,7 +1423,7 @@ export function CreateEventWizardModal({
                         value={pincode}
                         onChange={(e) => setPincode(e.target.value)}
                         placeholder="94103"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1] focus:ring-2 focus:ring-[#1e9df1]/15 transition-all font-mono shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all font-mono shadow-sm"
                       />
                     </div>
                   </div>
@@ -1440,7 +1440,7 @@ export function CreateEventWizardModal({
                       value={onlineMeetingUrl}
                       onChange={(e) => setOnlineMeetingUrl(e.target.value)}
                       placeholder="https://meet.google.com/xyz-abc or Zoom URL"
-                      className="w-full bg-white border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#1e9df1]"
+                      className="w-full bg-white border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 </div>
@@ -1469,7 +1469,7 @@ export function CreateEventWizardModal({
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] cursor-pointer appearance-none shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] cursor-pointer appearance-none shadow-sm"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -1493,7 +1493,7 @@ export function CreateEventWizardModal({
                       value={capacity}
                       onChange={(e) => setCapacity(Number(e.target.value))}
                       placeholder="500"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                     />
                   </div>
                   <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">
@@ -1503,7 +1503,7 @@ export function CreateEventWizardModal({
               </div>
 
               <div className="pt-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#1e9df1]">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#0758fc]">
                   SEARCH TAGS &amp; TOPICS *
                 </label>
                 <div className="flex items-center gap-3">
@@ -1518,12 +1518,12 @@ export function CreateEventWizardModal({
                       }
                     }}
                     placeholder="Type a tag (e.g. react, marketing, rock) and press Enter"
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                   />
                   <button
                     type="button"
                     onClick={handleAddTag}
-                    className="w-11 h-11 rounded-full bg-[#1e9df1] hover:bg-[#1583cd] text-white flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer"
+                    className="w-11 h-11 rounded-full bg-[#0758fc] hover:bg-[#054fe0] text-white flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer"
                   >
                     <Plus size={20} />
                   </button>
@@ -1568,7 +1568,7 @@ export function CreateEventWizardModal({
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
                       placeholder="organizer@rotaract3192.org"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                     />
                   </div>
                 </div>
@@ -1584,7 +1584,7 @@ export function CreateEventWizardModal({
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
                       placeholder="+91 9876543210"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#1e9df1] shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                     />
                   </div>
                 </div>
@@ -1621,7 +1621,7 @@ export function CreateEventWizardModal({
               <button
                 type="button"
                 onClick={handleNext}
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#1e9df1]/30 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#0758fc]/30 flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
               >
                 Next <ArrowRight size={16} />
               </button>
@@ -1630,7 +1630,7 @@ export function CreateEventWizardModal({
                 type="button"
                 onClick={handleFinalSubmit}
                 disabled={loading}
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#1e9df1]/30 flex items-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-105 active:scale-95"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#0758fc]/30 flex items-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-105 active:scale-95"
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin" />

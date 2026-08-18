@@ -221,12 +221,12 @@ export function BulkEmailModal({
         {/* ── MODAL TOP HEADER BAR ────────────────────────────────────────── */}
         <div className="bg-white border-b border-gray-100 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#1e9df1] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0758fc] flex items-center justify-center">
               <Mail size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#1e9df1] px-2.5 py-0.5 rounded-full border border-blue-200">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0758fc] px-2.5 py-0.5 rounded-full border border-blue-200">
                   RO TASPHERE BROADCAST STUDIO
                 </span>
                 <span className="text-xs font-bold text-gray-500">
@@ -255,7 +255,7 @@ export function BulkEmailModal({
                 type="button"
                 onClick={() => setActiveViewTab("PREVIEW")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeViewTab === "PREVIEW" ? "bg-white text-[#1e9df1] shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                  activeViewTab === "PREVIEW" ? "bg-white text-[#0758fc] shadow-2xs" : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <Eye size={13} /> Live Preview
@@ -268,7 +268,7 @@ export function BulkEmailModal({
               disabled={testSending || isBroadcasting}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {testSending ? <Loader2 size={14} className="animate-spin text-[#1e9df1]" /> : <TestTube size={14} className="text-[#1e9df1]" />}
+              {testSending ? <Loader2 size={14} className="animate-spin text-[#0758fc]" /> : <TestTube size={14} className="text-[#0758fc]" />}
               <span>Test Email</span>
             </button>
 
@@ -276,7 +276,7 @@ export function BulkEmailModal({
               type="button"
               onClick={handleStartBroadcast}
               disabled={isBroadcasting || recipients.length === 0}
-              className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-5 py-2 rounded-xl transition-all flex items-center gap-2 shadow-md shadow-[#1e9df1]/20 cursor-pointer disabled:opacity-50"
+              className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-2 rounded-xl transition-all flex items-center gap-2 shadow-md shadow-[#0758fc]/20 cursor-pointer disabled:opacity-50"
             >
               <Send size={14} />
               <span>Send Broadcast</span>
@@ -322,7 +322,7 @@ export function BulkEmailModal({
                     <select
                       value={selectedEventId}
                       onChange={(e) => setSelectedEventId(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                     >
                       {events.map((ev) => (
                         <option key={ev.id} value={ev.id}>
@@ -340,7 +340,7 @@ export function BulkEmailModal({
                   <select
                     value={targetScope}
                     onChange={(e) => setTargetScope(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                   >
                     <option value="ALL_APPROVED">All Confirmed Event Delegates ({recipients.length})</option>
                     <option value="CUSTOM_EMAILS">Custom Email List</option>
@@ -359,7 +359,7 @@ export function BulkEmailModal({
                     value={customEmails}
                     onChange={(e) => setCustomEmails(e.target.value)}
                     placeholder="email1@domain.com, email2@domain.com..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-mono text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-mono text-gray-900 outline-none focus:border-[#0758fc]"
                   />
                 </div>
               )}
@@ -376,7 +376,7 @@ export function BulkEmailModal({
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Important Event Rules & Entry Guidelines"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                   />
                 </div>
 
@@ -389,7 +389,7 @@ export function BulkEmailModal({
                     value={bannerTitle}
                     onChange={(e) => setBannerTitle(e.target.value)}
                     placeholder="e.g. Official Delegate Guidelines"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
@@ -407,7 +407,7 @@ export function BulkEmailModal({
                         key={tag}
                         type="button"
                         onClick={() => insertPlaceholder(tag)}
-                        className="bg-gray-100 hover:bg-gray-200 text-[#1e9df1] text-[11px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                        className="bg-gray-100 hover:bg-gray-200 text-[#0758fc] text-[11px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors"
                       >
                         {tag}
                       </button>
@@ -419,7 +419,7 @@ export function BulkEmailModal({
                   rows={6}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-medium text-gray-900 outline-none focus:border-[#1e9df1] leading-relaxed resize-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-medium text-gray-900 outline-none focus:border-[#0758fc] leading-relaxed resize-none"
                 />
               </div>
 
@@ -434,7 +434,7 @@ export function BulkEmailModal({
                     value={buttonText}
                     onChange={(e) => setButtonText(e.target.value)}
                     placeholder="e.g. View Photos GDrive Link"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
                   />
                 </div>
                 <div>
@@ -446,7 +446,7 @@ export function BulkEmailModal({
                     value={buttonUrl}
                     onChange={(e) => setButtonUrl(e.target.value)}
                     placeholder="https://rotasphere.in/gallery"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-mono text-gray-900 outline-none focus:border-[#1e9df1]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-mono text-gray-900 outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
@@ -454,7 +454,7 @@ export function BulkEmailModal({
               {/* Toggle Switch: QR Code & Badge */}
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1e9df1] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0758fc] flex items-center justify-center">
                     <QrCode size={18} />
                   </div>
                   <div>
@@ -468,7 +468,7 @@ export function BulkEmailModal({
                   type="button"
                   onClick={() => setIncludeQrCode(!includeQrCode)}
                   className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    includeQrCode ? "bg-[#1e9df1]" : "bg-gray-300"
+                    includeQrCode ? "bg-[#0758fc]" : "bg-gray-300"
                   }`}
                 >
                   <span
@@ -483,7 +483,7 @@ export function BulkEmailModal({
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Paperclip size={16} className="text-[#1e9df1]" />
+                    <Paperclip size={16} className="text-[#0758fc]" />
                     <span className="text-xs font-bold text-gray-900">Email Attachments ({attachments.length})</span>
                   </div>
                   <button
@@ -511,7 +511,7 @@ export function BulkEmailModal({
                         key={idx}
                         className="bg-white border border-gray-200 text-gray-800 text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2"
                       >
-                        <FileText size={13} className="text-[#1e9df1]" />
+                        <FileText size={13} className="text-[#0758fc]" />
                         <span className="truncate max-w-[150px]">{file.name}</span>
                         <button
                           type="button"
@@ -531,13 +531,13 @@ export function BulkEmailModal({
             /* LIVE PREVIEW TAB */
             <div className="space-y-4 max-w-2xl mx-auto">
               <div className="text-center pb-2">
-                <span className="text-xs font-bold text-[#1e9df1] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                <span className="text-xs font-bold text-[#0758fc] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                   Live Email Template Preview
                 </span>
               </div>
 
               <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xl">
-                <div className="bg-[#1e9df1] p-6 text-center text-white">
+                <div className="bg-[#0758fc] p-6 text-center text-white">
                   <h3 className="text-xl font-extrabold uppercase tracking-wide">{selectedEventTitle}</h3>
                   <p className="text-xs text-white/80 font-semibold mt-1">Official Delegate Announcement</p>
                 </div>
@@ -563,7 +563,7 @@ export function BulkEmailModal({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Ticket Code:</span>
-                      <span className="font-mono font-bold text-[#1e9df1]">TKT-SAMPLE-8821</span>
+                      <span className="font-mono font-bold text-[#0758fc]">TKT-SAMPLE-8821</span>
                     </div>
                   </div>
 
@@ -578,7 +578,7 @@ export function BulkEmailModal({
 
                   {buttonText && (
                     <div className="text-center pt-2">
-                      <span className="inline-block bg-[#1e9df1] text-white font-extrabold text-xs px-6 py-3 rounded-xl uppercase tracking-wider shadow-md shadow-[#1e9df1]/20">
+                      <span className="inline-block bg-[#0758fc] text-white font-extrabold text-xs px-6 py-3 rounded-xl uppercase tracking-wider shadow-md shadow-[#0758fc]/20">
                         {buttonText}
                       </span>
                     </div>
@@ -600,7 +600,7 @@ export function BulkEmailModal({
       {isBroadcasting && (
         <div className="fixed inset-0 z-[999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-gray-200 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-5 text-center relative">
-            <div className="w-14 h-14 rounded-full bg-blue-50 text-[#1e9df1] flex items-center justify-center mx-auto shadow-md">
+            <div className="w-14 h-14 rounded-full bg-blue-50 text-[#0758fc] flex items-center justify-center mx-auto shadow-md">
               <Send size={24} className={broadcastComplete ? "" : "animate-pulse"} />
             </div>
 
@@ -619,13 +619,13 @@ export function BulkEmailModal({
               <div className="space-y-2">
                 <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden p-0.5 border border-gray-200">
                   <div
-                    className="bg-[#1e9df1] h-full rounded-full transition-all duration-500"
+                    className="bg-[#0758fc] h-full rounded-full transition-all duration-500"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-xs font-bold text-gray-600 font-mono">
                   <span>Batch {currentBatchIndex} / {totalBatches}</span>
-                  <span className="text-[#1e9df1]">{progressPercent}%</span>
+                  <span className="text-[#0758fc]">{progressPercent}%</span>
                   <span>{sentCount} of {recipients.length}</span>
                 </div>
               </div>
@@ -642,7 +642,7 @@ export function BulkEmailModal({
                   setIsBroadcasting(false);
                   onClose();
                 }}
-                className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs py-3 px-6 rounded-xl transition-all shadow-md cursor-pointer"
+                className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 px-6 rounded-xl transition-all shadow-md cursor-pointer"
               >
                 Done
               </button>

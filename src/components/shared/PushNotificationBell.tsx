@@ -49,7 +49,7 @@ export function PushNotificationBell() {
         aria-label={isSubscribed ? "Disable notifications" : "Enable notifications"}
         className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
           isSubscribed
-            ? "bg-[#1e9df1]/10 text-[#1e9df1] hover:bg-[#1e9df1]/20"
+            ? "bg-[#0758fc]/10 text-[#0758fc] hover:bg-[#0758fc]/20"
             : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
         }`}
       >
@@ -61,7 +61,7 @@ export function PushNotificationBell() {
           <>
             <BellRing size={16} />
             {/* Active indicator dot */}
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#1e9df1] ring-2 ring-white dark:ring-gray-900" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#0758fc] ring-2 ring-white dark:ring-gray-900" />
           </>
         ) : (
           <Bell size={16} />

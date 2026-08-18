@@ -552,7 +552,7 @@ export function OrganizerDashboardClient({
                 key={id}
                 onClick={() => setActiveTab(id as any)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
-                  active ? "bg-[#1e9df1] text-white" : "bg-gray-800 text-gray-400"
+                  active ? "bg-[#0758fc] text-white" : "bg-gray-800 text-gray-400"
                 }`}
               >
                 <Icon size={13} />
@@ -640,7 +640,7 @@ export function OrganizerDashboardClient({
                 active
                   ? isTrash
                     ? "bg-rose-600 text-white shadow-sm"
-                    : "bg-[#1e9df1] text-white shadow-sm"
+                    : "bg-[#0758fc] text-white shadow-sm"
                   : isTrash && trashedEvents.length > 0
                   ? "text-rose-400 hover:bg-gray-800 hover:text-white"
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
@@ -689,7 +689,7 @@ export function OrganizerDashboardClient({
         {/* User Card with Exit Link */}
         <div className="space-y-2 pt-6">
           <div className="p-3 bg-gray-800/80 rounded-2xl flex items-center gap-3 border border-gray-700/50">
-            <div className="w-8 h-8 rounded-full bg-[#1e9df1] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-[#0758fc] text-white font-bold flex items-center justify-center text-xs shadow-xs">
               {user?.profile?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "O"}
             </div>
             <div className="min-w-0 flex-1">
@@ -737,12 +737,12 @@ export function OrganizerDashboardClient({
                   onClick={() => setIsGalleryModalOpen(true)}
                   className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                 >
-                  <Camera size={15} className="text-[#1e9df1]" />
+                  <Camera size={15} className="text-[#0758fc]" />
                   <span>Add Gallery Photos</span>
                 </button>
                 <button
                   onClick={handleOpenCreateModal}
-                  className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
                 >
                   <PlusCircle size={16} /> Create New Event
                 </button>
@@ -784,7 +784,7 @@ export function OrganizerDashboardClient({
             <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 border border-blue-100 rounded-3xl p-6 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1e9df1]">Organizer Shortcuts</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">Organizer Shortcuts</span>
                   <h3 className="text-base font-bold text-gray-900">What would you like to do today?</h3>
                 </div>
               </div>
@@ -795,7 +795,7 @@ export function OrganizerDashboardClient({
                   onClick={handleOpenCreateModal}
                   className="bg-white hover:bg-blue-600 hover:text-white text-gray-900 border border-blue-200/80 p-3.5 rounded-2xl transition-all font-bold text-xs flex flex-col items-center justify-center gap-2 text-center shadow-2xs group cursor-pointer"
                 >
-                  <PlusCircle size={20} className="text-[#1e9df1] group-hover:text-white transition-colors" />
+                  <PlusCircle size={20} className="text-[#0758fc] group-hover:text-white transition-colors" />
                   <span>Create New Event</span>
                 </button>
 
@@ -837,7 +837,7 @@ export function OrganizerDashboardClient({
                 <h3 className="text-lg font-bold text-gray-900">Your Active Events</h3>
                 <Link
                   href="/events"
-                  className="text-xs font-bold text-[#1e9df1] hover:underline flex items-center gap-1"
+                  className="text-xs font-bold text-[#0758fc] hover:underline flex items-center gap-1"
                 >
                   View Public Discovery <ExternalLink size={13} />
                 </Link>
@@ -850,7 +850,7 @@ export function OrganizerDashboardClient({
                   <p className="text-xs text-gray-400">Click &quot;Create New Event&quot; to publish your first conference, tournament or workshop.</p>
                   <button
                     onClick={handleOpenCreateModal}
-                    className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
+                    className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
                   >
                     <PlusCircle size={14} /> Create Event Now
                   </button>
@@ -860,7 +860,7 @@ export function OrganizerDashboardClient({
                   {activeEvents.map((evt) => (
                     <div key={evt.id} className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-gray-50/50 px-2 rounded-2xl transition-colors">
                       <div className="space-y-1">
-                        <Link href={`/events/${evt.slug}`} className="text-base font-bold text-gray-900 hover:text-[#1e9df1] transition-colors">
+                        <Link href={`/events/${evt.slug}`} className="text-base font-bold text-gray-900 hover:text-[#0758fc] transition-colors">
                           {evt.title}
                         </Link>
                         <p className="text-xs text-gray-500">
@@ -874,7 +874,7 @@ export function OrganizerDashboardClient({
                           onClick={() => handleOpenEditModal(evt)}
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs hover:border-gray-400"
                         >
-                          <Edit3 size={14} className="text-[#1e9df1]" />
+                          <Edit3 size={14} className="text-[#0758fc]" />
                           <span>Edit</span>
                         </button>
 
@@ -886,7 +886,7 @@ export function OrganizerDashboardClient({
                           }}
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs"
                         >
-                          <Megaphone size={14} className="text-[#1e9df1]" />
+                          <Megaphone size={14} className="text-[#0758fc]" />
                           <span>Broadcast</span>
                         </button>
 
@@ -949,7 +949,7 @@ export function OrganizerDashboardClient({
 
               <button
                 onClick={handleOpenCreateModal}
-                className="inline-flex items-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer"
+                className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer"
               >
                 <PlusCircle size={16} /> Create Event
               </button>
@@ -991,7 +991,7 @@ export function OrganizerDashboardClient({
                           onClick={() => handleOpenEditModal(evt)}
                           className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-800 bg-white border border-gray-200 hover:bg-gray-100 transition-all cursor-pointer flex items-center gap-1.5"
                         >
-                          <Edit3 size={13} className="text-[#1e9df1]" />
+                          <Edit3 size={13} className="text-[#0758fc]" />
                           <span>Edit</span>
                         </button>
 
@@ -1141,7 +1141,7 @@ export function OrganizerDashboardClient({
                           <tr key={t.id}>
                             <td className="py-3.5 font-bold text-gray-900">{t.name}</td>
                             <td className="py-3.5 text-gray-500">{e.title}</td>
-                            <td className="py-3.5 font-bold text-[#1e9df1]">{Number(t.price) === 0 ? "FREE" : `₹${t.price}`}</td>
+                            <td className="py-3.5 font-bold text-[#0758fc]">{Number(t.price) === 0 ? "FREE" : `₹${t.price}`}</td>
                             <td className="py-3.5">{t.total_capacity}</td>
                             <td className="py-3.5 text-emerald-600 font-bold">{t.sold_count}</td>
                             <td className="py-3.5 font-bold">{Math.max(0, avail)}</td>
@@ -1198,7 +1198,7 @@ export function OrganizerDashboardClient({
                 <select
                   value={selectedAttendeeEventId}
                   onChange={(e) => setSelectedAttendeeEventId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#1e9df1] shadow-xs cursor-pointer"
+                  className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] shadow-xs cursor-pointer"
                 >
                   <option value="ALL">📅 All Events ({tickets.length} Attendees)</option>
                   {activeEvents.map((ev) => {
@@ -1220,7 +1220,7 @@ export function OrganizerDashboardClient({
                   value={attendeeSearch}
                   onChange={(e) => setAttendeeSearch(e.target.value)}
                   placeholder="Search attendees by name, email, or ticket code..."
-                  className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-gray-900 outline-none focus:border-[#1e9df1] shadow-xs"
+                  className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-gray-900 outline-none focus:border-[#0758fc] shadow-xs"
                 />
               </div>
             </div>
@@ -1329,7 +1329,7 @@ export function OrganizerDashboardClient({
                             <button
                               type="button"
                               onClick={() => setPreviewProofUrl(o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url)}
-                              className="text-[11px] text-[#1e9df1] font-bold hover:underline flex items-center gap-1 cursor-pointer mt-0.5"
+                              className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 cursor-pointer mt-0.5"
                             >
                               <ExternalLink size={11} /> View Payment Screenshot Proof
                             </button>
@@ -1421,7 +1421,7 @@ export function OrganizerDashboardClient({
                                     <button
                                       type="button"
                                       onClick={() => setProofModalOrder(o)}
-                                      className="text-[11px] text-[#1e9df1] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                                      className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 cursor-pointer"
                                     >
                                       <Camera size={12} /> View Payment Photo Proof
                                     </button>
@@ -1534,7 +1534,7 @@ export function OrganizerDashboardClient({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {activeEvents.map((evt) => (
-                  <div key={evt.id} className="bg-white border border-gray-200 hover:border-[#1e9df1]/30 p-6 rounded-3xl shadow-xs space-y-4 transition-all hover:shadow-md">
+                  <div key={evt.id} className="bg-white border border-gray-200 hover:border-[#0758fc]/30 p-6 rounded-3xl shadow-xs space-y-4 transition-all hover:shadow-md">
                     <div className="flex items-start justify-between gap-3">
                       <div className="w-11 h-11 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
                         <QrCode size={22} />
@@ -1551,7 +1551,7 @@ export function OrganizerDashboardClient({
                     </div>
                     <Link
                       href={`/check-in?eventId=${evt.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md hover:scale-[1.02]"
+                      className="w-full inline-flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md hover:scale-[1.02]"
                     >
                       <QrCode size={15} /> Open Scanner for this Event
                     </Link>
@@ -1591,7 +1591,7 @@ export function OrganizerDashboardClient({
               <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Gross Sales Revenue</span>
-                  <DollarSign size={18} className="text-[#1e9df1]" />
+                  <DollarSign size={18} className="text-[#0758fc]" />
                 </div>
                 <p className="text-3xl font-black text-gray-900">₹{totalGrossSales.toLocaleString("en-IN")}</p>
                 <p className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 pt-1">
@@ -1654,11 +1654,11 @@ export function OrganizerDashboardClient({
                   >
                     <defs>
                       <linearGradient id="organizerRevGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1e9df1" stopOpacity="0.32" />
-                        <stop offset="100%" stopColor="#1e9df1" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#0758fc" stopOpacity="0.32" />
+                        <stop offset="100%" stopColor="#0758fc" stopOpacity="0.0" />
                       </linearGradient>
                       <linearGradient id="organizerLineGrad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#1e9df1" />
+                        <stop offset="0%" stopColor="#0758fc" />
                         <stop offset="100%" stopColor="#10b981" />
                       </linearGradient>
                     </defs>
@@ -1682,7 +1682,7 @@ export function OrganizerDashboardClient({
                             cx={pt.x}
                             cy={pt.y}
                             r={isHovered ? 7 : 4}
-                            className={`${isHovered ? "fill-[#1e9df1] stroke-white stroke-2" : "fill-white stroke-[#1e9df1] stroke-2"} transition-all`}
+                            className={`${isHovered ? "fill-[#0758fc] stroke-white stroke-2" : "fill-white stroke-[#0758fc] stroke-2"} transition-all`}
                           />
                         </g>
                       );
@@ -1743,7 +1743,7 @@ export function OrganizerDashboardClient({
                         </div>
                         <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#1e9df1] rounded-full transition-all"
+                            className="h-full bg-[#0758fc] rounded-full transition-all"
                             style={{ width: `${t.percent}%` }}
                           />
                         </div>
@@ -1797,7 +1797,7 @@ export function OrganizerDashboardClient({
                     ) : (
                       orders.map((o) => (
                         <tr key={o.id} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="py-4 px-6 font-mono font-bold text-[#1e9df1]">{o.order_number || o.id.slice(0, 8)}</td>
+                          <td className="py-4 px-6 font-mono font-bold text-[#0758fc]">{o.order_number || o.id.slice(0, 8)}</td>
                           <td className="py-4 px-6">
                             <p className="font-bold text-gray-900">{o.customer_name || "Delegate"}</p>
                             <p className="text-[11px] text-gray-400 font-mono">{o.customer_email}</p>
@@ -1900,7 +1900,7 @@ export function OrganizerDashboardClient({
           <div className="relative max-w-2xl w-full bg-white rounded-3xl p-6 shadow-2xl space-y-4 text-center">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-                <ExternalLink size={18} className="text-[#1e9df1]" /> Payment Receipt Screenshot Proof
+                <ExternalLink size={18} className="text-[#0758fc]" /> Payment Receipt Screenshot Proof
               </h3>
               <button
                 type="button"
@@ -1939,7 +1939,7 @@ export function OrganizerDashboardClient({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#1e9df1] block">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0758fc] block">
                   Verify Payment Screenshot Before Approval
                 </span>
                 <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">

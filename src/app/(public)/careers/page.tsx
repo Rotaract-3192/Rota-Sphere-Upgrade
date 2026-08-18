@@ -35,7 +35,7 @@ export default function CareersPage() {
               </div>
               <Link
                 href="/contact"
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all w-fit shrink-0"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all w-fit shrink-0"
               >
                 Apply Now
               </Link>
@@ -48,7 +48,7 @@ export default function CareersPage() {
               </div>
               <Link
                 href="/contact"
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all w-fit shrink-0"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all w-fit shrink-0"
               >
                 Apply Now
               </Link>

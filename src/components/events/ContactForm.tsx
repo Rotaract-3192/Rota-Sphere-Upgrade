@@ -47,7 +47,7 @@ export function ContactForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your full name"
-            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#0758fc]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
@@ -65,7 +65,7 @@ export function ContactForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+91 98765 43210"
-            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#0758fc]/15 rounded-2xl px-4 py-3 pl-10 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
           />
         </div>
       </div>
@@ -81,14 +81,14 @@ export function ContactForm() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Tell us about your event or inquiry..."
-            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#1e9df1]/15 rounded-2xl p-3.5 sm:p-4 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all resize-none"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-[#0758fc]/15 rounded-2xl p-3.5 sm:p-4 text-base sm:text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all resize-none"
           />
         </div>
       </div>
 
       <button
         type="submit"
-        className="w-full bg-[#1e9df1] hover:bg-[#1583cd] text-white font-black text-xs sm:text-sm py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#1e9df1]/20 active:scale-95 cursor-pointer"
+        className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-black text-xs sm:text-sm py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#0758fc]/20 active:scale-95 cursor-pointer"
       >
         <Send size={16} /> Send Inquiry
       </button>

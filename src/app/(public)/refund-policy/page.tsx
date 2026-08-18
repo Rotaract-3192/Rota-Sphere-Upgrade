@@ -69,7 +69,7 @@ export default function RefundPolicyPage() {
           {/* Section 1: Non-Profit Direct Settlement Model */}
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="text-[#1e9df1]" size={20} /> 1. Overview of Platform Payment Models
+              <ShieldCheck className="text-[#0758fc]" size={20} /> 1. Overview of Platform Payment Models
             </h2>
             <p>
               RotaSphere operates on a <strong>Direct Non-Profit UPI Settlement Model (0% platform fee)</strong> directly to verified host Rotaract Club bank accounts via dynamic QR codes and instant UPI banking handles. 
@@ -99,7 +99,7 @@ export default function RefundPolicyPage() {
               </div>
 
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1e9df1]">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0758fc]">
                   Discretionary Triggers
                 </span>
                 <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">Organizer-Approved Refunds</h3>
@@ -165,7 +165,7 @@ export default function RefundPolicyPage() {
               <RefreshCw className="text-purple-600" size={20} /> 4. Real-Time Refund Status Tracking
             </h2>
             <p>
-              Attendees can monitor their refund lifecycle directly from <Link href="/tickets" className="text-[#1e9df1] font-bold hover:underline">My Passes (/tickets)</Link> or the <Link href="/disputes" className="text-[#1e9df1] font-bold hover:underline">Dispute Desk</Link>:
+              Attendees can monitor their refund lifecycle directly from <Link href="/tickets" className="text-[#0758fc] font-bold hover:underline">My Passes (/tickets)</Link> or the <Link href="/disputes" className="text-[#0758fc] font-bold hover:underline">Dispute Desk</Link>:
             </p>
             <div className="flex flex-wrap items-center gap-2 text-xs py-2">
               <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold">
@@ -206,7 +206,7 @@ export default function RefundPolicyPage() {
               <CreditCard className="text-blue-600" size={20} /> 6. Chargebacks &amp; Direct Resolution
             </h2>
             <p>
-              We encourage delegates to reach out directly to RotaSphere Support or open a dispute ticket on our <Link href="/disputes" className="text-[#1e9df1] font-bold hover:underline">Dispute Desk</Link> before initiating a formal bank chargeback. Our team investigates payment issues within 24 hours to ensure fair and expedited resolution without long banking dispute cycles.
+              We encourage delegates to reach out directly to RotaSphere Support or open a dispute ticket on our <Link href="/disputes" className="text-[#0758fc] font-bold hover:underline">Dispute Desk</Link> before initiating a formal bank chargeback. Our team investigates payment issues within 24 hours to ensure fair and expedited resolution without long banking dispute cycles.
             </p>
           </div>
 
@@ -225,7 +225,7 @@ export default function RefundPolicyPage() {
               </Link>
               <Link
                 href="/contact"
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
               >
                 Contact Payments Desk <ArrowRight size={14} />
               </Link>

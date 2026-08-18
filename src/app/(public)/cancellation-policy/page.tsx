@@ -47,7 +47,7 @@ export default function CancellationPolicyPage() {
           {/* Section 1: Overview */}
           <div className="space-y-3">
             <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="text-[#1e9df1]" size={20} /> 1. Transparent Cancellation Governance
+              <ShieldCheck className="text-[#0758fc]" size={20} /> 1. Transparent Cancellation Governance
             </h2>
             <p>
               RotaSphere enforces clear, upfront cancellation terms for every event. Because RotaSphere hosts a wide spectrum of events—ranging from community service initiatives and professional summits to district conferences—<strong>each event publishes its specific cancellation terms directly on the event booking page before checkout.</strong>
@@ -103,7 +103,7 @@ export default function CancellationPolicyPage() {
               If you cannot attend an event, you don&apos;t have to lose your registration! RotaSphere provides a <strong>100% Free Pass Transfer feature</strong>:
             </p>
             <ol className="list-decimal pl-5 space-y-1.5 text-gray-600 dark:text-gray-400">
-              <li>Log in and navigate to <Link href="/tickets" className="text-[#1e9df1] font-bold hover:underline">My Passes (/tickets)</Link>.</li>
+              <li>Log in and navigate to <Link href="/tickets" className="text-[#0758fc] font-bold hover:underline">My Passes (/tickets)</Link>.</li>
               <li>Locate your confirmed ticket card and click <strong>Transfer Pass</strong>.</li>
               <li>Enter the recipient&apos;s registered email address. The original QR code is instantly deactivated and a fresh, authenticated QR pass is generated for the new delegate.</li>
             </ol>
@@ -157,7 +157,7 @@ export default function CancellationPolicyPage() {
               </Link>
               <Link
                 href="/refund-policy"
-                className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
               >
                 View Refund Policy <ArrowRight size={14} />
               </Link>

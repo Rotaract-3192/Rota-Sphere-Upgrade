@@ -33,7 +33,7 @@ export function LastUpdatedBadge({
         onClick ? "hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer hover:border-gray-300 dark:hover:border-gray-600" : ""
       } ${className}`}
     >
-      <Clock size={12} className="text-[#1e9df1]" />
+      <Clock size={12} className="text-[#0758fc]" />
       <span>
         {label}: <span className="font-extrabold text-gray-800 dark:text-gray-200">{formattedDate}</span>
       </span>

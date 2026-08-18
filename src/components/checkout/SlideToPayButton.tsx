@@ -131,7 +131,7 @@ export function SlideToPayButton({
             ? "bg-gray-100 opacity-60 cursor-not-allowed border border-gray-200"
             : isCompleted
             ? "bg-emerald-500 border border-emerald-400 shadow-lg shadow-emerald-500/20"
-            : "bg-gradient-to-r from-blue-500/10 via-sky-500/15 to-blue-500/10 border-2 border-[#1e9df1]/30 shadow-inner hover:border-[#1e9df1]/60"
+            : "bg-gradient-to-r from-blue-500/10 via-sky-500/15 to-blue-500/10 border-2 border-[#0758fc]/30 shadow-inner hover:border-[#0758fc]/60"
         }`}
       >
         {/* Dynamic sliding fill color */}
@@ -139,7 +139,7 @@ export function SlideToPayButton({
           className={`absolute left-0 top-0 bottom-0 transition-all ${
             isCompleted
               ? "w-full bg-emerald-500"
-              : "bg-gradient-to-r from-[#1e9df1] to-[#38bdf8] opacity-25"
+              : "bg-gradient-to-r from-[#0758fc] to-[#38bdf8] opacity-25"
           }`}
           style={{
             width: isCompleted ? "100%" : `${Math.max(15, progressPercent)}%`,
@@ -150,7 +150,7 @@ export function SlideToPayButton({
         {/* Shimmering Center Action Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
           {loading ? (
-            <div className="flex items-center gap-2 text-xs font-black text-[#1e9df1]">
+            <div className="flex items-center gap-2 text-xs font-black text-[#0758fc]">
               <Loader2 size={16} className="animate-spin" />
               <span>Processing Order...</span>
             </div>
@@ -162,7 +162,7 @@ export function SlideToPayButton({
           ) : (
             <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-gray-800 tracking-tight transition-opacity duration-200">
               <span className="truncate">{displayText}</span>
-              <span className="hidden sm:inline-flex text-[#1e9df1] animate-pulse">
+              <span className="hidden sm:inline-flex text-[#0758fc] animate-pulse">
                 &gt;&gt;&gt;
               </span>
             </div>
@@ -184,7 +184,7 @@ export function SlideToPayButton({
               ? "bg-gray-300 text-gray-500"
               : isCompleted
               ? "bg-white text-emerald-600 shadow-lg scale-105"
-              : "bg-[#1e9df1] hover:bg-[#1583cd] text-white shadow-md hover:shadow-lg active:scale-95"
+              : "bg-[#0758fc] hover:bg-[#054fe0] text-white shadow-md hover:shadow-lg active:scale-95"
           }`}
           role="slider"
           aria-valuenow={Math.round(progressPercent)}
@@ -216,7 +216,7 @@ export function SlideToPayButton({
       {/* Tap / Click fallback helper text */}
       <div className="flex items-center justify-between text-[11px] text-gray-500 font-semibold px-1">
         <span className="flex items-center gap-1 text-gray-400">
-          <Sparkles size={12} className="text-[#1e9df1]" /> Swipe right to confirm
+          <Sparkles size={12} className="text-[#0758fc]" /> Swipe right to confirm
         </span>
         <button
           type="button"
@@ -227,7 +227,7 @@ export function SlideToPayButton({
               onSuccess();
             }
           }}
-          className="text-[#1e9df1] hover:underline font-bold cursor-pointer disabled:opacity-40"
+          className="text-[#0758fc] hover:underline font-bold cursor-pointer disabled:opacity-40"
         >
           or click here to proceed &rarr;
         </button>

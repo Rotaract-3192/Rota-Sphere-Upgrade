@@ -83,7 +83,7 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900">{tier.name}</p>
-            <p className="text-xs font-mono font-semibold text-[#1e9df1]">{formatPrice(tier.price)}</p>
+            <p className="text-xs font-mono font-semibold text-[#0758fc]">{formatPrice(tier.price)}</p>
             {tier.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{tier.description}</p>
             )}
@@ -177,7 +177,7 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
           {/* 1. Early Bird Tiers */}
           {earlyBirdTiers.length > 0 && (
             <div className="space-y-2">
-              <span className="text-[10px] font-black text-[#1e9df1] uppercase tracking-wider block">
+              <span className="text-[10px] font-black text-[#0758fc] uppercase tracking-wider block">
                 Early Bird Release
               </span>
               {earlyBirdTiers.map(renderTierCard)}
@@ -195,7 +195,7 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
                 <span className="text-xs font-bold text-gray-900">
                   General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
                 </span>
-                <span className="text-xs font-bold text-[#1e9df1] flex items-center gap-1">
+                <span className="text-xs font-bold text-[#0758fc] flex items-center gap-1">
                   {showGeneralDropdown ? (
                     <>Hide <ChevronUp size={14} /></>
                   ) : (
@@ -246,7 +246,7 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
         <button
           onClick={handleReserve}
           disabled={totalTickets === 0 || loading}
-          className="w-full bg-[#1e9df1] hover:bg-[#1583cd] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
+          className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
         >
           {loading ? "Processing…" : totalTickets === 0 ? "Select Tickets Above" : "Book Passes Now"}
         </button>

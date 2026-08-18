@@ -101,14 +101,14 @@ export function GlobalCommandPalette() {
                   className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-blue-50 text-left group transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-gray-100 group-hover:bg-[#1e9df1] group-hover:text-white text-gray-600 flex items-center justify-center transition-colors shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-gray-100 group-hover:bg-[#0758fc] group-hover:text-white text-gray-600 flex items-center justify-center transition-colors shrink-0">
                       <Icon size={16} />
                     </div>
                     <span className="text-xs font-bold text-gray-800 group-hover:text-gray-900">
                       {link.title}
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 group-hover:bg-blue-100 group-hover:text-[#1e9df1] px-2 py-0.5 rounded-full transition-colors">
+                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 group-hover:bg-blue-100 group-hover:text-[#0758fc] px-2 py-0.5 rounded-full transition-colors">
                     {link.cat}
                   </span>
                 </button>

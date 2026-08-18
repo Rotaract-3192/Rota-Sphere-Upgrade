@@ -59,7 +59,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
               placeholder="Search by club name, institution, zone, or partner Rotary club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-all"
             />
           </div>
 
@@ -68,7 +68,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#1e9df1] focus:bg-white dark:focus:bg-gray-900 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none transition-all cursor-pointer"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none transition-all cursor-pointer"
             >
               <option value="All">All Club Types (Community &amp; College)</option>
               <option value="Community Based">Community Based Clubs</option>
@@ -102,7 +102,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                   onClick={() => setSelectedZone(zone)}
                   className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                     active
-                      ? "bg-[#1e9df1] text-white shadow-xs"
+                      ? "bg-[#0758fc] text-white shadow-xs"
                       : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                   }`}
                 >
@@ -134,7 +134,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
               setSelectedZone("All");
               setSelectedType("All");
             }}
-            className="text-xs font-bold text-[#1e9df1] hover:underline pt-2 inline-block cursor-pointer active:scale-95"
+            className="text-xs font-bold text-[#0758fc] hover:underline pt-2 inline-block cursor-pointer active:scale-95"
           >
             Clear all filters
           </button>
@@ -159,7 +159,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                 <div className="space-y-4">
                   {/* Zone and Type Badges */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-extrabold text-[#1e9df1] bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-extrabold text-[#0758fc] bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
                       Zone {club.zone}
                     </span>
                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
@@ -169,7 +169,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
 
                   {/* Club Name */}
                   <div>
-                    <h3 className="font-extrabold text-base sm:text-lg text-gray-900 leading-snug group-hover:text-[#1e9df1] transition-colors">
+                    <h3 className="font-extrabold text-base sm:text-lg text-gray-900 leading-snug group-hover:text-[#0758fc] transition-colors">
                       {club.name}
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
@@ -194,7 +194,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                     {club.contact_email && (
                       <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate">
                         <Mail size={12} className="text-gray-400 shrink-0" />
-                        <a href={`mailto:${club.contact_email}`} className="text-[#1e9df1] hover:underline truncate">
+                        <a href={`mailto:${club.contact_email}`} className="text-[#0758fc] hover:underline truncate">
                           {club.contact_email}
                         </a>
                       </p>
@@ -211,7 +211,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
 
                   <Link
                     href={`/events?club=${encodeURIComponent(club.name)}&club_id=${encodeURIComponent(club.id)}`}
-                    className="text-xs font-extrabold text-[#1e9df1] hover:text-[#1583cd] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+                    className="text-xs font-extrabold text-[#0758fc] hover:text-[#054fe0] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
                   >
                     View Events <ArrowRight size={13} />
                   </Link>
@@ -238,7 +238,7 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
 
         <Link
           href="/dashboard"
-          className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-7 py-3.5 rounded-2xl shadow-lg transition-all hover:scale-105 shrink-0 text-center"
+          className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-7 py-3.5 rounded-2xl shadow-lg transition-all hover:scale-105 shrink-0 text-center"
         >
           Request Host Rights
         </Link>

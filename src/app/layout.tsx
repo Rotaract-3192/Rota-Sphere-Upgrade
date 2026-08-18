@@ -134,7 +134,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-canvas text-ink font-sans relative selection:bg-[#1e9df1] selection:text-white" suppressHydrationWarning>
+      <body className="antialiased bg-canvas text-ink font-sans relative selection:bg-[#0758fc] selection:text-white" suppressHydrationWarning>
         <SkipToContent />
         <ScrollProgressBar />
         <UtmTracker />

@@ -133,7 +133,7 @@ export function DisputeDashboardClient() {
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-widest text-[#1e9df1] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-black uppercase tracking-widest text-[#0758fc] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
               Dispute Desk &amp; Ombudsman
             </span>
           </div>
@@ -148,7 +148,7 @@ export function DisputeDashboardClient() {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+          className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
         >
           <PlusCircle size={15} /> Raise New Dispute
         </button>
@@ -195,7 +195,7 @@ export function DisputeDashboardClient() {
                   <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                     <span>Category: <strong className="text-gray-700 dark:text-gray-300">{d.category}</strong></span>
                     {d.orderId && <span>Order: <strong className="text-gray-700 dark:text-gray-300">{d.orderId}</strong></span>}
-                    <span>Level: <strong className="text-[#1e9df1]">{d.level}</strong></span>
+                    <span>Level: <strong className="text-[#0758fc]">{d.level}</strong></span>
                   </div>
                 </div>
 
@@ -230,7 +230,7 @@ export function DisputeDashboardClient() {
                     <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-700">
                       {d.timeline.map((step, idx) => (
                         <div key={idx} className="relative space-y-1">
-                          <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#1e9df1] ring-4 ring-blue-50 dark:ring-gray-900" />
+                          <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#0758fc] ring-4 ring-blue-50 dark:ring-gray-900" />
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-xs text-gray-900 dark:text-white">
                               {step.step}
@@ -250,7 +250,7 @@ export function DisputeDashboardClient() {
                   {/* Actions / Escalation Notice */}
                   <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs border-t border-gray-200/60 dark:border-gray-700/60">
                     <span className="text-gray-500">
-                      Need immediate Ombudsman review? Email <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#1e9df1] font-bold underline">tech.rotaract3192@gmail.com</a> quoting <strong>{d.id}</strong>.
+                      Need immediate Ombudsman review? Email <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] font-bold underline">tech.rotaract3192@gmail.com</a> quoting <strong>{d.id}</strong>.
                     </span>
                     {d.status !== "resolved" && (
                       <span className="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-3 py-1 rounded-xl">
@@ -278,7 +278,7 @@ export function DisputeDashboardClient() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#1e9df1] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] flex items-center justify-center shrink-0">
                 <Gavel size={20} />
               </div>
               <div>
@@ -299,7 +299,7 @@ export function DisputeDashboardClient() {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1e9df1]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-[#0758fc]"
                 >
                   <option value="Refund Not Received">Refund Not Received</option>
                   <option value="Duplicate Payment">Duplicate Payment / Double Charge</option>
@@ -375,7 +375,7 @@ export function DisputeDashboardClient() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#1e9df1] hover:bg-[#1583cd] text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Send size={14} /> Submit Dispute
                 </button>
