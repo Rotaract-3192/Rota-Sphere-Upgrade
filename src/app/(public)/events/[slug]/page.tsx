@@ -27,14 +27,44 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const { data } = await executeSql(`SELECT title, summary, description FROM saas_events WHERE slug = '${slug}' LIMIT 1;`);
+  const { data } = await executeSql(`
+    SELECT e.title, e.summary, e.description, e.cover_url, o.name as org_name
+    FROM saas_events e
+    LEFT JOIN organizations o ON e.organization_id = o.id
+    WHERE e.slug = '${slug.replace(/'/g, "''")}'
+    LIMIT 1;
+  `);
   const event = data?.[0];
 
   if (!event) return { title: "Event Not Found | RotaSphere" };
 
+  const eventTitle = `${event.title} | ${event.org_name || "District 3192"} · RotaSphere`;
+  const eventDesc = event.summary || event.description?.slice(0, 160) || "Official delegate pass registration and tickets on RotaSphere District 3192.";
+  const fallbackCover = event.cover_url || "/brand/logo.png";
+
   return {
-    title: `${event.title} | RotaSphere SaaS Ticketing`,
-    description: event.summary || event.description?.slice(0, 160),
+    title: eventTitle,
+    description: eventDesc,
+    openGraph: {
+      title: eventTitle,
+      description: eventDesc,
+      type: "website",
+      siteName: "RotaSphere District 3192",
+      images: [
+        {
+          url: fallbackCover,
+          width: 1200,
+          height: 630,
+          alt: event.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: eventTitle,
+      description: eventDesc,
+      images: [fallbackCover],
+    },
   };
 }
 

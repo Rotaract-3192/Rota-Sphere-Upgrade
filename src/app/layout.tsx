@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     "rotaract clubs",
   ],
   authors: [{ name: "Rotaract District 3192 Council" }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rotaract3192.org"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rotasphere.in"),
   alternates: {
     canonical: "/",
   },
@@ -62,22 +62,22 @@ export const metadata: Metadata = {
     siteName: "RotaSphere District 3192",
     title: "RotaSphere — Rotaract District 3192 Experience & Ticketing",
     description:
-      "Discover verified conferences, cultural fests, workshops, and concerts across all 85 chartered clubs in District 3192.",
+      "Official event ticketing, registration, and club discovery platform for Rotaract District 3192. Discover verified conferences, fests, and workshops.",
     images: [
       {
-        url: "/brand-logo.png",
-        width: 1200,
-        height: 630,
-        alt: "RotaSphere District 3192",
+        url: "/brand/logo.png",
+        width: 1024,
+        height: 1024,
+        alt: "RotaSphere District 3192 Logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RotaSphere — Rotaract District 3192 Platform",
+    title: "RotaSphere — Rotaract District 3192 Experience & Ticketing",
     description:
-      "Discover verified events, passes, and 85 chartered Rotaract clubs across District 3192.",
-    images: ["/brand-logo.png"],
+      "Official event ticketing, registration, and club discovery platform for Rotaract District 3192.",
+    images: ["/brand/logo.png"],
   },
   robots: {
     index: true,
@@ -86,12 +86,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/brand/logo.png" },
       { url: "/favicon.ico" },
-      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
       { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/brand/logo.png",
+    apple: "/brand/logo.png",
   },
   manifest: "/site.webmanifest",
   appleWebApp: {
