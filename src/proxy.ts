@@ -38,20 +38,20 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
 
   // Only apply CSP in production.
-  // In development, CSP blocks Clerk dev keys, HMR websockets, blob workers, and CDN assets.
   if (!isDev) {
     response.headers.set(
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        // Clerk production uses *.clerk.com; allow blob: for Clerk's web workers
-        "script-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.com",
+        // Clerk production uses *.clerk.com; dev instances use *.clerk.accounts.dev; allow blob: and worker scripts
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.com https://*.clerk.accounts.dev https://*.accounts.dev https://challenges.cloudflare.com",
         "worker-src 'self' blob:",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https:",
-        // Supabase, Clerk prod API, Clerk images
-        "connect-src 'self' https://*.supabase.co https://*.clerk.com https://api.clerk.com",
+        "img-src 'self' data: blob: https: https://img.clerk.com",
+        // Supabase, Clerk API, accounts.dev
+        "connect-src 'self' https://*.supabase.co https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://*.accounts.dev",
+        "frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
