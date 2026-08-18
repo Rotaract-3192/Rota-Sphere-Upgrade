@@ -63,7 +63,7 @@ async function getMapEvents() {
       LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
       WHERE e.status = 'PUBLISHED' AND (e.deleted_at IS NULL)
       GROUP BY e.id
-      ORDER BY e.start_date ASC
+      ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC
       LIMIT 12;
     `);
     return data || [];

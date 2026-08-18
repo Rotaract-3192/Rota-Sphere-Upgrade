@@ -83,7 +83,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
     )`;
   }
 
-  sql += ` GROUP BY e.id, o.name, o.slug, o.zone ORDER BY e.start_date ASC;`;
+  sql += ` GROUP BY e.id, o.name, o.slug, o.zone ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC;`;
 
   const { data: events } = await executeSql(sql);
 
