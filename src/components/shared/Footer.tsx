@@ -13,8 +13,6 @@ import Image from "next/image";
 import { ChevronDown, ChevronUp, ShieldCheck, Mail, Sparkles, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
-import { DirectoryVerificationModal } from "@/components/shared/DirectoryVerificationModal";
 
 const FOOTER_COLUMNS = [
   {
@@ -52,7 +50,6 @@ const FOOTER_COLUMNS = [
 ] as const;
 
 export function Footer() {
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const year = new Date().getFullYear();
 
@@ -61,11 +58,10 @@ export function Footer() {
   };
 
   return (
-    <>
-      <footer
-        role="contentinfo"
-        className="bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 mt-12 sm:mt-16 transition-colors"
-      >
+    <footer
+      role="contentinfo"
+      className="bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 mt-12 sm:mt-16 transition-colors"
+    >
         {/* ══════════════════════════════════════════════════════════════════
             1. MOBILE-ONLY COMPACT & SLEEK FOOTER (< md)
             ══════════════════════════════════════════════════════════════════ */}
@@ -212,15 +208,6 @@ export function Footer() {
               </div>
               <ThemeToggle />
             </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-500">
-              <span>District 3192 Verified</span>
-              <LastUpdatedBadge
-                label="Verified"
-                date="2026-08-18"
-                onClick={() => setShowVerificationModal(true)}
-              />
-            </div>
           </div>
 
           {/* Copyright & DPDP */}
@@ -299,14 +286,6 @@ export function Footer() {
                   v2.4.0-prod
                 </span>
               </div>
-
-              <div className="flex items-center gap-2">
-                <LastUpdatedBadge
-                  label="Directory verified"
-                  date="2026-08-18"
-                  onClick={() => setShowVerificationModal(true)}
-                />
-              </div>
             </div>
           </div>
 
@@ -371,12 +350,5 @@ export function Footer() {
           </div>
         </div>
       </footer>
-
-      {/* Directory Verification Modal */}
-      <DirectoryVerificationModal
-        isOpen={showVerificationModal}
-        onClose={() => setShowVerificationModal(false)}
-      />
-    </>
   );
 }
