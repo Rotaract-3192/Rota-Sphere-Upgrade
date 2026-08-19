@@ -1,7 +1,12 @@
 /**
  * JSON-LD Structured Data Schema for Search Engines (Google, Bing)
  * Adds Organization and WebSite schemas for rich snippets and site search box eligibility.
+ * Protects against script tag injection / XSS by escaping '<' as '\u003c'.
  */
+
+function safeJsonLd(obj: any): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
 
 export function RootJsonLd() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rotaract3192.org";
@@ -45,11 +50,11 @@ export function RootJsonLd() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteSchema) }}
       />
     </>
   );
@@ -101,7 +106,7 @@ export function EventJsonLd({ event }: { event: any }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(eventSchema) }}
     />
   );
 }

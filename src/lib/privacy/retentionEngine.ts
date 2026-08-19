@@ -11,7 +11,7 @@
  * 4. Hard delete marketing/consent data when requested
  */
 
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
 
 export interface RetentionRunResult {
@@ -114,38 +114,38 @@ export async function runRetentionEngine(): Promise<RetentionRunResult> {
         // Check for legal hold
         const { data: holds } = await executeSql(`
           SELECT id FROM legal_holds
-          WHERE target_user_id = '${(job.target_user_id as string).replace(/'/g, "''")}' AND is_active = true
+          WHERE target_user_id = ${escapeSql(job.target_user_id)} AND is_active = true
           LIMIT 1;
         `);
 
         if (holds && holds.length > 0) {
-          await executeSql(`UPDATE deletion_jobs SET status = 'blocked_by_legal_hold', updated_at = now() WHERE id = '${job.id}';`);
+          await executeSql(`UPDATE deletion_jobs SET status = 'blocked_by_legal_hold', updated_at = now() WHERE id = ${escapeSql(job.id)};`);
           continue;
         }
 
         // Anonymise user's personal data (retain financial records)
         if (job.job_type === "user_erasure") {
-          const userId = (job.target_user_id as string).replace(/'/g, "''");
+          const userId = escapeSql(job.target_user_id);
 
           await executeSql(`
             UPDATE saas_tickets
-            SET attendee_name = 'Deleted User', attendee_email = 'deleted@deleted.invalid', phone = NULL
-            WHERE owner_user_id = '${userId}';
+            SET attendee_name = 'Deleted User', attendee_email = 'deleted@deleted.invalid', attendee_phone = NULL
+            WHERE owner_user_id = ${userId};
           `);
 
           await executeSql(`
             UPDATE consents
             SET status = 'withdrawn', user_email = 'deleted@deleted.invalid', withdrawn_at = now()
-            WHERE user_id = '${userId}';
+            WHERE user_id = ${userId};
           `);
 
           await executeSql(`
-            DELETE FROM push_subscriptions WHERE user_id = '${userId}';
+            DELETE FROM push_subscriptions WHERE user_id = ${userId};
           `);
 
           await executeSql(`
             UPDATE deletion_jobs SET status = 'completed', completed_at = now(), updated_at = now()
-            WHERE id = '${job.id}';
+            WHERE id = ${escapeSql(job.id)};
           `);
 
           await writeAuditLog({
@@ -160,8 +160,8 @@ export async function runRetentionEngine(): Promise<RetentionRunResult> {
         }
       } catch (e: unknown) {
         await executeSql(`
-          UPDATE deletion_jobs SET status = 'failed', error_message = '${String(e).replace(/'/g, "''")}', updated_at = now()
-          WHERE id = '${job.id}';
+          UPDATE deletion_jobs SET status = 'failed', error_message = ${escapeSql(String(e))}, updated_at = now()
+          WHERE id = ${escapeSql(job.id)};
         `);
       }
     }

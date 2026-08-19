@@ -5,17 +5,11 @@
  * Handles official Rotaract clubs directory, database synchronization, Super Admin CRUD, and organizer linking.
  */
 
-import { requireAuth } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { requireRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logAuditAction } from "@/lib/services/auditService";
 import { DISTRICT_3192_CLUBS, DistrictClub } from "@/lib/data/districtClubsData";
 import { revalidatePath } from "next/cache";
-
-function escapeSql(str: any): string {
-  if (str === null || str === undefined) return "NULL";
-  if (typeof str === "number" || typeof str === "boolean") return String(str);
-  return `'${String(str).replace(/'/g, "''")}'`;
-}
 
 function generateSlug(name: string): string {
   return name
@@ -109,9 +103,15 @@ export async function seedDistrictClubsInternal(shouldRevalidate = false): Promi
 
 /**
  * Server Action: Seed all 85 authentic District 3192 clubs into the organizations table
+ * Strictly restricted to Platform Administrators.
  */
 export async function seedDistrictClubsAction(): Promise<{ success: boolean; count: number; error?: string }> {
-  return seedDistrictClubsInternal(true);
+  try {
+    await requireRole("admin");
+    return await seedDistrictClubsInternal(true);
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || "Unauthorized" };
+  }
 }
 
 export interface ClubRecord {
@@ -201,7 +201,7 @@ export async function getDistrictClubsAction(): Promise<{ success: boolean; data
   } catch (err: any) {
     console.error("Error fetching clubs:", err);
     // Fallback to static district dataset if db fetch fails
-    const fallback: ClubRecord[] = DISTRICT_3192_CLUBS.map((c, i) => ({
+    const fallback: ClubRecord[] = DISTRICT_3192_CLUBS.map((c) => ({
       id: `club-${generateSlug(c.name)}`,
       name: c.name,
       slug: generateSlug(c.name),
@@ -235,10 +235,7 @@ export async function createDistrictClubAction(formData: {
   presidentEmail?: string;
 }): Promise<{ success: boolean; clubId?: string; error?: string }> {
   try {
-    const user = await requireAuth();
-    if (user.profile.role !== "admin") {
-      return { success: false, error: "Unauthorized: Super Admin access required." };
-    }
+    const user = await requireRole("admin");
 
     await ensureClubColumns();
     const slug = generateSlug(formData.name);
@@ -309,10 +306,7 @@ export async function updateDistrictClubAction(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
-    if (user.profile.role !== "admin") {
-      return { success: false, error: "Unauthorized: Super Admin access required." };
-    }
+    const user = await requireRole("admin");
 
     const res = await executeSql(`
       UPDATE organizations
@@ -357,10 +351,7 @@ export async function updateDistrictClubAction(
  */
 export async function deleteDistrictClubAction(clubId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
-    if (user.profile.role !== "admin") {
-      return { success: false, error: "Unauthorized: Super Admin access required." };
-    }
+    const user = await requireRole("admin");
 
     // Soft delete club so event histories are preserved
     const res = await executeSql(`

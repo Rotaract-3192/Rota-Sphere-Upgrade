@@ -3,13 +3,13 @@
  * Reads real-time toggles from Postgres database
  */
 
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 
 export async function isFeatureEnabled(flagName: string, defaultValue: boolean = true): Promise<boolean> {
   try {
     const { data } = await executeSql(`
       SELECT is_enabled FROM platform_feature_flags
-      WHERE name = '${flagName.replace(/'/g, "''")}'
+      WHERE name = ${escapeSql(flagName)}
       LIMIT 1;
     `);
 

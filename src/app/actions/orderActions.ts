@@ -4,10 +4,11 @@
  * Order & Dynamic UPI QR Checkout Server Actions
  * Architecture: Dynamic UPI QR generation with UTR verification workflow.
  * Zero dependency on third-party payment gateways; uses instant Indian UPI payments.
+ * Enforces strict authorization on payment verification and capacity validation on ticket tiers.
  */
 
-import { getCurrentUser, requireAuth } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { getCurrentUser, requireAuth, hasMinimumRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { generateSecureTicketToken } from "@/lib/services/ticketService";
 import { logAuditAction } from "@/lib/services/auditService";
@@ -48,12 +49,6 @@ export interface LegacyCreateOrderInput {
   customAnswers?: Record<string, any>;
   paymentMethod?: "online" | "upi_qr" | "free";
   upiTransactionId?: string;
-}
-
-function escapeSql(str: any): string {
-  if (str === null || str === undefined) return "NULL";
-  if (typeof str === "number" || typeof str === "boolean") return String(str);
-  return `'${String(str).replace(/'/g, "''")}'`;
 }
 
 // Ensure database schema columns exist for UPI payments
@@ -132,7 +127,6 @@ export async function getEventCustomQuestionsAction(eventId: string) {
   }
 }
 
-
 export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
   try {
     await ensureUpiColumns();
@@ -161,7 +155,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     // 1. Fetch Event and Organization
     const { data: eventRows } = await executeSql(`
-      SELECT e.id, e.title, e.organization_id, e.status, e.upi_id, e.upi_payee_name, o.custom_platform_fee_percent
+      SELECT e.id, e.title, e.city, e.organization_id, e.status, e.upi_id, e.upi_payee_name, o.custom_platform_fee_percent
       FROM saas_events e
       LEFT JOIN organizations o ON e.organization_id = o.id
       WHERE e.id = ${escapeSql(input.eventId)}
@@ -179,7 +173,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     // 2. Fetch all requested ticket tiers
     const tierIds = Array.from(new Set(input.attendees.map((a) => a.ticketTierId)));
-    const formattedTierIds = tierIds.map((id) => `'${id}'`).join(",");
+    const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers } = await executeSql(`
       SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active
       FROM saas_ticket_tiers
@@ -202,6 +196,15 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       const tier = tierMap.get(tId);
       if (!tier || !tier.is_active) {
         return { success: false, error: "One or more selected ticket tiers are no longer active" };
+      }
+      // Capacity check to prevent overselling
+      const sold = Number(tier.sold_count) || 0;
+      const capacity = Number(tier.total_capacity) || 0;
+      if (capacity > 0 && sold + requestedCount > capacity) {
+        return {
+          success: false,
+          error: `Pass tier "${tier.name}" is sold out or does not have ${requestedCount} seats remaining.`,
+        };
       }
       subtotal += Number(tier.price) * requestedCount;
     }
@@ -489,7 +492,8 @@ export async function createOrderAction(
 }
 
 /**
- * Super Admin / Organizer Action to Approve or Reject a UPI Payment
+ * Super Admin / Event Organizer Action to Approve or Reject a UPI Payment
+ * Strictly verified: Caller must be an admin/super_admin or the owner/organizer of the event.
  */
 export async function verifyOrderPaymentAction(params: {
   orderId: string;
@@ -498,6 +502,28 @@ export async function verifyOrderPaymentAction(params: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
+
+    // Verify order exists and check caller authorization against event organizer
+    const { data: orderRows, error: orderFetchErr } = await executeSql(`
+      SELECT o.id, o.order_number, o.total_amount, o.status as current_status, o.event_id,
+             e.organizer_id, e.created_by_user_id, e.organization_id, e.title as event_title, e.city as event_city
+      FROM saas_orders o
+      LEFT JOIN saas_events e ON o.event_id = e.id
+      WHERE o.id = ${escapeSql(params.orderId)}
+      LIMIT 1;
+    `);
+
+    if (orderFetchErr || !orderRows || orderRows.length === 0) {
+      return { success: false, error: "Order not found." };
+    }
+
+    const ord = orderRows[0];
+    const isEventOwner = ord.organizer_id === user.clerkId || ord.created_by_user_id === user.clerkId;
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+
+    if (!isEventOwner && !isAdmin) {
+      return { success: false, error: "Unauthorized: Only event organizers and administrators can verify payments." };
+    }
 
     if (params.action === "APPROVE") {
       // 1. Mark order as PAID
@@ -522,13 +548,6 @@ export async function verifyOrderPaymentAction(params: {
 
       // 3. Dispatch email notification with QR attachment to attendee
       try {
-        const { data: ordDetails } = await executeSql(`
-          SELECT o.order_number, o.total_amount, e.title as event_title, e.city as event_city
-          FROM saas_orders o
-          JOIN saas_events e ON e.id = o.event_id
-          WHERE o.id = ${escapeSql(params.orderId)};
-        `);
-
         const { data: tktDetails } = await executeSql(`
           SELECT t.ticket_code, t.qr_token, t.attendee_email, t.attendee_name, tr.name as tier_name
           FROM saas_tickets t
@@ -536,8 +555,7 @@ export async function verifyOrderPaymentAction(params: {
           WHERE t.order_id = ${escapeSql(params.orderId)};
         `);
 
-        if (ordDetails && ordDetails.length > 0 && tktDetails && tktDetails.length > 0) {
-          const ord = ordDetails[0];
+        if (tktDetails && tktDetails.length > 0) {
           const primaryEmail = tktDetails[0].attendee_email;
           const primaryName = tktDetails[0].attendee_name || "Delegate";
 
@@ -569,6 +587,7 @@ export async function verifyOrderPaymentAction(params: {
         action: "UPI_PAYMENT_APPROVED",
         entityType: "ORDER",
         entityId: params.orderId,
+        organizationId: ord.organization_id,
         newState: { status: "PAID" },
       });
     } else {
@@ -619,6 +638,7 @@ export async function verifyOrderPaymentAction(params: {
         action: "UPI_PAYMENT_REJECTED",
         entityType: "ORDER",
         entityId: params.orderId,
+        organizationId: ord.organization_id,
         newState: { status: "PAYMENT_REJECTED", reason },
       });
     }

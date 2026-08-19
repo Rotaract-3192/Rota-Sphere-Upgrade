@@ -2,7 +2,7 @@
  * GET /api/cron/retention
  * Runs the DPDP retention engine.
  * Protected by CRON_SECRET — must match Authorization header.
- * Safe to call from Vercel Cron, an external scheduler, or manually.
+ * Safe to call from Vercel Cron or an external scheduler.
  */
 
 import { NextResponse } from "next/server";
@@ -12,11 +12,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authHeader = request.headers.get("Authorization");
+
+  if (!secret || authHeader !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized: Missing or invalid secret token." }, { status: 401 });
   }
 
   try {

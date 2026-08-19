@@ -6,8 +6,8 @@
  * Real database persistence with support for multiple photos per moment.
  */
 
-import { getCurrentUser } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { getCurrentUser, hasMinimumRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { revalidatePath } from "next/cache";
 
 export interface GalleryPhotoRecord {
@@ -54,8 +54,7 @@ export async function getGalleryPhotosAction(category?: string): Promise<{
 
     let sql = `SELECT * FROM gallery_photos`;
     if (category && category !== "all") {
-      const safeCat = category.replace(/'/g, "''");
-      sql += ` WHERE category = '${safeCat}'`;
+      sql += ` WHERE category = ${escapeSql(category)}`;
     }
     sql += ` ORDER BY created_at DESC;`;
 
@@ -96,6 +95,10 @@ export async function createGalleryPhotoAction(payload: {
       return { success: false, error: "Authentication required" };
     }
 
+    if (!hasMinimumRole(user.profile.role, "organizer")) {
+      return { success: false, error: "Unauthorized: Organizer privileges required to add gallery moments." };
+    }
+
     await ensureGalleryTable();
 
     const title = (payload.title || "").trim();
@@ -108,17 +111,24 @@ export async function createGalleryPhotoAction(payload: {
       return { success: false, error: "At least one image URL or photo is required" };
     }
 
-    const safeTitle = title.replace(/'/g, "''");
-    const safeCategory = (payload.category || "conference").replace(/'/g, "''");
-    const safeCity = (payload.city || "District 3192").replace(/'/g, "''");
-    const safeDate = (payload.date || new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" })).replace(/'/g, "''");
-    const safeDesc = (payload.description || "").replace(/'/g, "''");
-    const safeUploader = (user.email || "").replace(/'/g, "''");
+    const safeCategory = payload.category || "conference";
+    const safeCity = payload.city || "District 3192";
+    const safeDate = payload.date || new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+    const safeDesc = payload.description || "";
+    const safeUploader = user.email || "";
     const safeImagesJson = JSON.stringify(cleanUrls).replace(/'/g, "''");
 
     const insertSql = `
       INSERT INTO gallery_photos (title, category, city, date, image_urls, description, uploader_email)
-      VALUES ('${safeTitle}', '${safeCategory}', '${safeCity}', '${safeDate}', '${safeImagesJson}'::jsonb, '${safeDesc}', '${safeUploader}')
+      VALUES (
+        ${escapeSql(title)},
+        ${escapeSql(safeCategory)},
+        ${escapeSql(safeCity)},
+        ${escapeSql(safeDate)},
+        '${safeImagesJson}'::jsonb,
+        ${escapeSql(safeDesc)},
+        ${escapeSql(safeUploader)}
+      )
       RETURNING *;
     `;
 
@@ -144,15 +154,11 @@ export async function deleteGalleryPhotoAction(id: string): Promise<{ success: b
       return { success: false, error: "Unauthorized" };
     }
 
-    const userEmail = (user.email || "").toLowerCase();
-    const isSuperAdmin = userEmail === "tech.rotaract3192@gmail.com";
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
 
-    const safeId = id.replace(/'/g, "''");
-    const safeEmail = userEmail.replace(/'/g, "''");
-
-    let deleteSql = `DELETE FROM gallery_photos WHERE id = '${safeId}'`;
-    if (!isSuperAdmin) {
-      deleteSql += ` AND uploader_email = '${safeEmail}'`;
+    let deleteSql = `DELETE FROM gallery_photos WHERE id = ${escapeSql(id)}`;
+    if (!isAdmin) {
+      deleteSql += ` AND uploader_email = ${escapeSql(user.email)}`;
     }
 
     const { error } = await executeSql(deleteSql);
@@ -172,11 +178,10 @@ export async function deleteGalleryPhotoAction(id: string): Promise<{ success: b
  */
 export async function toggleGalleryPhotoLikeAction(id: string): Promise<{ success: boolean; likes?: number }> {
   try {
-    const safeId = id.replace(/'/g, "''");
     const sql = `
       UPDATE gallery_photos 
       SET likes = COALESCE(likes, 0) + 1 
-      WHERE id = '${safeId}'
+      WHERE id = ${escapeSql(id)}
       RETURNING likes;
     `;
     const { data } = await executeSql(sql);

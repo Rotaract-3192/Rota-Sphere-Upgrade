@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 export interface PushPayload {
   title: string;
@@ -17,11 +19,12 @@ export interface PushPayload {
 }
 
 export async function POST(req: NextRequest) {
-  // Protect with CRON_SECRET or internal calls only
+  // Fail-closed authorization check: Protect with CRON_SECRET / internal token
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized: Missing or invalid secret token." }, { status: 401 });
   }
 
   const body = await req.json();
@@ -34,9 +37,9 @@ export async function POST(req: NextRequest) {
   // Fetch target subscriptions
   let whereClause = "";
   if (userId) {
-    whereClause = `WHERE user_id = '${userId.replace(/'/g, "''")}'`;
+    whereClause = `WHERE user_id = ${escapeSql(userId)}`;
   } else if (userEmail) {
-    whereClause = `WHERE user_email = '${userEmail.replace(/'/g, "''")}'`;
+    whereClause = `WHERE user_email = ${escapeSql(userEmail.toLowerCase().trim())}`;
   }
 
   const { data: subs } = await executeSql(
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
   if (expiredEndpoints.length > 0) {
     for (const ep of expiredEndpoints) {
       await executeSql(
-        `DELETE FROM push_subscriptions WHERE endpoint = '${(ep as string).replace(/'/g, "''")}'`
+        `DELETE FROM push_subscriptions WHERE endpoint = ${escapeSql(ep)}`
       );
     }
   }

@@ -3,22 +3,17 @@
 /**
  * Super Admin Server Actions
  * Platform governance, KYC approvals, fee configurations, event moderation, and feature flags.
+ * Enforces strict Role-Based Access Control (RBAC) to protect administrative functions.
  */
 
-import { requireAuth } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { requireAuth, requireRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logAuditAction } from "@/lib/services/auditService";
 import { revalidatePath } from "next/cache";
 
-function escapeSql(str: any): string {
-  if (str === null || str === undefined) return "NULL";
-  if (typeof str === "number" || typeof str === "boolean") return String(str);
-  return `'${String(str).replace(/'/g, "''")}'`;
-}
-
 export async function approveOrganizationKycAction(organizationId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       UPDATE organizations
@@ -46,7 +41,7 @@ export async function approveOrganizationKycAction(organizationId: string): Prom
 
 export async function rejectOrganizationKycAction(organizationId: string, reason: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       UPDATE organizations
@@ -77,7 +72,7 @@ export async function setEventStatusAction(
   status: "PUBLISHED" | "DRAFT" | "SUSPENDED" | "CANCELLED"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       UPDATE saas_events
@@ -105,7 +100,7 @@ export async function setEventStatusAction(
 
 export async function toggleEventFeatureAction(eventId: string, isFeatured: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       UPDATE saas_events
@@ -133,7 +128,7 @@ export async function toggleEventFeatureAction(eventId: string, isFeatured: bool
 
 export async function togglePlatformFeatureFlagAction(flagId: string, isEnabled: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("super_admin");
 
     await executeSql(`
       UPDATE platform_feature_flags
@@ -165,7 +160,7 @@ export async function createOrganizationAction(data: {
   supportEmail: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       INSERT INTO organizations (name, slug, city, support_email, kyc_status, is_verified, created_at, updated_at)
@@ -271,7 +266,7 @@ export async function submitOrganizerAccessRequestAction(data: {
 
 export async function getOrganizerAccessRequestsAction(): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
-    const user = await requireAuth();
+    await requireRole("admin");
     await ensureOrganizerRequestsTable();
 
     const res = await executeSql(`
@@ -287,7 +282,7 @@ export async function getOrganizerAccessRequestsAction(): Promise<{ success: boo
 
 export async function approveOrganizerAccessRequestAction(requestId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     const reqRes = await executeSql(`
       SELECT * FROM organizer_access_requests WHERE id::text = ${escapeSql(requestId)} LIMIT 1;
@@ -349,7 +344,7 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
 
 export async function rejectOrganizerAccessRequestAction(requestId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
 
     await executeSql(`
       UPDATE organizer_access_requests
@@ -388,7 +383,7 @@ export async function updateComplaintStatusAction(
   resolution?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
     const resolutionClause = resolution ? `, resolution = ${escapeSql(resolution)}, resolved_at = NOW()` : "";
     await executeSql(`
       UPDATE privacy_complaints
@@ -419,7 +414,7 @@ export async function updatePrivacyRequestStatusAction(
   resolution?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireAuth();
+    const user = await requireRole("admin");
     const completedClause = status === "completed" ? `, completed_at = NOW()` : "";
     await executeSql(`
       UPDATE privacy_requests
@@ -443,4 +438,3 @@ export async function updatePrivacyRequestStatusAction(
     return { success: false, error: err?.message || String(err) };
   }
 }
-

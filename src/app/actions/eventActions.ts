@@ -3,11 +3,11 @@
 /**
  * Event Server Actions
  * Handles full event creation, updating, duplication, publishing, and cancellation.
- * Uses high-performance directDb client to execute against the live PostgreSQL database.
+ * Protected with strict authorization checks, ownership verification, and SSRF prevention.
  */
 
-import { getCurrentUser, requireAuth } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { getCurrentUser, requireAuth, hasMinimumRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logAuditAction } from "@/lib/services/auditService";
 import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
@@ -77,11 +77,6 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function escapeSql(str: string | null | undefined): string {
-  if (str === null || str === undefined) return "NULL";
-  return `'${String(str).replace(/'/g, "''")}'`;
-}
-
 async function resolveCategoryId(categoryInput?: string): Promise<string | null> {
   if (!categoryInput || !categoryInput.trim()) return null;
   const inputStr = categoryInput.trim();
@@ -105,9 +100,40 @@ async function resolveCategoryId(categoryInput?: string): Promise<string | null>
   return fallback?.[0]?.id || null;
 }
 
+/**
+ * Validates that an acting user has authorization to mutate or view the specified event.
+ */
+async function verifyEventAccess(eventId: string, user: { clerkId: string; profile: { role: any } }): Promise<{ authorized: boolean; event?: any; error?: string }> {
+  const { data: events, error } = await executeSql(`
+    SELECT id, organization_id, organizer_id, created_by_user_id, title
+    FROM saas_events
+    WHERE id = ${escapeSql(eventId)}
+    LIMIT 1;
+  `);
+
+  if (error || !events || events.length === 0) {
+    return { authorized: false, error: "Event not found" };
+  }
+
+  const event = events[0];
+  const isOwner = event.organizer_id === user.clerkId || event.created_by_user_id === user.clerkId;
+  const isAdmin = hasMinimumRole(user.profile.role, "admin");
+
+  if (!isOwner && !isAdmin) {
+    return { authorized: false, error: "Unauthorized: You do not have permission to manage this event." };
+  }
+
+  return { authorized: true, event };
+}
+
 export async function createEventAction(input: CreateEventInput): Promise<{ success: boolean; eventId?: string; slug?: string; error?: string }> {
   try {
     const user = await requireAuth();
+
+    // Verify minimum role requirement
+    if (!hasMinimumRole(user.profile.role, "organizer")) {
+      return { success: false, error: "Unauthorized: Organizer access required to create events." };
+    }
 
     // Auto-migrate UPI & user columns if missing
     try {
@@ -213,12 +239,12 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.startDate)},
         ${escapeSql(input.endDate)},
         ${escapeSql(input.timezone || "Asia/Kolkata")},
-        ${input.capacity || 100},
+        ${Number(input.capacity) || 100},
         'PUBLISHED',
         ${escapeSql(input.visibility || "PUBLIC")},
-        ${input.allowWaitlist !== false},
-        ${input.allowTicketTransfer !== false},
-        ${input.allowRefunds !== false},
+        ${input.allowWaitlist !== false ? "TRUE" : "FALSE"},
+        ${input.allowTicketTransfer !== false ? "TRUE" : "FALSE"},
+        ${input.allowRefunds !== false ? "TRUE" : "FALSE"},
         ${escapeSql(input.termsAndConditions)},
         ${escapeSql(input.refundPolicy)},
         ${escapeSql(input.contactEmail || user.email)},
@@ -262,8 +288,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             ${escapeSql(tier.name)},
             ${escapeSql(tier.description)},
             ${escapeSql(tier.tierType || "REGULAR")},
-            ${tier.price || 0},
-            ${tier.totalCapacity || 100},
+            ${Number(tier.price) || 0},
+            ${Number(tier.totalCapacity) || 100},
             0,
             0,
             ${escapeSql(tier.salesStart || new Date().toISOString())},
@@ -354,14 +380,12 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
 export async function duplicateEventAction(eventId: string): Promise<{ success: boolean; newEventSlug?: string; error?: string }> {
   try {
     const user = await requireAuth();
-
-    const { data: origRows } = await executeSql(`SELECT * FROM saas_events WHERE id = ${escapeSql(eventId)} LIMIT 1;`);
-    const orig = origRows?.[0];
-
-    if (!orig) {
-      return { success: false, error: "Original event not found" };
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
     }
 
+    const orig = access.event;
     const newTitle = `${orig.title} (Copy)`;
     const newSlug = `${slugify(newTitle)}-${Date.now().toString().slice(-4)}`;
 
@@ -369,6 +393,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
       INSERT INTO saas_events (
         organization_id,
         organizer_id,
+        created_by_user_id,
         category_id,
         title,
         slug,
@@ -389,6 +414,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
       ) VALUES (
         ${escapeSql(orig.organization_id)},
         ${escapeSql(user.clerkId)},
+        ${escapeSql(user.clerkId)},
         ${escapeSql(orig.category_id)},
         ${escapeSql(newTitle)},
         ${escapeSql(newSlug)},
@@ -403,7 +429,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
         ${escapeSql(orig.state)},
         NOW() + INTERVAL '7 days',
         NOW() + INTERVAL '8 days',
-        ${orig.capacity || 100},
+        ${Number(orig.capacity) || 100},
         'DRAFT',
         'PUBLIC'
       )
@@ -424,6 +450,10 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
 export async function cancelEventAction(eventId: string, reason: string): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
 
     await executeSql(`
       UPDATE saas_events
@@ -455,13 +485,9 @@ export async function updateEventAction(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
-
-    // Check ownership or superadmin
-    const existing = await executeSql(`
-      SELECT id, organization_id, organizer_id FROM saas_events WHERE id = ${escapeSql(eventId)} LIMIT 1;
-    `);
-    if (!existing.data || existing.data.length === 0) {
-      return { success: false, error: "Event not found" };
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
     }
 
     const updates: string[] = [];
@@ -480,7 +506,7 @@ export async function updateEventAction(
     if (input.startDate) updates.push(`start_date = ${escapeSql(input.startDate)}`);
     if (input.endDate) updates.push(`end_date = ${escapeSql(input.endDate)}`);
     if (input.timezone !== undefined) updates.push(`timezone = ${escapeSql(input.timezone)}`);
-    if (input.capacity !== undefined) updates.push(`capacity = ${input.capacity}`);
+    if (input.capacity !== undefined) updates.push(`capacity = ${Number(input.capacity) || 100}`);
     if (input.visibility !== undefined) updates.push(`visibility = ${escapeSql(input.visibility)}`);
     if (input.allowWaitlist !== undefined) updates.push(`allow_waitlist = ${input.allowWaitlist ? "TRUE" : "FALSE"}`);
     if (input.allowTicketTransfer !== undefined) updates.push(`allow_ticket_transfer = ${input.allowTicketTransfer ? "TRUE" : "FALSE"}`);
@@ -532,8 +558,8 @@ export async function updateEventAction(
             ${escapeSql(tier.name)},
             ${escapeSql(tier.description)},
             ${escapeSql(tier.tierType || "REGULAR")},
-            ${tier.price || 0},
-            ${tier.totalCapacity || 100},
+            ${Number(tier.price) || 0},
+            ${Number(tier.totalCapacity) || 100},
             0,
             0,
             ${escapeSql(tier.salesStart || new Date().toISOString())},
@@ -568,8 +594,12 @@ export async function updateEventAction(
 export async function trashEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
 
-    // Auto-migrate deleted_at column if missing in database schema
+    // Auto-migrate deleted_at column if missing
     try {
       await executeSql(`
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
@@ -582,7 +612,6 @@ export async function trashEventAction(eventId: string): Promise<{ success: bool
       WHERE id = ${escapeSql(eventId)};
     `);
 
-    // If status check constraint rejects 'TRASHED', fallback to updating deleted_at
     if (dbErr) {
       const fallbackRes = await executeSql(`
         UPDATE saas_events
@@ -616,6 +645,10 @@ export async function trashEventAction(eventId: string): Promise<{ success: bool
 export async function restoreEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
 
     await executeSql(`
       UPDATE saas_events
@@ -644,6 +677,10 @@ export async function restoreEventAction(eventId: string): Promise<{ success: bo
 export async function permanentDeleteEventAction(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
 
     // Cascading deletes
     await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
@@ -671,6 +708,10 @@ export async function permanentDeleteEventAction(eventId: string): Promise<{ suc
 export async function getEventRegistrationsAction(eventId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
     const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
 
     const ticketsRes = await executeSql(`
       SELECT 
@@ -721,6 +762,48 @@ export interface ParsedLocationResult {
   error?: string;
 }
 
+/**
+ * Defensive SSRF Guard: Verifies that a target URL is public and not an internal network or cloud metadata address.
+ */
+function isSafePublicUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+
+    const host = parsed.hostname.toLowerCase();
+
+    // Block localhost, link-local, loopback, and cloud metadata
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host === "169.254.169.254" ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal") ||
+      host.endsWith(".localhost")
+    ) {
+      return false;
+    }
+
+    // Block private IPv4 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+    const ipv4Match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (ipv4Match) {
+      const [, a, b] = ipv4Match.map(Number);
+      if (a === 10) return false;
+      if (a === 127) return false;
+      if (a === 169 && b === 254) return false;
+      if (a === 192 && b === 168) return false;
+      if (a === 172 && b >= 16 && b <= 31) return false;
+      if (a === 0) return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function parseGoogleMapsUrlAction(inputUrl: string): Promise<ParsedLocationResult> {
   try {
     if (!inputUrl || !inputUrl.trim()) {
@@ -734,10 +817,14 @@ export async function parseGoogleMapsUrlAction(inputUrl: string): Promise<Parsed
       return await searchPlaceGeocode(raw);
     }
 
+    if (!isSafePublicUrl(raw)) {
+      return { success: false, error: "Invalid or restricted URL provided." };
+    }
+
     let url = raw;
     let pageHtml = "";
 
-    // 1. Follow redirects if shortened link or standard maps URL
+    // 1. Follow redirects with SSRF protection
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -748,11 +835,12 @@ export async function parseGoogleMapsUrlAction(inputUrl: string): Promise<Parsed
           "Accept-Language": "en-US,en;q=0.9",
         },
       });
-      if (response.url) {
+
+      if (response.url && isSafePublicUrl(response.url)) {
         url = response.url;
       }
       pageHtml = await response.text();
-    } catch (e) {
+    } catch {
       // Continue with original url if fetch fails
     }
 
@@ -808,7 +896,6 @@ export async function parseGoogleMapsUrlAction(inputUrl: string): Promise<Parsed
       lat = parseFloat(qCoordsMatch[1]);
       lng = parseFloat(qCoordsMatch[2]);
     } else if (pageHtml) {
-      // Look for coordinates pattern in Google Maps HTML
       const htmlCoordMatch = pageHtml.match(/\[\s*(-?\d{1,2}\.\d{4,8})\s*,\s*(-?\d{1,3}\.\d{4,8})\s*\]/);
       if (htmlCoordMatch) {
         lat = parseFloat(htmlCoordMatch[1]);

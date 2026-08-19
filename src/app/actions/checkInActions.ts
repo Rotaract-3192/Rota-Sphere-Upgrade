@@ -4,16 +4,11 @@
  * Check-in Server Actions
  * High-performance gate validation against saas_tickets and rotasphere_tickets.
  * Concurrency-safe duplicate scan protection with instant audio/haptic feedback support.
+ * Rejects pending payment verification passes and enforces atomic state transitions.
  */
 
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
-
-function escapeSql(val: any): string {
-  if (val === null || val === undefined) return "NULL";
-  if (typeof val === "number" || typeof val === "boolean") return String(val);
-  return `'${String(val).replace(/'/g, "''")}'`;
-}
 
 export interface CheckInRequest {
   rawInput: string;
@@ -37,7 +32,7 @@ export interface CheckInResponse {
 
 export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInResponse> {
   try {
-    let clean = req.rawInput.trim();
+    let clean = req.rawInput?.trim();
     if (!clean) {
       return { result: "INVALID", message: "Empty scan code provided" };
     }
@@ -49,8 +44,8 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       clean = clean.split("token=").pop()?.split("&")[0] || clean;
     }
 
-    const gateName = req.gateName || "Main Gate";
-    const scannerUserId = req.scannerUserId || "staff-gate-ops";
+    const gateName = req.gateName?.trim() || "Main Gate";
+    const scannerUserId = req.scannerUserId?.trim() || "staff-gate-ops";
 
     // 1. Query saas_tickets
     const sql = `
@@ -155,6 +150,30 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     }
 
     // 3. Status checks
+    if (ticket.status === "PENDING_VERIFICATION") {
+      return {
+        result: "INVALID",
+        ticketId: ticket.id,
+        ticketCode: ticket.ticket_code,
+        attendeeName,
+        ticketTierName: tierName,
+        eventTitle,
+        message: "⛔ PAYMENT PENDING VERIFICATION. This ticket has not been approved by the organizer yet.",
+      };
+    }
+
+    if (ticket.status === "PAYMENT_REJECTED") {
+      return {
+        result: "INVALID",
+        ticketId: ticket.id,
+        ticketCode: ticket.ticket_code,
+        attendeeName,
+        ticketTierName: tierName,
+        eventTitle,
+        message: "⛔ PAYMENT REJECTED. This pass was invalidated.",
+      };
+    }
+
     if (ticket.status === "CANCELLED") {
       return {
         result: "CANCELLED",
@@ -199,7 +218,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       };
     }
 
-    // 5. Atomic check-in update
+    // 5. Atomic check-in update: only transition if status is currently valid
     const updateSql = `
       UPDATE saas_tickets
       SET 
@@ -208,9 +227,18 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         checked_in_gate = ${escapeSql(gateName)},
         checked_in_by_user_id = ${escapeSql(scannerUserId)},
         updated_at = NOW()
-      WHERE id = ${escapeSql(ticket.id)};
+      WHERE id = ${escapeSql(ticket.id)}
+        AND status IN ('CONFIRMED', 'ISSUED')
+      RETURNING id;
     `;
-    await executeSql(updateSql);
+    const { data: updatedTicketRows } = await executeSql(updateSql);
+
+    if (!updatedTicketRows || updatedTicketRows.length === 0) {
+      return {
+        result: "DUPLICATE_SCAN",
+        message: "Pass was just scanned concurrently at another gate or is in an invalid status.",
+      };
+    }
 
     // Also update rotasphere_tickets if it exists
     await executeSql(`UPDATE rotasphere_tickets SET status = 'CHECKED_IN' WHERE id = ${escapeSql(ticket.id)};`);

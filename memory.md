@@ -43,6 +43,19 @@
 
 ## Change Log
 
+### 2026-08-19 — Codebase Security Hardening, Vulnerability Patching & Grievance Desk Redesignation
+**Session goal:** Conduct a complete security audit across the codebase, patch all identified vulnerabilities (Broken Access Control, Privilege Escalation, SSRF, IDOR, race conditions, fail-open cron endpoints, XSS), and replace personal Grievance Officer name with "Rotaract District 3192 Tech Team".
+- **Grievance Officer Redesignation**: Replaced all personal name references (`Thejaswin P. S.`) with `Rotaract District 3192 Tech Team` across `/privacy`, `/help`, and `/contact`.
+- **Server Action Authorization Hardening**: Enforced `requireRole("super_admin")` / `requireRole("admin")` in `adminActions.ts` and `clubActions.ts`.
+- **Event Ownership & SSRF Defense**: Enforced organizer/admin ownership checks on event updates, cancellations, and registration exports in `eventActions.ts`. Added SSRF protection `isSafePublicUrl` to block loopback/metadata IPs in `parseGoogleMapsUrlAction`.
+- **Order & Ticket Checkout Hardening**: Enforced capacity checks to prevent overselling passes and secured payment verification in `orderActions.ts`.
+- **IDOR Protection**: Verified ticket ownership (`owner_user_id === user.clerkId`) on transfers, refunds, and UTR resubmissions in `attendeeActions.ts`.
+- **Gate Check-In Concurrency**: Blocked pending verification passes and used atomic conditional SQL updates in `checkInActions.ts` to prevent race conditions.
+- **Fail-Closed API Security**: Fixed fail-open cron auth in `/api/push/send` and `/api/cron/retention`.
+- **Clerk Webhook Synchronization**: Fixed table name from `profiles` to `rotasphere_profiles` in `/api/webhooks/clerk`.
+- **JSON-LD XSS Sanitization**: Escaped `<` characters as `\u003c` in `JsonLd.tsx`.
+- **Build Verification**: Ran `npm run build` — 100% passed (0 TypeScript errors, 37/37 routes generated).
+
 ### 2026-08-18 — Full Legal, Privacy, DPDP Act 2023, Support, and Footer Architecture Implementation
 **Session goal:** Implement the full Indian legal, privacy, refund, dispute resolution, support, and footer infrastructure per DPDP Act 2023 / Rules 2025 and Consumer Protection (E-Commerce) Rules 2020.
 - **Footer Architecture**: Completely revamped `Footer.tsx` with dedicated Support, Legal & Privacy, and Platform columns, operating legal entity disclosure (NO "RotaSphere, Inc."), Grievance Officer details (`tech.rotaract3192@gmail.com`), and interactive `DirectoryVerificationModal`.

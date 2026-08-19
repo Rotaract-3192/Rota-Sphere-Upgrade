@@ -7,18 +7,14 @@
  * 2. Real-time test email previews
  * 3. Personalized placeholders: {{name}}, {{ticket_code}}, {{category}}
  * 4. Custom CTA button & QR code toggle support
+ * Enforces strict role checks and event ownership authorization.
  */
 
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser, hasMinimumRole } from "@/lib/auth/getUser";
 import QRCode from "qrcode";
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { sendEmail, buildStudioBroadcastEmailHtml, EmailAttachment } from "@/lib/notifications/notificationService";
 import { logAuditAction } from "@/lib/services/auditService";
-
-function escapeSqlStr(str: string | undefined | null): string {
-  if (!str) return "''";
-  return `'${String(str).replace(/'/g, "''")}'`;
-}
 
 export interface RecipientAttendee {
   name: string;
@@ -34,15 +30,31 @@ export async function getBroadcastRecipientsAction(params: {
   selectedTicketIds?: string[];
   customEmailString?: string;
 }) {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: "Unauthorized", recipients: [] };
+
+  if (!hasMinimumRole(user.profile.role, "organizer")) {
+    return { success: false, error: "Unauthorized: Organizer access required to manage broadcasts.", recipients: [] };
+  }
+
+  // If scoping to an event, check ownership or admin role
+  if (params.eventId) {
+    const { data: evts } = await executeSql(`
+      SELECT organizer_id, created_by_user_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+    `);
+    const evt = evts?.[0];
+    const isOwner = evt && (evt.organizer_id === user.clerkId || evt.created_by_user_id === user.clerkId);
+    if (!isOwner && !hasMinimumRole(user.profile.role, "admin")) {
+      return { success: false, error: "Unauthorized: You do not have permission to view recipients for this event.", recipients: [] };
+    }
+  }
 
   try {
     let recipients: RecipientAttendee[] = [];
 
     if (params.scope === "TEST_MODE") {
-      const userEmail = user.emailAddresses[0]?.emailAddress || "test@rotasphere.in";
-      const userName = `${user.firstName || "Delegate"} ${user.lastName || ""}`.trim();
+      const userEmail = user.email || "test@rotasphere.in";
+      const userName = user.profile.full_name || "Delegate";
       recipients = [
         {
           name: userName,
@@ -56,7 +68,7 @@ export async function getBroadcastRecipientsAction(params: {
       const emails = params.customEmailString
         .split(",")
         .map((e) => e.trim().toLowerCase())
-        .filter((e) => e.includes("@"));
+        .filter((e) => e.includes("@") && e.length > 5);
 
       recipients = emails.map((e, idx) => ({
         name: e.split("@")[0],
@@ -66,7 +78,7 @@ export async function getBroadcastRecipientsAction(params: {
         qrToken: `CUSTOM_TOKEN_${idx + 1}`,
       }));
     } else if (params.scope === "SELECTED_ROWS" && params.selectedTicketIds && params.selectedTicketIds.length > 0) {
-      const idsList = params.selectedTicketIds.map((id) => escapeSqlStr(id)).join(",");
+      const idsList = params.selectedTicketIds.map((id) => escapeSql(id)).join(",");
       const { data } = await executeSql(`
         SELECT t.attendee_name, t.attendee_email, t.ticket_code, t.qr_token, tr.name as tier_name
         FROM saas_tickets t
@@ -89,7 +101,7 @@ export async function getBroadcastRecipientsAction(params: {
         SELECT t.attendee_name, t.attendee_email, t.ticket_code, t.qr_token, tr.name as tier_name
         FROM saas_tickets t
         LEFT JOIN saas_ticket_tiers tr ON tr.id = t.ticket_tier_id
-        WHERE t.event_id = ${escapeSqlStr(params.eventId)}
+        WHERE t.event_id = ${escapeSql(params.eventId)}
           AND t.status = 'CONFIRMED'
           AND t.attendee_email IS NOT NULL 
           AND t.attendee_email != '';
@@ -137,10 +149,26 @@ export async function sendBatchEmailChunkAction(params: {
   eventId?: string;
   eventName?: string;
 }) {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: "Unauthorized", sentCount: 0, failedCount: 0 };
 
-  const senderName = `${user.firstName || "RotaSphere"} ${user.lastName || "Team"}`.trim();
+  if (!hasMinimumRole(user.profile.role, "organizer")) {
+    return { success: false, error: "Unauthorized: Organizer access required.", sentCount: 0, failedCount: 0 };
+  }
+
+  // If scoping to an event, check ownership or admin role
+  if (params.eventId) {
+    const { data: evts } = await executeSql(`
+      SELECT organizer_id, created_by_user_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+    `);
+    const evt = evts?.[0];
+    const isOwner = evt && (evt.organizer_id === user.clerkId || evt.created_by_user_id === user.clerkId);
+    if (!isOwner && !hasMinimumRole(user.profile.role, "admin")) {
+      return { success: false, error: "Unauthorized: You do not have permission to send broadcasts for this event.", sentCount: 0, failedCount: 0 };
+    }
+  }
+
+  const senderName = `${user.profile.full_name || "RotaSphere Team"}`.trim();
   let sentCount = 0;
   let failedCount = 0;
 
@@ -180,7 +208,7 @@ export async function sendBatchEmailChunkAction(params: {
             cid: `qr-${item.ticketCode}`,
             contentType: "image/png",
           });
-        } catch (e) {}
+        } catch {}
       }
 
       // 3. Render HTML Body
@@ -206,9 +234,26 @@ export async function sendBatchEmailChunkAction(params: {
 
       if (ok) sentCount++;
       else failedCount++;
-    } catch (err) {
+    } catch {
       failedCount++;
     }
+  }
+
+  // Audit log broadcast dispatch
+  if (sentCount > 0) {
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "BULK_EMAIL_BROADCAST_SENT",
+      entityType: "EVENT",
+      entityId: params.eventId || "broadcast",
+      newState: {
+        sentCount,
+        failedCount,
+        subject: params.subject,
+      },
+    });
   }
 
   return { success: true, sentCount, failedCount };
@@ -223,14 +268,18 @@ export async function sendTestEmailAction(params: {
   includeQrCode?: boolean;
   eventName?: string;
 }) {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: "Unauthorized" };
 
-  const testEmail = user.emailAddresses[0]?.emailAddress;
+  if (!hasMinimumRole(user.profile.role, "organizer")) {
+    return { success: false, error: "Unauthorized: Organizer access required." };
+  }
+
+  const testEmail = user.email;
   if (!testEmail) return { success: false, error: "No user email address found." };
 
   const sampleAttendee: RecipientAttendee = {
-    name: `${user.firstName || "Alex"} ${user.lastName || "(Sample)"}`.trim(),
+    name: `${user.profile.full_name || "Alex (Sample)"}`.trim(),
     email: testEmail,
     ticketCode: "TKT-SAMPLE-8821",
     category: "VIP Pass",

@@ -5,18 +5,9 @@
  * - Grant, withdraw, check, and list consents
  * - Each purpose is tracked separately (no bundled consent)
  * - Every change is audit-logged
- *
- * Purposes:
- *   transactional_email     — Required for ticket delivery (no consent needed)
- *   marketing_email         — Optional, explicit consent required
- *   transactional_whatsapp  — Optional, explicit consent required
- *   marketing_whatsapp      — Optional, explicit consent required
- *   marketing_sms           — Optional, explicit consent required
- *   analytics               — Optional, explicit consent required
- *   personalisation         — Optional, explicit consent required
  */
 
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { auditConsent } from "@/lib/audit/auditLog";
 
 export type ConsentPurpose =
@@ -89,7 +80,7 @@ export async function getUserConsents(userId: string): Promise<ConsentRecord[]> 
            policy_version_tag, source,
            granted_at, withdrawn_at, created_at, updated_at
     FROM consents
-    WHERE user_id = '${userId.replace(/'/g, "''")}'
+    WHERE user_id = ${escapeSql(userId)}
     ORDER BY purpose ASC;
   `);
   return (data || []).map(mapRow);
@@ -99,7 +90,7 @@ export async function getUserConsents(userId: string): Promise<ConsentRecord[]> 
 export async function hasConsent(userId: string, purpose: ConsentPurpose): Promise<boolean> {
   const { data } = await executeSql(`
     SELECT status FROM consents
-    WHERE user_id = '${userId.replace(/'/g, "''")}' AND purpose = '${purpose}'
+    WHERE user_id = ${escapeSql(userId)} AND purpose = ${escapeSql(purpose)}
     LIMIT 1;
   `);
   if (!data || data.length === 0) return true; // Default ON
@@ -115,16 +106,24 @@ export async function grantConsents(
   policyVersionTag?: string
 ): Promise<void> {
   for (const purpose of purposes) {
-    const tag = policyVersionTag ? `'${policyVersionTag.replace(/'/g, "''")}'` : "NULL";
+    const tag = policyVersionTag ? escapeSql(policyVersionTag) : "NULL";
     await executeSql(`
       INSERT INTO consents (user_id, user_email, purpose, status, source, policy_version_tag, granted_at)
-      VALUES ('${userId.replace(/'/g, "''")}', '${userEmail.replace(/'/g, "''")}', '${purpose}', 'granted', '${source}', ${tag}, now())
+      VALUES (
+        ${escapeSql(userId)},
+        ${escapeSql(userEmail.toLowerCase().trim())},
+        ${escapeSql(purpose)},
+        'granted',
+        ${escapeSql(source)},
+        ${tag},
+        now()
+      )
       ON CONFLICT (user_id, purpose) DO UPDATE
         SET status = 'granted',
             granted_at = now(),
             withdrawn_at = NULL,
             policy_version_tag = ${tag},
-            source = '${source}',
+            source = ${escapeSql(source)},
             updated_at = now();
     `);
     await auditConsent(userId, userEmail, purpose, "granted");
@@ -141,7 +140,7 @@ export async function withdrawConsents(
     await executeSql(`
       UPDATE consents
       SET status = 'withdrawn', withdrawn_at = now(), updated_at = now()
-      WHERE user_id = '${userId.replace(/'/g, "''")}' AND purpose = '${purpose}';
+      WHERE user_id = ${escapeSql(userId)} AND purpose = ${escapeSql(purpose)};
     `);
     await auditConsent(userId, userEmail, purpose, "withdrawn");
   }
@@ -151,7 +150,14 @@ export async function withdrawConsents(
 export async function initTransactionalConsent(userId: string, userEmail: string): Promise<void> {
   await executeSql(`
     INSERT INTO consents (user_id, user_email, purpose, status, source, granted_at)
-    VALUES ('${userId.replace(/'/g, "''")}', '${userEmail.replace(/'/g, "''")}', 'transactional_email', 'granted', 'system', now())
+    VALUES (
+      ${escapeSql(userId)},
+      ${escapeSql(userEmail.toLowerCase().trim())},
+      'transactional_email',
+      'granted',
+      'system',
+      now()
+    )
     ON CONFLICT (user_id, purpose) DO NOTHING;
   `);
 }

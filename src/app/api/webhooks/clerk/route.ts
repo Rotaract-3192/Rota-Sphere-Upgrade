@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
   if (type === "user.updated") {
     const { error } = await supabaseAdmin
-      .from("profiles")
+      .from("rotasphere_profiles")
       .update({
         email: primaryEmail ?? undefined,
         full_name: fullName,
@@ -130,9 +130,8 @@ export async function POST(req: NextRequest) {
 
   if (type === "user.deleted") {
     // Soft delete — preserve financial records, audit trails
-    // Architecture §79: Financial records may need longer retention
     const { error } = await supabaseAdmin
-      .from("profiles")
+      .from("rotasphere_profiles")
       .update({
         status: "REJECTED",
         email: `deleted_${data.id}@deleted.rotasphere.in`,

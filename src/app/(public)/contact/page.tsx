@@ -170,8 +170,8 @@ export default function ContactPage() {
                   Under the <strong>Digital Personal Data Protection Act, 2023</strong> and the <strong>Information Technology (Intermediary Guidelines) Rules</strong>, any user may register a grievance with our designated officer:
                 </p>
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-1.5 font-medium">
-                  <p><strong>Grievance Officer:</strong> Thejaswin P. S.</p>
-                  <p><strong>Designation:</strong> District Ombudsman &amp; Redressal Lead</p>
+                  <p><strong>Grievance Desk:</strong> Rotaract District 3192 Tech Team</p>
+                  <p><strong>Designation:</strong> District Redressal &amp; Governance Desk</p>
                   <p><strong>Email:</strong> <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] underline">tech.rotaract3192@gmail.com</a></p>
                   <p><strong>Acknowledgement SLA:</strong> Within 24 Hours</p>
                   <p><strong>Resolution SLA:</strong> Within 15 Business Days</p>

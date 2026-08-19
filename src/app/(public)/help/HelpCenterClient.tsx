@@ -136,7 +136,7 @@ const ALL_FAQS: FAQItem[] = [
   {
     category: "privacy",
     q: "Who is the Grievance Officer and how can I contact them?",
-    a: "Our designated Grievance Officer is Thejaswin P. S. You can reach the grievance desk directly at tech.rotaract3192@gmail.com.",
+    a: "Our designated Grievance Desk is managed by the Rotaract District 3192 Tech Team. You can reach the grievance desk directly at tech.rotaract3192@gmail.com.",
   },
 
   // SECURITY & GATE SAFETY

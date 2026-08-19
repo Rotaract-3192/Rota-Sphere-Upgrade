@@ -20,6 +20,8 @@ export function isConfiguredAdminEmail(email?: string | null): boolean {
   return SUPER_ADMIN_EMAILS.includes(email.toLowerCase().trim());
 }
 
+const VALID_ROLES: UserRole[] = ["super_admin", "admin", "organizer", "attendee"];
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
     const { userId } = await auth();
@@ -43,9 +45,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     if (!profile) {
       const fullName = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0];
-      const initialRole: UserRole = isDesignatedAdmin
-        ? "super_admin"
-        : (clerkUser.publicMetadata?.role as UserRole) || "attendee";
+      const rawRole = clerkUser.publicMetadata?.role as string;
+      const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
+      const initialRole: UserRole = isDesignatedAdmin ? "super_admin" : metadataRole;
 
       const newProfile: Profile = {
         id: userId,
@@ -121,5 +123,7 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 export function hasMinimumRole(userRole: UserRole, minimumRole: UserRole): boolean {
-  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minimumRole];
+  const userRank = ROLE_HIERARCHY[userRole] ?? 0;
+  const minRank = ROLE_HIERARCHY[minimumRole] ?? 999;
+  return userRank >= minRank;
 }

@@ -3,21 +3,15 @@
 /**
  * Attendee & Ticket Actions
  * Handles ticket transfers, refund requests, and support queries.
- * Direct SQL execution with zero external RPC failure modes.
+ * Enforces strict IDOR protection and ticket ownership verification on all operations.
  */
 
-import { requireAuth } from "@/lib/auth/getUser";
-import { executeSql } from "@/lib/db/directDb";
+import { requireAuth, hasMinimumRole } from "@/lib/auth/getUser";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { generateSecureTicketToken } from "@/lib/services/ticketService";
 import { logAuditAction } from "@/lib/services/auditService";
 import { isFeatureEnabled } from "@/lib/services/featureFlags";
 import { revalidatePath } from "next/cache";
-
-function escapeSql(str: any): string {
-  if (str === null || str === undefined) return "NULL";
-  if (typeof str === "number" || typeof str === "boolean") return String(str);
-  return `'${String(str).replace(/'/g, "''")}'`;
-}
 
 export async function transferUserTicketAction(ticketId: string, toName: string, toEmail: string, toPhone?: string) {
   try {
@@ -27,6 +21,10 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
     const isTransferAllowed = await isFeatureEnabled("feature_ticket_transfer", true);
     if (!isTransferAllowed) {
       return { success: false, error: "Ticket transfers have been temporarily paused by platform administrators." };
+    }
+
+    if (!toName?.trim() || !toEmail?.trim()) {
+      return { success: false, error: "Recipient name and email are required for ticket transfer." };
     }
 
     // 1. Ensure ticket_transfers table exists
@@ -54,13 +52,21 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
     `);
 
     if (fetchErr || !ticketRows || ticketRows.length === 0) {
-      return { success: false, error: "Ticket not found or permission denied" };
+      return { success: false, error: "Ticket not found." };
     }
 
     const ticket = ticketRows[0];
+    const isOwner =
+      ticket.owner_user_id === user.clerkId ||
+      (ticket.attendee_email && ticket.attendee_email.toLowerCase() === user.email.toLowerCase());
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Unauthorized: You do not own this ticket." };
+    }
 
     if (ticket.status !== "CONFIRMED") {
-      return { success: false, error: `Tickets with status "${ticket.status}" cannot be transferred` };
+      return { success: false, error: `Tickets with status "${ticket.status}" cannot be transferred.` };
     }
 
     const newQrToken = generateSecureTicketToken(ticket.id, ticket.event_id || "event");
@@ -80,9 +86,9 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
         ${escapeSql(ticket.id)},
         ${escapeSql(user.clerkId)},
         ${escapeSql(user.email)},
-        ${escapeSql(toName)},
-        ${escapeSql(toEmail)},
-        ${escapeSql(toPhone || null)},
+        ${escapeSql(toName.trim())},
+        ${escapeSql(toEmail.trim().toLowerCase())},
+        ${escapeSql(toPhone?.trim() || null)},
         ${escapeSql(ticket.qr_token)},
         ${escapeSql(newQrToken)}
       );
@@ -92,9 +98,9 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
     await executeSql(`
       UPDATE saas_tickets
       SET
-        attendee_name = ${escapeSql(toName)},
-        attendee_email = ${escapeSql(toEmail)},
-        attendee_phone = ${escapeSql(toPhone || null)},
+        attendee_name = ${escapeSql(toName.trim())},
+        attendee_email = ${escapeSql(toEmail.trim().toLowerCase())},
+        attendee_phone = ${escapeSql(toPhone?.trim() || null)},
         qr_token = ${escapeSql(newQrToken)},
         updated_at = NOW()
       WHERE id = ${escapeSql(ticket.id)};
@@ -103,7 +109,7 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
     // 5. Log audit trail
     await logAuditAction({
       actorId: user.clerkId,
-      actorRole: "customer",
+      actorRole: user.profile.role,
       actorEmail: user.email,
       action: "TICKET_TRANSFERRED",
       entityType: "TICKET",
@@ -138,7 +144,7 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
       );
     `);
 
-    // 2. Fetch ticket details
+    // 2. Fetch ticket details and verify ownership
     const { data: ticketRows, error: fetchErr } = await executeSql(`
       SELECT t.*, tt.price
       FROM saas_tickets t
@@ -148,10 +154,19 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
     `);
 
     if (fetchErr || !ticketRows || ticketRows.length === 0) {
-      return { success: false, error: "Ticket not found or access denied" };
+      return { success: false, error: "Ticket not found." };
     }
 
     const ticket = ticketRows[0];
+    const isOwner =
+      ticket.owner_user_id === user.clerkId ||
+      (ticket.attendee_email && ticket.attendee_email.toLowerCase() === user.email.toLowerCase());
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Unauthorized: You do not have permission to request a refund for this ticket." };
+    }
+
     const refundAmount = Number(ticket.price || 0);
 
     // 3. Insert refund request
@@ -172,7 +187,7 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
         ${eventIdVal},
         ${escapeSql(ticket.id)},
         ${refundAmount},
-        ${escapeSql(reason)},
+        ${escapeSql(reason?.trim() || "User requested refund")},
         'PENDING_REVIEW',
         ${escapeSql(user.clerkId)}
       );
@@ -188,7 +203,7 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
     // 5. Log audit action
     await logAuditAction({
       actorId: user.clerkId,
-      actorRole: "customer",
+      actorRole: user.profile.role,
       actorEmail: user.email,
       action: "TICKET_REFUND_REQUESTED",
       entityType: "TICKET",
@@ -208,22 +223,30 @@ export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumbe
     const user = await requireAuth();
 
     const cleanUtr = newUtrNumber.trim();
-    if (!cleanUtr) {
+    if (!cleanUtr || cleanUtr.length < 6) {
       return { success: false, error: "Please enter a valid 12-digit UTR reference ID" };
     }
 
     const { data: ticketRows } = await executeSql(`
-      SELECT t.id, t.order_id, t.status
+      SELECT t.id, t.order_id, t.status, t.owner_user_id, t.attendee_email
       FROM saas_tickets t
       WHERE t.id = ${escapeSql(ticketId)}
       LIMIT 1;
     `);
 
     if (!ticketRows || ticketRows.length === 0) {
-      return { success: false, error: "Ticket not found" };
+      return { success: false, error: "Ticket not found." };
     }
 
     const ticket = ticketRows[0];
+    const isOwner =
+      ticket.owner_user_id === user.clerkId ||
+      (ticket.attendee_email && ticket.attendee_email.toLowerCase() === user.email.toLowerCase());
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Unauthorized: You do not own this ticket." };
+    }
 
     // Check for duplicate UTR across other active/pending orders
     const { data: existingUtr } = await executeSql(`
@@ -267,7 +290,7 @@ export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumbe
 
     await logAuditAction({
       actorId: user.clerkId,
-      actorRole: "customer",
+      actorRole: user.profile.role,
       actorEmail: user.email,
       action: "UPI_TRANSACTION_RESUBMITTED",
       entityType: "TICKET",

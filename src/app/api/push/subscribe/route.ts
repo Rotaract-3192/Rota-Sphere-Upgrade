@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { executeSql } from "@/lib/db/directDb";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { getCurrentUser } from "@/lib/auth/getUser";
 
 export async function POST(req: NextRequest) {
@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
   try {
     await executeSql(`
       INSERT INTO push_subscriptions (user_id, user_email, endpoint, p256dh, auth)
-      VALUES ('${user.clerkId}', '${user.email?.replace(/'/g, "''")}', '${endpoint.replace(/'/g, "''")}', '${keys.p256dh.replace(/'/g, "''")}', '${keys.auth.replace(/'/g, "''")}')
+      VALUES (
+        ${escapeSql(user.clerkId)},
+        ${escapeSql(user.email?.toLowerCase().trim())},
+        ${escapeSql(endpoint)},
+        ${escapeSql(keys.p256dh)},
+        ${escapeSql(keys.auth)}
+      )
       ON CONFLICT (endpoint) DO UPDATE
         SET user_id = EXCLUDED.user_id,
             user_email = EXCLUDED.user_email,
@@ -41,6 +47,10 @@ export async function DELETE(req: NextRequest) {
   const { endpoint } = await req.json();
   if (!endpoint) return NextResponse.json({ error: "Missing endpoint" }, { status: 400 });
 
-  await executeSql(`DELETE FROM push_subscriptions WHERE endpoint = '${endpoint.replace(/'/g, "''")}'`);
+  // Enforce IDOR protection: only delete if subscription belongs to caller
+  await executeSql(`
+    DELETE FROM push_subscriptions 
+    WHERE endpoint = ${escapeSql(endpoint)} AND user_id = ${escapeSql(user.clerkId)};
+  `);
   return NextResponse.json({ success: true });
 }

@@ -368,7 +368,7 @@ export default function PrivacyPolicyPage() {
             
             <div className="bg-gray-50 dark:bg-gray-800/80 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 space-y-2 text-xs">
               <p className="font-bold text-gray-900 dark:text-white">
-                Grievance Officer: <span className="font-normal text-gray-700 dark:text-gray-300">Thejaswin P. S.</span>
+                Grievance Officer: <span className="font-normal text-gray-700 dark:text-gray-300">Rotaract District 3192 Tech Team</span>
               </p>
               <p className="font-bold text-gray-900 dark:text-white">
                 Official Email: <a href="mailto:tech.rotaract3192@gmail.com" className="text-[#0758fc] hover:underline font-normal">tech.rotaract3192@gmail.com</a>
