@@ -122,6 +122,8 @@ export async function ServerEventGrid(props: EventGridProps) {
   }
 }
 
+import { EventCardSkeleton } from "@/components/ui/LoadingSkeleton";
+
 export function EventGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div
@@ -130,12 +132,7 @@ export function EventGridSkeleton({ count = 8 }: { count?: number }) {
       aria-label="Loading events"
     >
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="animate-pulse flex flex-col gap-2">
-          <div className="w-full aspect-[4/3] bg-gray-800 rounded-2xl" />
-          <div className="h-4 bg-gray-800 rounded w-3/4 mt-1" />
-          <div className="h-3 bg-gray-800 rounded w-1/2" />
-          <div className="h-3 bg-gray-800 rounded w-1/4" />
-        </div>
+        <EventCardSkeleton key={i} />
       ))}
     </div>
   );

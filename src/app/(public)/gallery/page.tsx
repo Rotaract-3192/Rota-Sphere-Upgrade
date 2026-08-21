@@ -21,6 +21,7 @@ import {
   GalleryPhotoRecord 
 } from "@/app/actions/galleryActions";
 import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
+import { GalleryGridSkeleton } from "@/components/ui/LoadingSkeleton";
 
 const CATEGORIES = [
   { id: "all", label: "All Photos" },
@@ -171,10 +172,7 @@ export default function GalleryPage() {
       {/* ── 2. RESPONSIVE MULTI-PHOTO GALLERY GRID ─────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {loading ? (
-          <div className="py-20 text-center space-y-3">
-            <Loader2 size={32} className="animate-spin text-[#0758fc] mx-auto" />
-            <p className="text-xs text-gray-400 font-bold">Loading District Moments...</p>
-          </div>
+          <GalleryGridSkeleton count={6} />
         ) : items.length === 0 ? (
           <div className="w-full max-w-xl mx-auto text-center py-16 sm:py-20 border border-gray-200 dark:border-gray-800 rounded-3xl bg-white dark:bg-gray-900 p-6 sm:p-8 shadow-xs animate-fade-in-up space-y-4">
             <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] flex items-center justify-center mx-auto">

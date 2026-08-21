@@ -11,6 +11,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { createOrderAction, SelectedTierInput } from "@/app/actions/orderActions";
 import { ShieldCheck, Lock, AlertCircle, QrCode } from "lucide-react";
 import { PaymentConfirmationAnimation } from "@/components/checkout/PaymentConfirmationAnimation";
+import { CheckoutSkeleton } from "@/components/ui/LoadingSkeleton";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -133,7 +134,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-400">Loading checkout...</div>}>
+    <Suspense fallback={<CheckoutSkeleton />}>
       <CheckoutContent />
     </Suspense>
   );

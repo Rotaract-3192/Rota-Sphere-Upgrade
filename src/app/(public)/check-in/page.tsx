@@ -37,6 +37,7 @@ import Link from "next/link";
 import Image from "next/image";
 import jsQR from "jsqr";
 import { checkInTicketAction, getScannerEventsAction, CheckInResponse } from "@/app/actions/checkInActions";
+import { GateScannerSkeleton } from "@/components/ui/LoadingSkeleton";
 
 function playSound(type: "SUCCESS" | "DUPLICATE" | "INVALID") {
   try {
@@ -740,13 +741,7 @@ function CheckInScannerContent() {
 
 export default function CheckInScannerPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center text-white text-xs font-mono">
-          Loading Gate Scanner Terminal...
-        </div>
-      }
-    >
+    <Suspense fallback={<GateScannerSkeleton />}>
       <CheckInScannerContent />
     </Suspense>
   );
