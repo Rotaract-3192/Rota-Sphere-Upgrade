@@ -128,6 +128,20 @@ export async function getEventCustomQuestionsAction(eventId: string) {
   }
 }
 
+export async function getEventTiersAction(eventId: string) {
+  try {
+    const { data: tiers } = await executeSql(`
+      SELECT id, name, price, total_capacity, sold_count, tier_type, description
+      FROM saas_ticket_tiers
+      WHERE event_id = ${escapeSql(eventId)}
+      ORDER BY price ASC, name ASC;
+    `);
+    return { success: true, tiers: tiers || [] };
+  } catch (err: any) {
+    return { success: false, tiers: [], error: err?.message || String(err) };
+  }
+}
+
 export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
   try {
     await ensureUpiColumns();
@@ -686,6 +700,7 @@ export interface ManualAttendeeInput {
   phone?: string;
   clubName?: string;
   zone?: string;
+  customAnswers?: Record<string, any>;
   paymentMethod?: "OFFLINE_CASH" | "DIRECT_BANK_TRANSFER" | "VIP_COMPLIMENTARY" | "MANUAL_UPI" | string;
   amountPaid?: number;
   referenceNote?: string;
@@ -827,9 +842,10 @@ export async function createManualAttendeeAction(
         ${escapeSql(qrToken)},
         'CONFIRMED',
         ${escapeSql(JSON.stringify({
-          club_name: clubName,
-          zone,
-          food_preference: input.foodPreference,
+          ...(input.customAnswers || {}),
+          club_name: clubName || input.customAnswers?.club_name,
+          zone: zone || input.customAnswers?.zone,
+          food_preference: input.foodPreference || input.customAnswers?.food_preference,
           payment_mode: paymentMode,
           reference_note: input.referenceNote || "Manual Spot Entry",
           manual_entry_by: user.email,

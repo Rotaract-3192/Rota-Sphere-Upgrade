@@ -14,11 +14,15 @@ import {
   Phone,
   User,
   ShieldCheck,
-  CreditCard,
   Layers,
   Sparkles,
 } from "lucide-react";
-import { createManualAttendeeAction, ManualAttendeeInput } from "@/app/actions/orderActions";
+import {
+  createManualAttendeeAction,
+  ManualAttendeeInput,
+  getEventCustomQuestionsAction,
+  getEventTiersAction,
+} from "@/app/actions/orderActions";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
 
 interface ManualAttendeeModalProps {
@@ -30,23 +34,6 @@ interface ManualAttendeeModalProps {
 }
 
 const DISTRICT_CLUBS = getDistrictClubsWithZones();
-const KNOWN_ZONES = [
-  "Taranga",
-  "Pravaha",
-  "Varuna",
-  "Arnava",
-  "Zone 1",
-  "Zone 2",
-  "Zone 3",
-  "Zone 4",
-  "Zone 5",
-  "Zone 6",
-  "Zone 7",
-  "Zone 8",
-  "Zone 9",
-  "Zone 10",
-  "Other / External Zone",
-];
 
 export function ManualAttendeeModal({
   isOpen,
@@ -61,7 +48,10 @@ export function ManualAttendeeModal({
 
   const selectedEvent = events.find((e) => String(e.id) === String(selectedEventId)) || events[0];
 
-  const tiers: any[] = selectedEvent?.saas_ticket_tiers || selectedEvent?.ticket_tiers || [];
+  // Dynamic Tiers and Dynamic Questions
+  const [tiers, setTiers] = useState<any[]>(selectedEvent?.saas_ticket_tiers || []);
+  const [customQuestions, setCustomQuestions] = useState<any[]>([]);
+  const [loadingTiers, setLoadingTiers] = useState(false);
 
   const [selectedTierId, setSelectedTierId] = useState<string>("");
   const [name, setName] = useState("");
@@ -70,10 +60,10 @@ export function ManualAttendeeModal({
   const [selectedClub, setSelectedClub] = useState("");
   const [customClubName, setCustomClubName] = useState("");
   const [zone, setZone] = useState("");
+  const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
   const [paymentMethod, setPaymentMethod] = useState<string>("OFFLINE_CASH");
   const [amountPaid, setAmountPaid] = useState<string>("0");
   const [referenceNote, setReferenceNote] = useState("");
-  const [foodPreference, setFoodPreference] = useState<string>("Veg");
   const [sendEmail, setSendEmail] = useState<boolean>(true);
 
   const [loading, setLoading] = useState(false);
@@ -84,23 +74,48 @@ export function ManualAttendeeModal({
     attendeeName: string;
   } | null>(null);
 
-  // Sync tier selection when event or tiers change
-  useEffect(() => {
-    if (tiers.length > 0) {
-      setSelectedTierId(String(tiers[0].id));
-      setAmountPaid(String(tiers[0].price || 0));
-    } else {
-      setSelectedTierId("");
-      setAmountPaid("0");
-    }
-  }, [selectedEventId, tiers.length]);
-
-  // When initialEventId changes
+  // Sync initialEventId prop
   useEffect(() => {
     if (initialEventId) {
       setSelectedEventId(String(initialEventId));
     }
   }, [initialEventId]);
+
+  // Load tiers and custom questions whenever selectedEventId changes
+  useEffect(() => {
+    if (!selectedEventId || !isOpen) return;
+
+    // 1. Fetch Tiers if not in memory or to ensure freshness
+    const inMemoryTiers = selectedEvent?.saas_ticket_tiers || [];
+    if (inMemoryTiers.length > 0) {
+      setTiers(inMemoryTiers);
+      setSelectedTierId(String(inMemoryTiers[0].id));
+      setAmountPaid(String(inMemoryTiers[0].price || 0));
+    } else {
+      setLoadingTiers(true);
+      getEventTiersAction(selectedEventId).then((res) => {
+        setLoadingTiers(false);
+        if (res.success && res.tiers && res.tiers.length > 0) {
+          setTiers(res.tiers);
+          setSelectedTierId(String(res.tiers[0].id));
+          setAmountPaid(String(res.tiers[0].price || 0));
+        } else {
+          setTiers([]);
+          setSelectedTierId("");
+          setAmountPaid("0");
+        }
+      });
+    }
+
+    // 2. Fetch Event Custom Registration Questions
+    getEventCustomQuestionsAction(selectedEventId).then((res) => {
+      if (res.success && res.questions) {
+        setCustomQuestions(res.questions);
+      } else {
+        setCustomQuestions([]);
+      }
+    });
+  }, [selectedEventId, isOpen, selectedEvent]);
 
   // Auto-populate Zone when Club is selected
   function handleClubChange(clubVal: string) {
@@ -142,6 +157,14 @@ export function ManualAttendeeModal({
       return;
     }
 
+    // Validate required custom questions
+    for (const q of customQuestions) {
+      if (q.is_required && !customAnswers[q.id]?.toString().trim()) {
+        setErrorMessage(`Please answer "${q.question_text}"`);
+        return;
+      }
+    }
+
     setLoading(true);
     setErrorMessage(null);
 
@@ -153,12 +176,12 @@ export function ManualAttendeeModal({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
-      clubName: finalClub || "Individual Delegate",
-      zone: zone.trim() || "General / Unassigned",
+      clubName: finalClub || undefined,
+      zone: zone.trim() || undefined,
       paymentMethod,
       amountPaid: Number(amountPaid) || 0,
-      referenceNote: referenceNote.trim() || "Manual Spot Entry",
-      foodPreference,
+      referenceNote: referenceNote.trim() || undefined,
+      foodPreference: customAnswers["food_preference"] || customAnswers["food"] || undefined,
       sendConfirmationEmail: sendEmail,
     };
 
@@ -184,9 +207,9 @@ export function ManualAttendeeModal({
           status: "CONFIRMED",
           created_at: new Date().toISOString(),
           custom_answers: {
+            ...customAnswers,
             club_name: finalClub,
             zone: zone.trim(),
-            food_preference: foodPreference,
             payment_mode: paymentMethod,
           },
         });
@@ -203,6 +226,7 @@ export function ManualAttendeeModal({
     setSelectedClub("");
     setCustomClubName("");
     setZone("");
+    setCustomAnswers({});
     setReferenceNote("");
     setSuccessResult(null);
     setErrorMessage(null);
@@ -313,7 +337,7 @@ export function ManualAttendeeModal({
                   >
                     {events.map((ev) => (
                       <option key={ev.id} value={ev.id}>
-                        {ev.title} ({ev.city || "Bangalore"})
+                        {ev.title} {ev.city ? `(${ev.city})` : ""}
                       </option>
                     ))}
                   </select>
@@ -329,19 +353,22 @@ export function ManualAttendeeModal({
                     required
                     value={selectedTierId}
                     onChange={(e) => handleTierChange(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                    disabled={loadingTiers}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer disabled:opacity-50"
                   >
-                    {tiers.length === 0 && <option value="">No tiers configured</option>}
-                    {tiers.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} — ₹{Number(t.price).toFixed(2)}
-                      </option>
-                    ))}
+                    {loadingTiers && <option value="">Loading ticket tiers...</option>}
+                    {!loadingTiers && tiers.length === 0 && <option value="">No tiers configured</option>}
+                    {!loadingTiers &&
+                      tiers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} — {Number(t.price) === 0 ? "Free Pass" : `₹${Number(t.price).toFixed(2)}`}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
 
-              {/* 2. Delegate Details */}
+              {/* 2. Delegate Details (Identical to Normal Registration) */}
               <div className="space-y-3 pt-1">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
                   Delegate Details
@@ -355,7 +382,7 @@ export function ManualAttendeeModal({
                       <input
                         type="text"
                         required
-                        placeholder="Rtr. John Doe"
+                        placeholder="Full Name *"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
@@ -370,7 +397,7 @@ export function ManualAttendeeModal({
                       <input
                         type="email"
                         required
-                        placeholder="delegate@rotaract3192.org"
+                        placeholder="Email Address *"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
@@ -379,32 +406,17 @@ export function ManualAttendeeModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-gray-700">Phone Number</label>
-                    <div className="relative">
-                      <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="tel"
-                        placeholder="+91 9876543210"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-gray-700">Food Preference</label>
-                    <select
-                      value={foodPreference}
-                      onChange={(e) => setFoodPreference(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
-                    >
-                      <option value="Veg">Vegetarian (Veg)</option>
-                      <option value="Non-Veg">Non-Vegetarian (Non-Veg)</option>
-                      <option value="Jain">Jain Food</option>
-                    </select>
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[11px] font-bold text-gray-700">Phone Number</label>
+                  <div className="relative">
+                    <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -413,11 +425,11 @@ export function ManualAttendeeModal({
               <div className="p-4 bg-blue-50/40 border border-blue-200/60 rounded-3xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold uppercase tracking-wider text-[#0758fc] flex items-center gap-1.5">
-                    <Building size={14} /> District 3192 Club &amp; Zone
+                    <Building size={14} /> Rotaract / Rotary Club &amp; District Zone
                   </span>
                   {zone && (
                     <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-[#0758fc] border border-blue-200">
-                      Auto Zone: {zone}
+                      Zone: {zone}
                     </span>
                   )}
                 </div>
@@ -430,30 +442,25 @@ export function ManualAttendeeModal({
                       onChange={(e) => handleClubChange(e.target.value)}
                       className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] cursor-pointer"
                     >
-                      <option value="">-- Choose Club ({DISTRICT_CLUBS.length} Clubs) --</option>
+                      <option value="">Select Club...</option>
                       {DISTRICT_CLUBS.map((c, idx) => (
                         <option key={idx} value={c.name}>
                           {c.name} ({c.zone})
                         </option>
                       ))}
-                      <option value="custom">-- Other / Non-3192 Club --</option>
+                      <option value="custom">Other / External Club</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-gray-700">District Zone</label>
-                    <select
+                    <input
+                      type="text"
+                      placeholder="District Zone"
                       value={zone}
                       onChange={(e) => setZone(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] cursor-pointer"
-                    >
-                      <option value="">-- Select or Auto-Filled Zone --</option>
-                      {KNOWN_ZONES.map((z) => (
-                        <option key={z} value={z}>
-                          {z}
-                        </option>
-                      ))}
-                    </select>
+                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                    />
                   </div>
                 </div>
 
@@ -462,7 +469,7 @@ export function ManualAttendeeModal({
                     <input
                       type="text"
                       required
-                      placeholder="Enter custom Club name..."
+                      placeholder="Club Name"
                       value={customClubName}
                       onChange={(e) => setCustomClubName(e.target.value)}
                       className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
@@ -471,7 +478,52 @@ export function ManualAttendeeModal({
                 )}
               </div>
 
-              {/* 4. Payment & Billing Details */}
+              {/* 4. Event Custom Registration Questions (Matches Normal Ticket Entry 1:1) */}
+              {customQuestions.length > 0 && (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-3xl space-y-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-700 block">
+                    Event Registration Questions
+                  </span>
+
+                  <div className="space-y-3">
+                    {customQuestions.map((q) => (
+                      <div key={q.id} className="space-y-1 text-left">
+                        <label className="block text-[11px] font-bold text-gray-700">
+                          {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
+                        </label>
+                        {q.question_type === "dropdown" ? (
+                          <select
+                            value={customAnswers[q.id] || ""}
+                            onChange={(e) =>
+                              setCustomAnswers({ ...customAnswers, [q.id]: e.target.value })
+                            }
+                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] cursor-pointer"
+                          >
+                            <option value="">Select an option...</option>
+                            {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
+                              <option key={optIdx} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder={q.question_text}
+                            value={customAnswers[q.id] || ""}
+                            onChange={(e) =>
+                              setCustomAnswers({ ...customAnswers, [q.id]: e.target.value })
+                            }
+                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Payment & Billing Details */}
               <div className="space-y-3 pt-1">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
                   Payment Collection &amp; Receipt Note
@@ -508,10 +560,10 @@ export function ManualAttendeeModal({
                   </div>
 
                   <div className="space-y-1.5 sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Receipt / Desk Note</label>
+                    <label className="block text-[11px] font-bold text-gray-700">Receipt / Reference Note</label>
                     <input
                       type="text"
-                      placeholder="e.g. Receipt #104"
+                      placeholder="Receipt / UTR / Note"
                       value={referenceNote}
                       onChange={(e) => setReferenceNote(e.target.value)}
                       className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
@@ -520,7 +572,7 @@ export function ManualAttendeeModal({
                 </div>
               </div>
 
-              {/* 5. Dispatch Email Checkbox */}
+              {/* 6. Dispatch Email Checkbox */}
               <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">

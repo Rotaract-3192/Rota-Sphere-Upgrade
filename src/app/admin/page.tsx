@@ -29,7 +29,12 @@ export default async function AdminPage() {
   const organizations = clubsRes.data || [];
 
   const { data: eventsData } = await executeSql(`
-    SELECT e.*, json_build_object('name', o.name) as organizations
+    SELECT e.*, 
+      json_build_object('name', o.name) as organizations,
+      COALESCE(
+        (SELECT json_agg(tt.*) FROM saas_ticket_tiers tt WHERE tt.event_id = e.id),
+        '[]'::json
+      ) as saas_ticket_tiers
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
     ORDER BY e.created_at DESC;
