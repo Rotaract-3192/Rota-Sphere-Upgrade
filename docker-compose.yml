@@ -1,0 +1,27 @@
+services:
+  rotasphere:
+    image: rotaract/rotasphere:latest
+    container_name: rotasphere
+
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_OLA_MAPS_API_KEY: ${NEXT_PUBLIC_OLA_MAPS_API_KEY}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    restart: unless-stopped
+
+    expose:
+      - "3000"
+
+    env_file:
+      - .env
+
+    networks:
+      - default
+      - rotaract
+
+networks:
+  default:
+
+  rotaract:
+    external: true
