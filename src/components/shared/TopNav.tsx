@@ -16,10 +16,10 @@ import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const NAV_TABS = [
   { label: "Home", href: "/", icon: Home, isNew: false },
-  { label: "Explore Events", href: "/events", icon: Calendar, isNew: false },
+  { label: "Events", href: "/events", icon: Calendar, isNew: false },
   { label: "Clubs", href: "/clubs", icon: Users, isNew: false },
-  { label: "My Tickets", href: "/tickets", icon: Ticket, isNew: false },
-  { label: "Photo Gallery", href: "/gallery", icon: ImageIcon, isNew: true },
+  { label: "Tickets", href: "/tickets", icon: Ticket, isNew: false },
+  { label: "Gallery", href: "/gallery", icon: ImageIcon, isNew: true },
 ] as const;
 
 function useSafeUser() {
@@ -48,15 +48,15 @@ export function TopNav() {
       role="banner"
       className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 h-16 sm:h-20 shadow-xs transition-colors"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3 lg:gap-6">
 
         {/* ── LEFT: Wordmark Logo ──────────────────────────────────────── */}
         <Link
           href="/"
-          className="flex items-center gap-3 group focus:outline-hidden"
+          className="flex items-center gap-2.5 sm:gap-3 group focus:outline-hidden shrink-0"
           aria-label="RotaSphere home"
         >
-          <div className="relative w-11 h-11 sm:w-13 sm:h-13 shrink-0 group-hover:scale-105 transition-transform">
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12 shrink-0 group-hover:scale-105 transition-transform">
             <Image
               src="/brand/logo.png"
               alt="Rotaract District 3192 Ticketing Logo"
@@ -81,7 +81,7 @@ export function TopNav() {
         </Link>
 
         {/* ── CENTER: Desktop Navigation Tabs ─────────────────────────── */}
-        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 lg:gap-2">
+        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 lg:gap-1.5 shrink-0">
           {NAV_TABS.map(({ label, href, icon: Icon, isNew }) => {
             const active = isActive(href);
             return (
@@ -89,23 +89,23 @@ export function TopNav() {
                 key={href}
                 href={href}
                 className={[
-                  "relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all",
+                  "relative flex items-center gap-2 px-3 lg:px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold whitespace-nowrap shrink-0 transition-all",
                   active
-                    ? "text-[#0758fc] bg-blue-50/80 dark:bg-blue-950/40"
+                    ? "text-[#0758fc] bg-blue-50/80 dark:bg-blue-950/40 font-black"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800",
                 ].join(" ")}
               >
                 <Icon size={16} className={active ? "text-[#0758fc]" : "text-gray-400"} />
-                <span>{label}</span>
+                <span className="whitespace-nowrap">{label}</span>
                 {isNew && (
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 rounded-full px-1.5 py-0.2">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 rounded-full px-1.5 py-0.2">
                     NEW
                   </span>
                 )}
                 {active && (
                   <motion.div
                     layoutId="activeNavIndicator"
-                    className="absolute bottom-0 inset-x-3.5 h-0.5 bg-[#0758fc] rounded-full"
+                    className="absolute bottom-0 inset-x-3 h-0.5 bg-[#0758fc] rounded-full"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -115,7 +115,7 @@ export function TopNav() {
         </nav>
 
         {/* ── RIGHT: Actions & User Button ─────────────────────────────── */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Dark Mode Toggle */}
           <ThemeToggle />
 
@@ -123,7 +123,7 @@ export function TopNav() {
           {isAdminUser && (
             <Link
               href="/admin"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <Shield size={14} className="text-amber-700" />
               <span>Admin</span>
@@ -134,7 +134,7 @@ export function TopNav() {
           {isLoaded && isSignedIn && (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white bg-[#0758fc] hover:bg-[#054fe0] px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-xs transition-all active:scale-95 shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white bg-[#0758fc] hover:bg-[#054fe0] px-3 sm:px-4 py-2 rounded-xl shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0"
               aria-label="Host an Event"
             >
               <PlusCircle size={15} />
@@ -146,7 +146,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/dashboard"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <PlusCircle size={16} className="text-gray-600 dark:text-gray-300" />
               Host Event
@@ -157,7 +157,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
-              className="text-xs sm:text-sm font-bold text-white bg-[#0758fc] hover:bg-[#054fe0] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95"
+              className="text-xs sm:text-sm font-bold text-white bg-[#0758fc] hover:bg-[#054fe0] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0"
             >
               Sign In
             </Link>

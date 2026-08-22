@@ -205,7 +205,7 @@ export function SuperAdminDashboardClient({
   const [upiSearch, setUpiSearch] = useState("");
   const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
   const [rejectModalOrder, setRejectModalOrder] = useState<any | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("UTR transaction reference not found in bank statement");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
 
   // Grievances & Privacy Reports State
@@ -297,9 +297,9 @@ export function SuperAdminDashboardClient({
 
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
-  const [newOrgDistrict, setNewOrgDistrict] = useState("District 3192");
+  const [newOrgDistrict, setNewOrgDistrict] = useState("");
   const [newOrgEmail, setNewOrgEmail] = useState("");
-  const [newOrgFee, setNewOrgFee] = useState("0");
+  const [newOrgFee, setNewOrgFee] = useState("");
   const [orgCreating, setOrgCreating] = useState(false);
   const [orgError, setOrgError] = useState<string | null>(null);
 
@@ -2935,6 +2935,7 @@ export function SuperAdminDashboardClient({
                   </label>
                   <input
                     type="text"
+                    placeholder="e.g. District 3192"
                     value={newOrgDistrict}
                     onChange={(e) => setNewOrgDistrict(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
@@ -2947,6 +2948,7 @@ export function SuperAdminDashboardClient({
                   <input
                     type="number"
                     step="0.1"
+                    placeholder="0"
                     value={newOrgFee}
                     onChange={(e) => setNewOrgFee(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"

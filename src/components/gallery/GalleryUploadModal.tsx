@@ -27,8 +27,8 @@ const CATEGORIES = [
 export function GalleryUploadModal({ isOpen, onClose, onSuccess }: GalleryUploadModalProps) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("conference");
-  const [city, setCity] = useState("Bengaluru");
-  const [date, setDate] = useState(new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" }));
+  const [city, setCity] = useState("");
+  const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([""]);
   const [loading, setLoading] = useState(false);

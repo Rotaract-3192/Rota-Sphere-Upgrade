@@ -45,13 +45,11 @@ export function BulkEmailModal({
     "ALL_APPROVED"
   );
   const [customEmails, setCustomEmails] = useState("");
-  const [subject, setSubject] = useState("Important Announcement & Guidelines for RotaSphere Event");
-  const [bannerTitle, setBannerTitle] = useState("Official Event Update & Guidelines");
-  const [message, setMessage] = useState(
-    "Hello {{name}},\n\nThank you for registering for our event! Below are important venue entry guidelines, schedule updates, and details for your registration.\n\nWe look forward to hosting you!"
-  );
-  const [buttonText, setButtonText] = useState("View Event Schedule & Photos");
-  const [buttonUrl, setButtonUrl] = useState("https://rotasphere.in");
+  const [subject, setSubject] = useState("");
+  const [bannerTitle, setBannerTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
   const [includeQrCode, setIncludeQrCode] = useState(true);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [activeViewTab, setActiveViewTab] = useState<"COMPOSE" | "PREVIEW">("COMPOSE");
@@ -419,6 +417,7 @@ export function BulkEmailModal({
                   rows={6}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Type your message guidelines, update details, or instructions here... (Use tags above for personalization)"
                   className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-medium text-gray-900 outline-none focus:border-[#0758fc] leading-relaxed resize-none"
                 />
               </div>

@@ -115,7 +115,7 @@ function CheckInScannerContent() {
   const [selectedEventId, setSelectedEventId] = useState(initialEventId);
   const isEventLocked = selectedEventId !== "" && selectedEventId !== "all";
   const [eventsList, setEventsList] = useState<Array<{ id: string; title: string; city: string }>>([]);
-  const [gateName, setGateName] = useState("Main Entrance");
+  const [gateName, setGateName] = useState("");
   const [inputToken, setInputToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -395,9 +395,13 @@ function CheckInScannerContent() {
             <label className="text-[10px] font-extrabold text-[#0758fc] uppercase tracking-wider block">
               Gate Checkpoint
             </label>
-            <div className="w-full bg-[#1b2230] text-xs font-semibold text-white px-3.5 py-2.5 rounded-xl border border-gray-700/80">
-              Main Entrance
-            </div>
+            <input
+              type="text"
+              value={gateName}
+              onChange={(e) => setGateName(e.target.value)}
+              placeholder="e.g. Main Entrance"
+              className="w-full bg-[#1b2230] text-xs font-semibold text-white px-3.5 py-2.5 rounded-xl border border-gray-700/80 outline-none focus:border-[#0758fc]"
+            />
           </div>
 
           <div className="space-y-1">

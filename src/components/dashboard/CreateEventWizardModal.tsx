@@ -113,20 +113,20 @@ export function CreateEventWizardModal({
   // Step 3: Event Settings
   const [priceModel, setPriceModel] = useState<"FREE" | "PAID">("FREE");
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
-  const [hostingClub, setHostingClub] = useState(defaultClubName || "Rotaract District 3192 Council");
+  const [hostingClub, setHostingClub] = useState(defaultClubName || "");
   const [locationDeliveryType, setLocationDeliveryType] = useState<"IN_PERSON" | "ONLINE" | "HYBRID">("IN_PERSON");
-  const [upiId, setUpiId] = useState("rotaractdistrict3192@okaxis");
-  const [upiPayeeName, setUpiPayeeName] = useState("Rotaract District 3192");
+  const [upiId, setUpiId] = useState("");
+  const [upiPayeeName, setUpiPayeeName] = useState("");
 
   // Ticket Tiers
-  const [capacity, setCapacity] = useState(500);
+  const [capacity, setCapacity] = useState(100);
   const [allowWaitlist, setAllowWaitlist] = useState(true);
   const [allowTransfer, setAllowTransfer] = useState(true);
   const [allowRefunds, setAllowRefunds] = useState(true);
   const [ticketTiers, setTicketTiers] = useState<
     Array<{ name: string; tierType: TicketTierType; price: number; totalCapacity: number; description?: string }>
   >([
-    { name: "General Admission Pass", tierType: "REGULAR", price: 0, totalCapacity: 500, description: "Complimentary delegate pass" },
+    { name: "", tierType: "REGULAR", price: 0, totalCapacity: 100, description: "" },
   ]);
 
   // Step 4: Venue Details & Google Maps Auto-Fill
@@ -136,9 +136,9 @@ export function CreateEventWizardModal({
 
   const [venueName, setVenueName] = useState("");
   const [venueDirections, setVenueDirections] = useState("");
-  const [country, setCountry] = useState("India");
-  const [stateRegion, setStateRegion] = useState("Karnataka");
-  const [city, setCity] = useState("Bengaluru");
+  const [country, setCountry] = useState("");
+  const [stateRegion, setStateRegion] = useState("");
+  const [city, setCity] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [onlineMeetingUrl, setOnlineMeetingUrl] = useState("");
@@ -146,7 +146,7 @@ export function CreateEventWizardModal({
   // Step 5: Additional Details
   const [category, setCategory] = useState("Community Service");
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>(["rotaract"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
@@ -169,11 +169,11 @@ export function CreateEventWizardModal({
       setCapacity(eventToEdit.capacity || 500);
       setVenueName(eventToEdit.venue_name || "");
       setStreetAddress(eventToEdit.address || "");
-      setCity(eventToEdit.city || "Bengaluru");
-      setStateRegion(eventToEdit.state || "Karnataka");
-      setCountry(eventToEdit.country || "India");
+      setCity(eventToEdit.city || "");
+      setStateRegion(eventToEdit.state || "");
+      setCountry(eventToEdit.country || "");
       setOnlineMeetingUrl(eventToEdit.online_meeting_url || "");
-      setContactEmail(eventToEdit.contact_email || "support@rotasphere.com");
+      setContactEmail(eventToEdit.contact_email || "");
       setContactPhone(eventToEdit.contact_phone || "");
       setVisibility(eventToEdit.visibility || "PUBLIC");
       if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
@@ -277,10 +277,10 @@ export function CreateEventWizardModal({
   }
 
   function addNewTier() {
-    const defaultPrice = priceModel === "FREE" ? 0 : 499;
+    const defaultPrice = priceModel === "FREE" ? 0 : 0;
     setTicketTiers([
       ...ticketTiers,
-      { name: `Pass Tier #${ticketTiers.length + 1}`, tierType: "REGULAR", price: defaultPrice, totalCapacity: 100, description: "" },
+      { name: "", tierType: "REGULAR", price: defaultPrice, totalCapacity: 100, description: "" },
     ]);
   }
 
@@ -378,7 +378,7 @@ export function CreateEventWizardModal({
     setLoading(true);
     setErrorMessage(null);
 
-    const finalTags = tags.length > 0 ? tags : ["rotaract"];
+    const finalTags = tags;
 
     const eventFormat: EventFormat =
       locationDeliveryType === "ONLINE" ? "ONLINE" : locationDeliveryType === "HYBRID" ? "HYBRID" : "OFFLINE";
@@ -409,8 +409,8 @@ export function CreateEventWizardModal({
         allowRefunds,
         contactEmail,
         contactPhone,
-        upiId: upiId.trim() || "rotaractdistrict3192@okaxis",
-        upiPayeeName: upiPayeeName.trim() || "District 3192 Rotaract",
+        upiId: upiId.trim(),
+        upiPayeeName: upiPayeeName.trim(),
         category,
         tags: finalTags,
         ticketTiers,
@@ -1365,7 +1365,7 @@ export function CreateEventWizardModal({
                         required
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        placeholder="United States"
+                        placeholder="e.g. India"
                         className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
@@ -1378,7 +1378,7 @@ export function CreateEventWizardModal({
                         type="text"
                         value={stateRegion}
                         onChange={(e) => setStateRegion(e.target.value)}
-                        placeholder="California"
+                        placeholder="e.g. Karnataka"
                         className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
@@ -1392,7 +1392,7 @@ export function CreateEventWizardModal({
                         required
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="San Francisco"
+                        placeholder="e.g. Bengaluru"
                         className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
@@ -1408,7 +1408,7 @@ export function CreateEventWizardModal({
                         required
                         value={streetAddress}
                         onChange={(e) => setStreetAddress(e.target.value)}
-                        placeholder="747 Howard St"
+                        placeholder="e.g. 123 Main St, Indiranagar"
                         className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
                       />
                     </div>
@@ -1422,7 +1422,7 @@ export function CreateEventWizardModal({
                         required
                         value={pincode}
                         onChange={(e) => setPincode(e.target.value)}
-                        placeholder="94103"
+                        placeholder="e.g. 560038"
                         className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all font-mono shadow-sm"
                       />
                     </div>
