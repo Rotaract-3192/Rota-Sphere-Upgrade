@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { transferUserTicketAction, requestTicketRefundAction, resubmitUpiTransactionAction } from "@/app/actions/attendeeActions";
+import { compressImageFile } from "@/lib/utils/imageCompressor";
 
 interface UserTicketsClientProps {
   initialTickets: any[];
@@ -1097,16 +1098,21 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (typeof reader.result === "string") {
-                              setUtrProofUrl(reader.result);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressed = await compressImageFile(file);
+                            setUtrProofUrl(compressed);
+                          } catch {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === "string") {
+                                setUtrProofUrl(reader.result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
                         }
                       }}
                     />

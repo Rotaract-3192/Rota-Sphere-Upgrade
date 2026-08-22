@@ -36,6 +36,7 @@ import {
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
+import { compressImageFile } from "@/lib/utils/imageCompressor";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
@@ -543,16 +544,21 @@ export function CheckoutModal({
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (typeof reader.result === "string") {
-                              setPaymentProofUrl(reader.result);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressed = await compressImageFile(file);
+                            setPaymentProofUrl(compressed);
+                          } catch {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === "string") {
+                                setPaymentProofUrl(reader.result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
                         }
                       }}
                     />

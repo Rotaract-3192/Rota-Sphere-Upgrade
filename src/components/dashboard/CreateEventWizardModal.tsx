@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
+import { compressImageFile } from "@/lib/utils/imageCompressor";
 import type { EventFormat, TicketTierType } from "@/types/saas";
 
 interface CreateEventWizardModalProps {
@@ -225,40 +226,54 @@ export function CreateEventWizardModal({
     }
   }
 
-  function handleThumbnailFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleThumbnailFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setErrorMessage("Please select an image file (PNG, JPG, JPEG, WEBP)");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setThumbnailUrl(event.target.result as string);
-        setThumbnailFileName(file.name);
-        setErrorMessage(null);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 800, 0.8);
+      setThumbnailUrl(compressed);
+      setThumbnailFileName(file.name);
+      setErrorMessage(null);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setThumbnailUrl(event.target.result as string);
+          setThumbnailFileName(file.name);
+          setErrorMessage(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
-  function handleBannerFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleBannerFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setErrorMessage("Please select an image file (PNG, JPG, JPEG, WEBP)");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setBannerUrl(event.target.result as string);
-        setBannerFileName(file.name);
-        setErrorMessage(null);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 1600, 0.8);
+      setBannerUrl(compressed);
+      setBannerFileName(file.name);
+      setErrorMessage(null);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setBannerUrl(event.target.result as string);
+          setBannerFileName(file.name);
+          setErrorMessage(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   function handlePriceModelChange(model: "FREE" | "PAID") {
