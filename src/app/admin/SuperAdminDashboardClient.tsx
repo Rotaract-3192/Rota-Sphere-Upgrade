@@ -89,6 +89,9 @@ import {
   getDistrictClubsAction,
 } from "@/app/actions/clubActions";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
+import { ManualAttendeeModal } from "@/components/dashboard/ManualAttendeeModal";
+import { exportEventAttendeesToExcel, exportTableToExcel } from "@/lib/utils/excelExporter";
+import { resolveClubAndZone } from "@/lib/utils/zoneResolver";
 
 interface SuperAdminProps {
   user: any;
@@ -107,30 +110,8 @@ interface SuperAdminProps {
 
 function downloadCsv(filename: string, rows: Record<string, any>[]) {
   if (!rows || rows.length === 0) return;
-  const headers = Object.keys(rows[0]);
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) =>
-      headers
-        .map((h) => {
-          const val = row[h];
-          if (val === null || val === undefined) return '""';
-          const str = typeof val === "object" ? JSON.stringify(val) : String(val);
-          return `"${str.replace(/"/g, '""')}"`;
-        })
-        .join(",")
-    ),
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const targetName = filename.replace(/\.csv$/i, ".xlsx");
+  exportTableToExcel(targetName, "Report", rows);
 }
 
 function downloadJson(filename: string, data: any) {
@@ -207,6 +188,10 @@ export function SuperAdminDashboardClient({
   const [auditLogs] = useState(initialAuditLogs);
   const [organizerRequests, setOrganizerRequests] = useState(initialOrganizerRequests);
   const [reqProcessingId, setReqProcessingId] = useState<string | null>(null);
+
+  // Manual Attendee Entry State
+  const [manualAttendeeModalOpen, setManualAttendeeModalOpen] = useState(false);
+  const [manualAttendeeEventId, setManualAttendeeEventId] = useState<string | undefined>(undefined);
 
   async function handleApproveRequest(requestId: string) {
     setReqProcessingId(requestId);
@@ -1632,10 +1617,10 @@ export function SuperAdminDashboardClient({
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadCsv("RotaSphere_UPI_Payments.csv", filteredUpiOrders)}
+                  onClick={() => downloadCsv("RotaSphere_UPI_Payments.xlsx", filteredUpiOrders)}
                   className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export CSV
+                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
                 </button>
               </div>
             </div>
@@ -2391,10 +2376,37 @@ export function SuperAdminDashboardClient({
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "events" && (
           <div className="space-y-6 animate-in fade-in-50">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black text-gray-900">Event Catalog &amp; Moderation Hub</h2>
                 <p className="text-xs text-gray-500">Live events across District 3192 discovery channels</p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualAttendeeEventId(undefined);
+                    setManualAttendeeModalOpen(true);
+                  }}
+                  className="bg-[#0758fc] hover:bg-blue-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                >
+                  <UserPlus size={15} /> + Manual Attendee Entry
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tickets.length === 0) {
+                      alert("No delegate tickets recorded yet.");
+                      return;
+                    }
+                    exportEventAttendeesToExcel("District_3192_All_Events_Delegates", tickets);
+                  }}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                >
+                  <FileSpreadsheet size={15} /> Export All Attendees (.xlsx)
+                </button>
               </div>
             </div>
 
@@ -2419,14 +2431,28 @@ export function SuperAdminDashboardClient({
                     <p className="text-xs text-gray-500 line-clamp-2">{evt.description || "District 3192 Official Event."}</p>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                    <Link
-                      href={`/events/${evt.slug || evt.id}`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-gray-900"
-                    >
-                      <ExternalLink size={13} /> View Live
-                    </Link>
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/events/${evt.slug || evt.id}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-gray-900"
+                      >
+                        <ExternalLink size={13} /> View Live
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const eventTickets = tickets.filter((t) => t.event_id === evt.id || t.saas_events?.title === evt.title);
+                          exportEventAttendeesToExcel(evt.title, eventTickets);
+                        }}
+                        title="Download formatted Excel delegate roster with Zonal Breakdown"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                      >
+                        <FileSpreadsheet size={12} /> Excel
+                      </button>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       {evt.status === "PUBLISHED" ? (
@@ -2465,10 +2491,10 @@ export function SuperAdminDashboardClient({
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadCsv("RotaSphere_Finance_Ledger.csv", orders)}
+                  onClick={() => downloadCsv("RotaSphere_Finance_Ledger.xlsx", orders)}
                   className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export CSV
+                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
                 </button>
               </div>
             </div>
@@ -2542,10 +2568,10 @@ export function SuperAdminDashboardClient({
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadCsv("RotaSphere_Gate_Scans.csv", checkIns)}
+                  onClick={() => downloadCsv("RotaSphere_Gate_Scans.xlsx", checkIns)}
                   className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Scan Logs (CSV)
+                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
                 </button>
               </div>
             </div>
@@ -2616,10 +2642,10 @@ export function SuperAdminDashboardClient({
               {/* Download & Export Action Bar */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => downloadCsv("RotaSphere_Audit_Logs.csv", filteredAuditLogs)}
+                  onClick={() => downloadCsv("RotaSphere_Audit_Logs.xlsx", filteredAuditLogs)}
                   className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export CSV
+                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
                 </button>
 
                 <button
@@ -3801,6 +3827,20 @@ export function SuperAdminDashboardClient({
       <GalleryUploadModal
         isOpen={isGalleryModalOpen}
         onClose={() => setIsGalleryModalOpen(false)}
+      />
+
+      {/* Manual Attendee Entry & Spot Registration Modal */}
+      <ManualAttendeeModal
+        isOpen={manualAttendeeModalOpen}
+        onClose={() => {
+          setManualAttendeeModalOpen(false);
+          setManualAttendeeEventId(undefined);
+        }}
+        events={events}
+        initialEventId={manualAttendeeEventId}
+        onAttendeeAdded={(newTicket) => {
+          setTickets((prev) => [newTicket, ...prev]);
+        }}
       />
     </div>
   </div>

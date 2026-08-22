@@ -15,6 +15,7 @@ import { logAuditAction } from "@/lib/services/auditService";
 import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
 import { sendTicketEmailWithQR, sendBookingReceivedEmail } from "@/lib/notifications/notificationService";
+import { resolveClubAndZone } from "@/lib/utils/zoneResolver";
 
 export interface CheckoutAttendeeItem {
   ticketTierId: string;
@@ -675,4 +676,241 @@ export async function confirmOrderPaymentAction(params: {
     orderId: params.orderId,
     action: "APPROVE",
   });
+}
+
+export interface ManualAttendeeInput {
+  eventId: string;
+  ticketTierId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  clubName?: string;
+  zone?: string;
+  paymentMethod?: "OFFLINE_CASH" | "DIRECT_BANK_TRANSFER" | "VIP_COMPLIMENTARY" | "MANUAL_UPI" | string;
+  amountPaid?: number;
+  referenceNote?: string;
+  foodPreference?: string;
+  sendConfirmationEmail?: boolean;
+}
+
+/**
+ * Manual Attendee Creation Action
+ * Allows Organizers & Super Admins to manually issue tickets for desk spot registrations,
+ * offline cash payments, direct bank transfers, or VIP passes.
+ */
+export async function createManualAttendeeAction(
+  input: ManualAttendeeInput
+): Promise<{ success: boolean; orderNumber?: string; ticketCode?: string; error?: string }> {
+  try {
+    const user = await requireAuth();
+
+    // 1. Fetch Event and Verify Organizer/Admin Rights
+    const { data: eventRows } = await executeSql(`
+      SELECT e.id, e.title, e.city, e.venue_name, e.start_time, e.organization_id
+      FROM saas_events e
+      WHERE e.id = ${escapeSql(input.eventId)}
+      LIMIT 1;
+    `);
+
+    const event = eventRows?.[0];
+    if (!event) {
+      return { success: false, error: "Event not found." };
+    }
+
+    const isSuperAdmin = user.profile.role === "super_admin" || user.profile.role === "admin";
+    const isOrganizer = user.profile.role === "organizer";
+
+    if (!isSuperAdmin && !isOrganizer) {
+      return { success: false, error: "You are not authorized to create manual attendees." };
+    }
+
+    // 2. Fetch Ticket Tier
+    const { data: tierRows } = await executeSql(`
+      SELECT id, name, price, total_capacity, sold_count
+      FROM saas_ticket_tiers
+      WHERE id = ${escapeSql(input.ticketTierId)} AND event_id = ${escapeSql(input.eventId)}
+      LIMIT 1;
+    `);
+
+    const tier = tierRows?.[0];
+    if (!tier) {
+      return { success: false, error: "Selected ticket tier was not found." };
+    }
+
+    // 3. Resolve Zone & Club
+    const { clubName, zone } = resolveClubAndZone({
+      clubName: input.clubName,
+      customAnswers: {
+        zone: input.zone,
+        food_preference: input.foodPreference,
+        reference_note: input.referenceNote,
+      },
+    });
+
+    const amountPaid = typeof input.amountPaid === "number" ? input.amountPaid : Number(tier.price) || 0;
+    const paymentMode = input.paymentMethod || (amountPaid === 0 ? "VIP_COMPLIMENTARY" : "OFFLINE_CASH");
+    const orderNumber = `RS-ORD-M${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+
+    // 4. Insert Paid Order
+    const insertOrderSql = `
+      INSERT INTO saas_orders (
+        order_number,
+        event_id,
+        organization_id,
+        user_id,
+        customer_name,
+        customer_email,
+        customer_phone,
+        total_amount,
+        currency,
+        status,
+        payment_status,
+        payment_method,
+        upi_transaction_id,
+        metadata
+      ) VALUES (
+        ${escapeSql(orderNumber)},
+        ${escapeSql(input.eventId)},
+        ${escapeSql(event.organization_id || user.profile.home_club_id || null)},
+        ${escapeSql(user.clerkId)},
+        ${escapeSql(input.name.trim())},
+        ${escapeSql(input.email.trim())},
+        ${escapeSql(input.phone?.trim() || null)},
+        ${escapeSql(amountPaid)},
+        'INR',
+        'PAID',
+        'PAID',
+        ${escapeSql(paymentMode)},
+        ${escapeSql(input.referenceNote?.trim() || "Manual Spot Entry")},
+        ${escapeSql(JSON.stringify({
+          club_name: clubName,
+          zone,
+          food_preference: input.foodPreference,
+          manual_entry_by: user.email,
+          manual_entry_role: user.profile.role,
+        }))}
+      ) RETURNING id, order_number;
+    `;
+
+    const { data: orderRes } = await executeSql(insertOrderSql);
+    const orderId = orderRes?.[0]?.id;
+    if (!orderId) {
+      throw new Error("Failed to create order record for manual attendee");
+    }
+
+    // 5. Generate Ticket
+    const ticketCode = `RS-MANUAL-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const qrToken = generateSecureTicketToken("MANUAL-" + Date.now(), input.eventId);
+
+    const insertTicketSql = `
+      INSERT INTO saas_tickets (
+        ticket_code,
+        order_id,
+        event_id,
+        ticket_tier_id,
+        owner_user_id,
+        attendee_name,
+        attendee_email,
+        attendee_phone,
+        qr_token,
+        status,
+        custom_answers
+      ) VALUES (
+        ${escapeSql(ticketCode)},
+        ${escapeSql(orderId)},
+        ${escapeSql(input.eventId)},
+        ${escapeSql(tier.id)},
+        ${escapeSql(user.clerkId)},
+        ${escapeSql(input.name.trim())},
+        ${escapeSql(input.email.trim())},
+        ${escapeSql(input.phone?.trim() || null)},
+        ${escapeSql(qrToken)},
+        'CONFIRMED',
+        ${escapeSql(JSON.stringify({
+          club_name: clubName,
+          zone,
+          food_preference: input.foodPreference,
+          payment_mode: paymentMode,
+          reference_note: input.referenceNote || "Manual Spot Entry",
+          manual_entry_by: user.email,
+        }))}
+      ) RETURNING id, ticket_code, qr_token;
+    `;
+
+    await executeSql(insertTicketSql);
+
+    // 6. Update sold count on tier
+    await executeSql(`
+      UPDATE saas_ticket_tiers
+      SET sold_count = sold_count + 1
+      WHERE id = ${escapeSql(tier.id)};
+    `);
+
+    // 7. Send Ticket Email if opted in
+    if (input.sendConfirmationEmail !== false && input.email) {
+      try {
+        const formattedDate = event.start_time
+          ? new Date(event.start_time).toLocaleDateString("en-IN", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Scheduled Event Date";
+
+        await sendTicketEmailWithQR({
+          to: input.email.trim(),
+          fullName: input.name.trim(),
+          eventTitle: event.title,
+          eventDate: formattedDate,
+          eventCity: event.venue_name || event.city || "District 3192",
+          orderNumber,
+          orderTotal: `₹${amountPaid.toFixed(2)} (${paymentMode.replace(/_/g, " ")})`,
+          tickets: [
+            {
+              code: ticketCode,
+              qrToken,
+              tierName: tier.name,
+            },
+          ],
+        });
+      } catch (emailErr) {
+        logger.warn("Could not dispatch manual ticket email", { error: String(emailErr) });
+      }
+    }
+
+    // 8. Log Audit Action
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "MANUAL_ATTENDEE_CREATED",
+      entityType: "TICKET",
+      entityId: ticketCode,
+      organizationId: event.organization_id,
+      newState: {
+        orderNumber,
+        ticketCode,
+        attendeeName: input.name,
+        attendeeEmail: input.email,
+        clubName,
+        zone,
+        paymentMode,
+        amountPaid,
+      },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/admin");
+    revalidatePath("/tickets");
+
+    return {
+      success: true,
+      orderNumber,
+      ticketCode,
+    };
+  } catch (err: any) {
+    logger.error("createManualAttendeeAction error", { error: String(err) });
+    return { success: false, error: err?.message || "Failed to create manual attendee." };
+  }
 }

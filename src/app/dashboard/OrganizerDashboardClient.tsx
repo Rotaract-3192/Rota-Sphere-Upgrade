@@ -46,6 +46,8 @@ import {
   Archive,
   ShieldAlert,
   Megaphone,
+  UserPlus,
+  Building,
 } from "lucide-react";
 import {
   duplicateEventAction,
@@ -59,6 +61,9 @@ import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 import { CreateEventWizardModal } from "@/components/dashboard/CreateEventWizardModal";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
+import { ManualAttendeeModal } from "@/components/dashboard/ManualAttendeeModal";
+import { exportEventAttendeesToExcel } from "@/lib/utils/excelExporter";
+import { resolveClubAndZone } from "@/lib/utils/zoneResolver";
 import type { SaasEvent, TicketTierType } from "@/types/saas";
 
 interface OrganizerDashboardClientProps {
@@ -101,6 +106,10 @@ export function OrganizerDashboardClient({
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
   const [selectedBroadcastEventId, setSelectedBroadcastEventId] = useState<string>("");
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+
+  // Manual Attendee Entry State
+  const [manualAttendeeModalOpen, setManualAttendeeModalOpen] = useState(false);
+  const [manualAttendeeEventId, setManualAttendeeEventId] = useState<string | undefined>(undefined);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
@@ -331,109 +340,26 @@ export function OrganizerDashboardClient({
     return Math.max(0, 30 - elapsedDays);
   }
 
-  // ─── 4. EXCEL / CSV REGISTRATION EXPORTER ──────────────────────────────────
-  function downloadCsvFile(content: string, fileName: string) {
-    // Add UTF-8 BOM so Excel opens Indian names and symbols flawlessly
-    const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
+  // ─── 4. NATIVE EXCEL (.XLSX) REGISTRATION EXPORTER ────────────────────────
   async function handleExportEventRegistrations(eventId: string, eventTitle: string) {
     setActionLoadingId(eventId);
-    showToast(`Generating Excel export for "${eventTitle}"...`);
+    showToast(`Generating Excel (.xlsx) workbook for "${eventTitle}"...`);
     const res = await getEventRegistrationsAction(eventId);
     setActionLoadingId(null);
 
-    const headers = [
-      "Ticket / Pass ID",
-      "Event Title",
-      "Attendee Name",
-      "Attendee Email",
-      "Attendee Phone",
-      "Ticket Tier",
-      "Amount Paid (INR)",
-      "Payment Status",
-      "UPI UTR Reference",
-      "Check-In Status",
-      "Checked-In Timestamp",
-      "Registration Date",
-      "Custom Form Answers",
-      "QR Gate Token",
-    ];
-
-    let rows: string[][] = [];
-
     if (res.success && res.data && res.data.length > 0) {
-      rows = res.data.map((t: any) => [
-        t.ticket_code || t.ticket_id || "",
-        `"${(t.event_title || eventTitle).replace(/"/g, '""')}"`,
-        `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
-        t.attendee_email || "",
-        t.attendee_phone || "",
-        `"${(t.tier_name || "General Admission").replace(/"/g, '""')}"`,
-        t.unit_price || "0",
-        t.order_status || t.ticket_status || "PAID",
-        t.upi_transaction_id || "N/A",
-        t.ticket_status === "USED" ? "CHECKED_IN" : "PENDING",
-        t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned",
-        t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "",
-        `"${JSON.stringify(t.custom_answers || {}).replace(/"/g, '""')}"`,
-        t.qr_token || "",
-      ]);
+      exportEventAttendeesToExcel(eventTitle, res.data);
     } else {
       // Fallback to local tickets if any match
       const matchingTickets = tickets.filter(
         (t) => t.event_id === eventId || t.saas_events?.title === eventTitle
       );
-      if (matchingTickets.length === 0) {
-        // Generate header-only template for user
-        rows = [
-          [
-            "EXAMPLE-TKT-001",
-            `"${eventTitle.replace(/"/g, '""')}"`,
-            "Sample Attendee",
-            "attendee@example.com",
-            "+91 9876543210",
-            "General Delegate Pass",
-            "0",
-            "CONFIRMED",
-            "PENDING",
-            "Not Scanned",
-            new Date().toLocaleString("en-IN"),
-            "qr_sample_token_demo",
-          ],
-        ];
-      } else {
-        rows = matchingTickets.map((t) => [
-          t.ticket_code || t.id,
-          `"${(t.saas_events?.title || eventTitle).replace(/"/g, '""')}"`,
-          `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
-          t.attendee_email || "",
-          t.attendee_phone || "",
-          `"${(t.saas_ticket_tiers?.name || "Standard").replace(/"/g, '""')}"`,
-          t.unit_price || "0",
-          "PAID",
-          t.status === "USED" ? "CHECKED_IN" : "PENDING",
-          t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned",
-          new Date().toLocaleString("en-IN"),
-          t.qr_code_hash || "",
-        ]);
-      }
+      exportEventAttendeesToExcel(eventTitle, matchingTickets);
     }
-
-    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const sanitizedTitle = eventTitle.replace(/[^a-zA-Z0-9]/g, "_");
-    downloadCsvFile(csvContent, `${sanitizedTitle}_Registrations_${new Date().toISOString().slice(0, 10)}.csv`);
-    showToast(`✓ Excel spreadsheet downloaded for "${eventTitle}"`);
+    showToast(`✓ Excel workbook (.xlsx) downloaded with Zonal Count Breakdown`);
   }
 
-  function handleExportFilteredAttendeesCSV() {
+  function handleExportFilteredAttendeesExcel() {
     const listToExport = filteredTickets;
     if (listToExport.length === 0) {
       alert("No attendees found to export for the selected filter.");
@@ -441,79 +367,19 @@ export function OrganizerDashboardClient({
     }
 
     const currentEvent = activeEvents.find((e) => e.id === selectedAttendeeEventId);
-    const eventName = currentEvent ? currentEvent.title : "All_Events";
+    const eventName = currentEvent ? currentEvent.title : "District_3192_Delegates";
 
-    const headers = [
-      "Ticket Code",
-      "Attendee Name",
-      "Email",
-      "Phone",
-      "Event Title",
-      "Ticket Tier",
-      "Amount Paid (INR)",
-      "Status",
-      "Check-In Status",
-      "Checked In At",
-      "Registration Date",
-      "QR Hash",
-    ];
-
-    const rows = listToExport.map((t: any) => [
-      t.ticket_code || t.id,
-      `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
-      t.attendee_email || "",
-      t.attendee_phone || "",
-      `"${(t.saas_events?.title || currentEvent?.title || "Event").replace(/"/g, '""')}"`,
-      `"${(t.saas_ticket_tiers?.name || "Standard").replace(/"/g, '""')}"`,
-      t.unit_price || t.saas_ticket_tiers?.price || "0",
-      t.status || "CONFIRMED",
-      t.status === "USED" ? "CHECKED_IN" : "PENDING",
-      t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned",
-      t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "",
-      t.qr_code_hash || "",
-    ]);
-
-    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const sanitizedTitle = eventName.replace(/[^a-zA-Z0-9]/g, "_");
-    downloadCsvFile(csvContent, `${sanitizedTitle}_Attendees_${new Date().toISOString().slice(0, 10)}.csv`);
-    showToast(`✓ Exported ${listToExport.length} delegates for "${currentEvent?.title || 'All Events'}"`);
+    exportEventAttendeesToExcel(eventName, listToExport);
+    showToast(`✓ Exported ${listToExport.length} delegates to Excel (.xlsx) with Zonal Breakdown`);
   }
 
-  function handleExportAllAttendeesCSV() {
+  function handleExportAllAttendeesExcel() {
     if (tickets.length === 0) {
       alert("No attendees to export");
       return;
     }
-    const headers = [
-      "Ticket Code",
-      "Attendee Name",
-      "Email",
-      "Phone",
-      "Event Title",
-      "Ticket Tier",
-      "Amount Paid (INR)",
-      "Status",
-      "Checked In At",
-      "Registration Date",
-      "QR Hash",
-    ];
-    const rows = tickets.map((t) => [
-      t.ticket_code || t.id,
-      `"${(t.attendee_name || "Delegate").replace(/"/g, '""')}"`,
-      t.attendee_email || "",
-      t.attendee_phone || "",
-      `"${(t.saas_events?.title || "Event").replace(/"/g, '""')}"`,
-      `"${(t.saas_ticket_tiers?.name || "Standard").replace(/"/g, '""')}"`,
-      t.unit_price || t.saas_ticket_tiers?.price || "0",
-      t.status || "CONFIRMED",
-      t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Pending",
-      t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "",
-      t.qr_code_hash || "",
-    ]);
-
-    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    downloadCsvFile(csvContent, `RotaSphere_All_Attendees_${new Date().toISOString().slice(0, 10)}.csv`);
-    showToast("✓ All attendees exported to Excel spreadsheet");
+    exportEventAttendeesToExcel("RotaSphere_All_District_Delegates", tickets);
+    showToast("✓ All attendees exported to Excel workbook (.xlsx)");
   }
 
   return (
@@ -734,6 +600,16 @@ export function OrganizerDashboardClient({
 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
+                  onClick={() => {
+                    setManualAttendeeEventId(undefined);
+                    setManualAttendeeModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-blue-200 text-[#0758fc] font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <UserPlus size={15} className="text-[#0758fc]" />
+                  <span>+ Add Manual Attendee</span>
+                </button>
+                <button
                   onClick={() => setIsGalleryModalOpen(true)}
                   className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                 >
@@ -789,7 +665,7 @@ export function OrganizerDashboardClient({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
                 <button
                   type="button"
                   onClick={handleOpenCreateModal}
@@ -797,6 +673,18 @@ export function OrganizerDashboardClient({
                 >
                   <PlusCircle size={20} className="text-[#0758fc] group-hover:text-white transition-colors" />
                   <span>Create New Event</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualAttendeeEventId(undefined);
+                    setManualAttendeeModalOpen(true);
+                  }}
+                  className="bg-white hover:bg-blue-600 hover:text-white text-gray-900 border border-blue-200/80 p-3.5 rounded-2xl transition-all font-bold text-xs flex flex-col items-center justify-center gap-2 text-center shadow-2xs group cursor-pointer"
+                >
+                  <UserPlus size={20} className="text-[#0758fc] group-hover:text-white transition-colors" />
+                  <span>+ Manual Attendee</span>
                 </button>
 
                 <button
@@ -822,11 +710,11 @@ export function OrganizerDashboardClient({
 
                 <button
                   type="button"
-                  onClick={handleExportAllAttendeesCSV}
+                  onClick={handleExportAllAttendeesExcel}
                   className="bg-white hover:bg-blue-600 hover:text-white text-gray-900 border border-blue-200/80 p-3.5 rounded-2xl transition-all font-bold text-xs flex flex-col items-center justify-center gap-2 text-center shadow-2xs group cursor-pointer"
                 >
                   <FileSpreadsheet size={20} className="text-amber-500 group-hover:text-white transition-colors" />
-                  <span>Download Guest List</span>
+                  <span>Export Excel (.xlsx)</span>
                 </button>
               </div>
             </div>
@@ -1180,12 +1068,24 @@ export function OrganizerDashboardClient({
 
                 <button
                   type="button"
-                  onClick={handleExportFilteredAttendeesCSV}
-                  className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-sm cursor-pointer"
+                  onClick={() => {
+                    setManualAttendeeEventId(selectedAttendeeEventId !== "ALL" ? selectedAttendeeEventId : undefined);
+                    setManualAttendeeModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-blue-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer active:scale-98"
+                >
+                  <UserPlus size={15} />
+                  + Add Manual Attendee
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportFilteredAttendeesExcel}
+                  className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer active:scale-98"
                 >
                   <FileSpreadsheet size={15} />
                   {selectedAttendeeEventId === "ALL"
-                    ? "Export All to Excel / CSV"
+                    ? "Export All to Excel (.xlsx)"
                     : `Export "${activeEvents.find((e) => e.id === selectedAttendeeEventId)?.title || "Event"}" (${filteredTickets.length})`}
                 </button>
               </div>
@@ -1219,7 +1119,7 @@ export function OrganizerDashboardClient({
                   type="text"
                   value={attendeeSearch}
                   onChange={(e) => setAttendeeSearch(e.target.value)}
-                  placeholder="Search attendees by name, email, or ticket code..."
+                  placeholder="Search attendees by name, email, club, or ticket code..."
                   className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-gray-900 outline-none focus:border-[#0758fc] shadow-xs"
                 />
               </div>
@@ -1230,7 +1130,7 @@ export function OrganizerDashboardClient({
                 <span>
                   Filtering for event: <strong>{activeEvents.find((e) => e.id === selectedAttendeeEventId)?.title || "Selected Event"}</strong> ({filteredTickets.length} delegates)
                 </span>
-                <span className="font-mono text-[11px] text-blue-700">Export button will download only this event</span>
+                <span className="font-mono text-[11px] text-blue-700">Excel export will include Zonal Count Breakdown</span>
               </div>
             )}
 
@@ -1241,8 +1141,8 @@ export function OrganizerDashboardClient({
                     <tr>
                       <th className="py-3.5 px-6">Ticket Code</th>
                       <th className="py-3.5 px-6">Attendee</th>
-                      <th className="py-3.5 px-6">Event</th>
-                      <th className="py-3.5 px-6">Tier</th>
+                      <th className="py-3.5 px-6">Club &amp; Zone</th>
+                      <th className="py-3.5 px-6">Event &amp; Tier</th>
                       <th className="py-3.5 px-6">Status</th>
                     </tr>
                   </thead>
@@ -1254,28 +1154,42 @@ export function OrganizerDashboardClient({
                         </td>
                       </tr>
                     ) : (
-                      filteredTickets.map((t) => (
-                        <tr key={t.id} className="hover:bg-gray-50/50">
-                          <td className="py-3.5 px-6 font-mono font-bold text-gray-900">{t.ticket_code}</td>
-                          <td className="py-3.5 px-6">
-                            <p className="font-bold text-gray-900">{t.attendee_name}</p>
-                            <p className="text-[11px] text-gray-400">{t.attendee_email}</p>
-                          </td>
-                          <td className="py-3.5 px-6 text-gray-600">{t.saas_events?.title || "Event"}</td>
-                          <td className="py-3.5 px-6">{t.saas_ticket_tiers?.name || "Standard"}</td>
-                          <td className="py-3.5 px-6">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
-                                t.status === "USED"
-                                  ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              }`}
-                            >
-                              ● {t.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
+                      filteredTickets.map((t: any) => {
+                        const { clubName, zone } = resolveClubAndZone(t);
+                        return (
+                          <tr key={t.id} className="hover:bg-gray-50/50">
+                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900">{t.ticket_code}</td>
+                            <td className="py-3.5 px-6">
+                              <p className="font-bold text-gray-900">{t.attendee_name}</p>
+                              <p className="text-[11px] text-gray-400">{t.attendee_email}</p>
+                              {t.attendee_phone && (
+                                <p className="text-[10px] text-gray-400">{t.attendee_phone}</p>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <p className="font-bold text-gray-800 line-clamp-1">{clubName}</p>
+                              <span className="inline-block mt-0.5 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
+                                {zone}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <p className="text-gray-800 font-medium line-clamp-1">{t.saas_events?.title || "Event"}</p>
+                              <p className="text-[11px] text-gray-500 font-bold">{t.saas_ticket_tiers?.name || "Standard Pass"}</p>
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                  t.status === "USED"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                }`}
+                              >
+                                ● {t.status === "USED" ? "CHECKED_IN" : "CONFIRMED"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1578,10 +1492,10 @@ export function OrganizerDashboardClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleExportAllAttendeesCSV}
+                  onClick={handleExportAllAttendeesExcel}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} /> Export Finance Ledger (CSV)
+                  <FileSpreadsheet size={15} /> Export Finance Ledger (.xlsx)
                 </button>
               </div>
             </div>
@@ -2053,6 +1967,21 @@ export function OrganizerDashboardClient({
       <GalleryUploadModal
         isOpen={isGalleryModalOpen}
         onClose={() => setIsGalleryModalOpen(false)}
+      />
+
+      {/* Manual Attendee Entry & Spot Registration Modal */}
+      <ManualAttendeeModal
+        isOpen={manualAttendeeModalOpen}
+        onClose={() => {
+          setManualAttendeeModalOpen(false);
+          setManualAttendeeEventId(undefined);
+        }}
+        events={activeEvents}
+        initialEventId={manualAttendeeEventId}
+        onAttendeeAdded={(newTicket) => {
+          setTickets((prev) => [newTicket, ...prev]);
+          showToast(`✓ Ticket created for ${newTicket.attendee_name}`);
+        }}
       />
     </div>
   );

@@ -732,6 +732,7 @@ export async function getEventRegistrationsAction(eventId: string): Promise<{ su
         o.id as order_id,
         o.order_number,
         o.status as order_status,
+        o.payment_method,
         o.upi_transaction_id,
         o.currency
       FROM saas_tickets t
