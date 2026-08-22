@@ -38,26 +38,40 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
 
   // Only apply CSP in production.
-  if (!isDev) {
-    response.headers.set(
-      "Content-Security-Policy",
-      [
-        "default-src 'self'",
-        // Clerk production uses *.clerk.com; dev instances use *.clerk.accounts.dev; allow blob: and worker scripts
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://clerk.com https://*.clerk.accounts.dev https://*.accounts.dev https://challenges.cloudflare.com",
-        "worker-src 'self' blob:",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https: https://img.clerk.com https://*.rotaract3192.org",
-        // Supabase (including custom domain db.rotaract3192.org), Clerk API, accounts.dev
-        "connect-src 'self' https://*.supabase.co https://db.rotaract3192.org https://*.rotaract3192.org https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://*.accounts.dev",
-        "frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ].join("; ")
-    );
-  }
+if (!isDev) {
+  response.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+
+      // Clerk JavaScript
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.rotaract3192.org https://*.clerk.com https://clerk.com https://*.clerk.accounts.dev https://*.accounts.dev https://challenges.cloudflare.com",
+
+      // Clerk / Next.js workers
+      "worker-src 'self' blob:",
+
+      // Styles
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+
+      // Fonts
+      "font-src 'self' https://fonts.gstatic.com",
+
+      // Images
+      "img-src 'self' data: blob: https: https://img.clerk.com https://*.rotaract3192.org",
+
+      // API / WebSocket / Clerk communication
+      "connect-src 'self' https://*.supabase.co https://db.rotaract3192.org https://*.rotaract3192.org https://clerk.rotaract3192.org https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://*.accounts.dev",
+
+      // Clerk UI / authentication frames
+      "frame-src 'self' https://clerk.rotaract3192.org https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+
+      // Security
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ")
+  );
+}
 
   return response;
 }
