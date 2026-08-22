@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     "rotaract clubs",
   ],
   authors: [{ name: "Rotaract District 3192 Council" }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rotaract3192.org"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://events.rotaract3192.org"),
   alternates: {
     canonical: "/",
   },

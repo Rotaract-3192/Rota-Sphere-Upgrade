@@ -9,7 +9,7 @@ function safeJsonLd(obj: any): string {
 }
 
 export function RootJsonLd() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rotaract3192.org";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   const organizationSchema = {
     "@context": "https://schema.org",
@@ -62,7 +62,7 @@ export function RootJsonLd() {
 
 export function EventJsonLd({ event }: { event: any }) {
   if (!event) return null;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rotaract3192.org";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   const eventSchema = {
     "@context": "https://schema.org",

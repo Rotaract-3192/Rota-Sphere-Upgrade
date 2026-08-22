@@ -9,6 +9,8 @@
 import { requireAuth, requireRole } from "@/lib/auth/getUser";
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logAuditAction } from "@/lib/services/auditService";
+import { logger } from "@/lib/logger/logger";
+import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 export async function approveOrganizationKycAction(organizationId: string): Promise<{ success: boolean; error?: string }> {
@@ -438,3 +440,330 @@ export async function updatePrivacyRequestStatusAction(
     return { success: false, error: err?.message || String(err) };
   }
 }
+
+/**
+ * Grant Super Admin / Admin Executive Council Access to a User
+ * Enables District Treasurer, District Secretary (Admin/Ops), DRR, and Webmasters
+ * to manage the Super Admin command center.
+ */
+export async function grantSuperAdminAccessAction(params: {
+  userId: string;
+  role: "super_admin" | "admin";
+  designation: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireRole("super_admin");
+
+    const cleanDesignation = params.designation?.trim() || "District Council Executive";
+    const targetRole = params.role === "admin" ? "admin" : "super_admin";
+
+    // 1. Check if profile exists in database
+    const { data: existing } = await executeSql(`
+      SELECT id, email, full_name FROM rotasphere_profiles WHERE id = ${escapeSql(params.userId)} LIMIT 1;
+    `);
+
+    if (existing && existing.length > 0) {
+      await executeSql(`
+        UPDATE rotasphere_profiles
+        SET role = ${escapeSql(targetRole)},
+            designation = ${escapeSql(cleanDesignation)},
+            status = 'ACTIVE',
+            updated_at = NOW()
+        WHERE id = ${escapeSql(params.userId)};
+      `);
+    } else {
+      // Create profile row if user was only in Clerk
+      try {
+        const clerk = await clerkClient();
+        const cu = await clerk.users.getUser(params.userId);
+        const email = cu.emailAddresses[0]?.emailAddress || "user@rotasphere.org";
+        const fullName = `${cu.firstName ?? ""} ${cu.lastName ?? ""}`.trim() || email.split("@")[0];
+
+        await executeSql(`
+          INSERT INTO rotasphere_profiles (id, email, full_name, role, status, designation, created_at, updated_at)
+          VALUES (
+            ${escapeSql(params.userId)},
+            ${escapeSql(email)},
+            ${escapeSql(fullName)},
+            ${escapeSql(targetRole)},
+            'ACTIVE',
+            ${escapeSql(cleanDesignation)},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            role = ${escapeSql(targetRole)},
+            designation = ${escapeSql(cleanDesignation)},
+            status = 'ACTIVE',
+            updated_at = NOW();
+        `);
+      } catch (insertErr) {
+        logger.warn("Could not insert profile from Clerk fallback", { error: String(insertErr) });
+      }
+    }
+
+    // 2. Also sync to Clerk public metadata
+    try {
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(params.userId, {
+        publicMetadata: {
+          role: targetRole,
+          designation: cleanDesignation,
+        },
+      });
+    } catch (clerkMetaErr) {
+      logger.warn("Could not update Clerk metadata", { error: String(clerkMetaErr) });
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "SUPER_ADMIN_ROLE_GRANTED",
+      entityType: "USER",
+      entityId: params.userId,
+      newState: { role: targetRole, designation: cleanDesignation },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    logger.error("grantSuperAdminAccessAction failed", { error: String(err) });
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Revoke Super Admin / Admin Access from a User
+ * Safely demotes user back to attendee or resets master root admin designation.
+ */
+export async function revokeSuperAdminAccessAction(params: {
+  userId: string;
+  newRole?: "organizer" | "attendee";
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireRole("super_admin");
+
+    const { data: targetRows } = await executeSql(`
+      SELECT id, email, role FROM rotasphere_profiles
+      WHERE id = ${escapeSql(params.userId)}
+      LIMIT 1;
+    `);
+
+    const targetUser = targetRows?.[0];
+    if (targetUser?.email?.toLowerCase() === "tech.rotaract3192@gmail.com") {
+      // For primary master account, reset designation back to District Super Administrator
+      await executeSql(`
+        UPDATE rotasphere_profiles
+        SET designation = 'District Super Administrator',
+            role = 'super_admin',
+            updated_at = NOW()
+        WHERE id = ${escapeSql(params.userId)};
+      `);
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.updateUserMetadata(params.userId, {
+          publicMetadata: {
+            role: "super_admin",
+            designation: "District Super Administrator",
+          },
+        });
+      } catch (clerkErr) {
+        logger.warn("Could not update Clerk metadata on master reset", { error: String(clerkErr) });
+      }
+
+      revalidatePath("/admin");
+      revalidatePath("/dashboard");
+      return { success: true };
+    }
+
+    const fallbackRole = params.newRole || "attendee";
+    await executeSql(`
+      UPDATE rotasphere_profiles
+      SET role = ${escapeSql(fallbackRole)},
+          designation = 'Rotaract Member',
+          updated_at = NOW()
+      WHERE id = ${escapeSql(params.userId)};
+    `);
+
+    try {
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(params.userId, {
+        publicMetadata: {
+          role: fallbackRole,
+          designation: "Rotaract Member",
+        },
+      });
+    } catch (clerkErr) {
+      logger.warn("Could not update Clerk metadata on revocation", { error: String(clerkErr) });
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "SUPER_ADMIN_ROLE_REVOKED",
+      entityType: "USER",
+      entityId: params.userId,
+      newState: { role: fallbackRole },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    logger.error("revokeSuperAdminAccessAction failed", { error: String(err) });
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Delete User Profile or Demote Admin Access Completely
+ */
+export async function deleteUserProfileAction(params: {
+  userId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireRole("super_admin");
+
+    const { data: targetRows } = await executeSql(`
+      SELECT id, email, role FROM rotasphere_profiles
+      WHERE id = ${escapeSql(params.userId)}
+      LIMIT 1;
+    `);
+
+    const targetUser = targetRows?.[0];
+    if (targetUser?.email?.toLowerCase() === "tech.rotaract3192@gmail.com") {
+      // For master root admin, reset designation to default
+      await executeSql(`
+        UPDATE rotasphere_profiles
+        SET designation = 'District Super Administrator',
+            role = 'super_admin',
+            updated_at = NOW()
+        WHERE id = ${escapeSql(params.userId)};
+      `);
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.updateUserMetadata(params.userId, {
+          publicMetadata: {
+            role: "super_admin",
+            designation: "District Super Administrator",
+          },
+        });
+      } catch {}
+      revalidatePath("/admin");
+      return { success: true };
+    }
+
+    // Delete record from rotasphere_profiles
+    await executeSql(`
+      DELETE FROM rotasphere_profiles
+      WHERE id = ${escapeSql(params.userId)};
+    `);
+
+    // Reset Clerk public metadata
+    try {
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(params.userId, {
+        publicMetadata: {
+          role: "attendee",
+          designation: "Rotaract Member",
+        },
+      });
+    } catch (clerkErr) {
+      logger.warn("Could not reset Clerk user metadata", { error: String(clerkErr) });
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "USER_PROFILE_DELETED",
+      entityType: "USER",
+      entityId: params.userId,
+      newState: { status: "DELETED" },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    logger.error("deleteUserProfileAction failed", { error: String(err) });
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Fetch All Registered User Profiles for Admin Assignment
+ * Combines rotasphere_profiles and Clerk registered users to guarantee no missing users.
+ */
+export async function getAllUserProfilesAction(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    await requireRole("admin");
+
+    const profileMap = new Map<string, any>();
+
+    // 1. Fetch from rotasphere_profiles database
+    try {
+      const { data: dbProfiles } = await executeSql(`
+        SELECT id, email, full_name, role, designation, status, created_at, updated_at
+        FROM rotasphere_profiles
+        ORDER BY created_at DESC;
+      `);
+
+      for (const p of dbProfiles || []) {
+        if (p.id) profileMap.set(p.id, p);
+        if (p.email) profileMap.set(p.email.toLowerCase(), p);
+      }
+    } catch (dbErr) {
+      logger.warn("Could not query rotasphere_profiles directly", { error: String(dbErr) });
+    }
+
+    // 2. Fetch all registered users from Clerk authentication
+    try {
+      const clerk = await clerkClient();
+      const clerkList = await clerk.users.getUserList({ limit: 200 });
+
+      for (const cu of clerkList.data || []) {
+        const primaryEmail = cu.emailAddresses[0]?.emailAddress?.toLowerCase() || "";
+        const fullName = `${cu.firstName ?? ""} ${cu.lastName ?? ""}`.trim() || primaryEmail.split("@")[0] || "Member";
+
+        const existing = profileMap.get(cu.id) || (primaryEmail ? profileMap.get(primaryEmail) : null);
+
+        if (!existing) {
+          profileMap.set(cu.id, {
+            id: cu.id,
+            email: primaryEmail,
+            full_name: fullName,
+            role: (cu.publicMetadata?.role as string) || "attendee",
+            designation: (cu.publicMetadata?.designation as string) || "Rotaract Member",
+            status: "ACTIVE",
+            created_at: new Date(cu.createdAt).toISOString(),
+            updated_at: new Date(cu.updatedAt).toISOString(),
+          });
+        }
+      }
+    } catch (clerkErr) {
+      logger.warn("Clerk user list fetch fallback", { error: String(clerkErr) });
+    }
+
+    // Deduplicate by user ID
+    const uniqueIds = Array.from(new Set(Array.from(profileMap.values()).map((p) => p.id)));
+    const merged = uniqueIds
+      .map((id) => Array.from(profileMap.values()).find((p) => p.id === id))
+      .filter(Boolean)
+      .sort((a, b) => {
+        const roleRank: Record<string, number> = { super_admin: 1, admin: 2, organizer: 3, attendee: 4 };
+        const rankA = roleRank[a.role] ?? 5;
+        const rankB = roleRank[b.role] ?? 5;
+        if (rankA !== rankB) return rankA - rankB;
+        return (a.full_name || "").localeCompare(b.full_name || "");
+      });
+
+    return { success: true, data: merged };
+  } catch (err: any) {
+    logger.error("getAllUserProfilesAction failed", { error: String(err) });
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+

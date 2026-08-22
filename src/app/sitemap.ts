@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 import { executeSql } from "@/lib/db/directDb";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rotaract3192.org";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

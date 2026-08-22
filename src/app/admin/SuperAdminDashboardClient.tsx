@@ -11,7 +11,7 @@
  * 5. Cryptographic Platform Audit Trail with 1-Click CSV/JSON downloads & inspector
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -61,6 +61,9 @@ import {
   Menu,
   AlertTriangle,
   Image as ImageIcon,
+  UserCheck,
+  UserPlus,
+  ShieldAlert,
 } from "lucide-react";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
@@ -74,6 +77,9 @@ import {
   rejectOrganizerAccessRequestAction,
   updateComplaintStatusAction,
   updatePrivacyRequestStatusAction,
+  grantSuperAdminAccessAction,
+  revokeSuperAdminAccessAction,
+  getAllUserProfilesAction,
 } from "@/app/actions/adminActions";
 import {
   createDistrictClubAction,
@@ -96,6 +102,7 @@ interface SuperAdminProps {
   initialOrganizerRequests?: any[];
   initialComplaints?: any[];
   initialPrivacyRequests?: any[];
+  initialProfiles?: any[];
 }
 
 function downloadCsv(filename: string, rows: Record<string, any>[]) {
@@ -151,11 +158,44 @@ export function SuperAdminDashboardClient({
   initialOrganizerRequests = [],
   initialComplaints = [],
   initialPrivacyRequests = [],
+  initialProfiles = [],
 }: SuperAdminProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "requests" | "upi" | "grievances" | "kyc" | "events" | "finance" | "checkins" | "audit" | "flags"
   >("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Council Executive Delegation State
+  const [profiles, setProfiles] = useState<any[]>(initialProfiles);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [councilDesignation, setCouncilDesignation] = useState("District Treasurer");
+  const [customDesignation, setCustomDesignation] = useState("");
+  const [selectedAdminRole, setSelectedAdminRole] = useState<"super_admin" | "admin">("super_admin");
+  const [grantingAccess, setGrantingAccess] = useState(false);
+  const [grantMessage, setGrantMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [refreshingUsers, setRefreshingUsers] = useState(false);
+
+  useEffect(() => {
+    getAllUserProfilesAction().then((res) => {
+      if (res.success && res.data && res.data.length > 0) {
+        setProfiles(res.data);
+      }
+    });
+  }, []);
+
+  async function handleRefreshUsers() {
+    setRefreshingUsers(true);
+    const res = await getAllUserProfilesAction();
+    setRefreshingUsers(false);
+    if (res.success && res.data) {
+      setProfiles(res.data);
+      setGrantMessage({ type: "success", text: `Refreshed registry: ${res.data.length} registered users synced.` });
+    } else {
+      setGrantMessage({ type: "error", text: "Failed to refresh user registry." });
+    }
+  }
 
   const [organizations, setOrganizations] = useState(initialOrganizations);
   const [events, setEvents] = useState(initialEvents);
@@ -262,6 +302,69 @@ export function SuperAdminDashboardClient({
       );
     } else {
       alert(res.error || "Failed to update request status");
+    }
+  }
+
+  async function handleGrantSuperAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedUserId) {
+      setGrantMessage({ type: "error", text: "Please select a registered user first." });
+      return;
+    }
+    const finalDesignation = councilDesignation === "custom" ? customDesignation.trim() : councilDesignation;
+    if (!finalDesignation) {
+      setGrantMessage({ type: "error", text: "Please enter or select a council designation." });
+      return;
+    }
+
+    setGrantingAccess(true);
+    setGrantMessage(null);
+
+    const res = await grantSuperAdminAccessAction({
+      userId: selectedUserId,
+      role: selectedAdminRole,
+      designation: finalDesignation,
+    });
+
+    setGrantingAccess(false);
+    if (res.success) {
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === selectedUserId || p.clerk_id === selectedUserId
+            ? { ...p, role: selectedAdminRole, designation: finalDesignation, status: "ACTIVE" }
+            : p
+        )
+      );
+      setGrantMessage({
+        type: "success",
+        text: `Successfully granted ${selectedAdminRole === "super_admin" ? "Super Admin" : "Admin"} access with title "${finalDesignation}".`,
+      });
+      setSelectedUserId("");
+      setCustomDesignation("");
+    } else {
+      setGrantMessage({ type: "error", text: res.error || "Failed to grant super admin access." });
+    }
+  }
+
+  async function handleRevokeSuperAdmin(userId: string, userName: string) {
+    if (!confirm(`Are you sure you want to revoke Super Admin panel access from ${userName}?`)) {
+      return;
+    }
+    setRevokingUserId(userId);
+    const res = await revokeSuperAdminAccessAction({ userId });
+    setRevokingUserId(null);
+
+    if (res.success) {
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === userId || p.clerk_id === userId
+            ? { ...p, role: "attendee", designation: "Rotaract Member" }
+            : p
+        )
+      );
+      setGrantMessage({ type: "success", text: `Successfully revoked / reset admin access for ${userName}.` });
+    } else {
+      alert(res.error || "Failed to revoke admin access.");
     }
   }
 
@@ -2647,54 +2750,340 @@ export function SuperAdminDashboardClient({
         {/* ══════════════════════════════════════════════════════════════════
             TAB 8: FEATURE FLAGS
             ══════════════════════════════════════════════════════════════════ */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 8: APP SETTINGS & DISTRICT COUNCIL DELEGATION
+            ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "flags" && (
-          <div className="space-y-6 animate-in fade-in-50">
+          <div className="space-y-8 animate-in fade-in-50">
+            {/* Header */}
             <div>
-              <h2 className="text-xl font-black text-gray-900">Platform Feature Flags &amp; Toggles</h2>
-              <p className="text-xs text-gray-500">Live operational switches controlling gate scanning, coupons, and payments</p>
+              <h2 className="text-xl font-black text-gray-900">App Settings &amp; Administrative Governance</h2>
+              <p className="text-xs text-gray-500">
+                Delegate Super Admin Panel access to District Council Executive Officers and configure platform runtime feature flags.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {featureFlags.map((flag) => (
-                <div
-                  key={flag.id}
-                  className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all"
+            {/* Notification Banner */}
+            {grantMessage && (
+              <div
+                className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs font-semibold ${
+                  grantMessage.type === "success"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : "bg-rose-50 text-rose-800 border-rose-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {grantMessage.type === "success" ? (
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                  )}
+                  <span>{grantMessage.text}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGrantMessage(null)}
+                  className="text-gray-400 hover:text-gray-700 cursor-pointer"
                 >
-                  <div className="space-y-1.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-900 truncate">{flag.name}</p>
-                      <span
-                        className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
-                          flag.is_enabled
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-gray-100 text-gray-600 border-gray-200"
-                        }`}
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* ── SECTION 1: DISTRICT COUNCIL EXECUTIVE DELEGATION CARD ── */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                      DISTRICT COUNCIL ACCESS
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                      SUPER ADMIN PANEL
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-black text-gray-900">Grant Super Admin Panel Access</h3>
+                  <p className="text-xs text-gray-500">
+                    Authorize executive members (e.g. District Treasurer, District Secretary) to log in and manage the Super Admin Panel.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshUsers}
+                  disabled={refreshingUsers}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3.5 py-2 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
+                  title="Sync users list directly from Clerk and database"
+                >
+                  <RefreshCw size={13} className={refreshingUsers ? "animate-spin text-[#0758fc]" : "text-gray-500"} />
+                  <span>{refreshingUsers ? "Syncing..." : "Sync / Refresh Users"}</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleGrantSuperAdmin} className="space-y-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Select User */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Select Registered User *
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={selectedUserId}
+                        onChange={(e) => setSelectedUserId(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
                       >
-                        {flag.is_enabled ? "ENABLED" : "DISABLED"}
-                      </span>
+                        <option value="">-- Choose a user account ({profiles.length} registered) --</option>
+                        {profiles.map((p) => (
+                          <option key={p.id || p.clerk_id} value={p.id || p.clerk_id}>
+                            {p.full_name || "Rotaractor"} ({p.email}) — [{p.role?.toUpperCase() || "ATTENDEE"}] {p.designation ? `• ${p.designation}` : ""}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <p className="text-xs text-gray-500 line-clamp-2">
-                      {flag.description || "Operational kill-switch controlling platform runtime behavior."}
+                    <p className="text-[11px] text-gray-400">
+                      Users who have registered / logged in to RotaSphere are available in this registry.
                     </p>
-                    <p className="text-[10px] font-mono text-gray-400">Key: {flag.name}</p>
                   </div>
 
+                  {/* Access Level */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Administrative Access Level *
+                    </label>
+                    <select
+                      value={selectedAdminRole}
+                      onChange={(e) => setSelectedAdminRole(e.target.value as any)}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                    >
+                      <option value="super_admin">👑 Super Admin (Full Governance, Financial Clearance &amp; Settings)</option>
+                      <option value="admin">🛡️ Admin (Operations, KYC &amp; Moderation)</option>
+                    </select>
+                    <p className="text-[11px] text-gray-400">
+                      Both Super Admin and Admin roles have full authorization to access the <code className="text-gray-700">/admin</code> command center.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Council Designation Presets */}
+                <div className="space-y-2.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    District Executive Portfolio / Designation *
+                  </label>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "District Treasurer", icon: "💼" },
+                      { label: "District Secretary - Administration", icon: "🏛️" },
+                      { label: "District Secretary - Operations", icon: "⚙️" },
+                      { label: "District Rotaract Representative (DRR)", icon: "👑" },
+                      { label: "District Webmaster / Tech Head", icon: "💻" },
+                      { label: "Custom Portfolio", icon: "✏️", value: "custom" },
+                    ].map((preset) => {
+                      const isSelected =
+                        preset.value === "custom"
+                          ? councilDesignation === "custom"
+                          : councilDesignation === preset.label;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setCouncilDesignation(preset.value === "custom" ? "custom" : preset.label);
+                          }}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                            isSelected
+                              ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs scale-102"
+                              : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{preset.icon}</span>
+                          <span>{preset.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {councilDesignation === "custom" && (
+                    <div className="pt-2 animate-in fade-in-50">
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. District Director - Public Relations, District Serjeant-at-Arms..."
+                        value={customDesignation}
+                        onChange={(e) => setCustomDesignation(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 flex justify-end">
                   <button
-                    type="button"
-                    onClick={() => handleToggleFlag(flag.id || flag.name, flag.is_enabled)}
-                    className={`w-14 h-8 rounded-full transition-colors cursor-pointer relative shrink-0 p-1 flex items-center ${
-                      flag.is_enabled ? "bg-[#0758fc]" : "bg-gray-200"
-                    }`}
-                    title={flag.is_enabled ? "Click to disable" : "Click to enable"}
+                    type="submit"
+                    disabled={grantingAccess || !selectedUserId}
+                    className="bg-[#0758fc] hover:bg-blue-600 text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-98"
                   >
-                    <span
-                      className={`block w-6 h-6 bg-white rounded-full transition-transform shadow-md ${
-                        flag.is_enabled ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
+                    {grantingAccess ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <UserPlus size={16} />
+                    )}
+                    <span>Grant Super Admin Panel Access</span>
                   </button>
                 </div>
-              ))}
+              </form>
+            </div>
+
+            {/* ── SECTION 2: ACTIVE SUPER ADMINS & COUNCIL OFFICERS TABLE ── */}
+            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+              <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
+                <div>
+                  <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                    <UserCheck size={18} className="text-[#0758fc]" />
+                    Authorized District Council Executives &amp; Super Admins
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Users with active access permissions to the Super Admin Panel (<code className="text-gray-700">/admin</code>)
+                  </p>
+                </div>
+                <span className="text-xs font-extrabold bg-blue-50 text-[#0758fc] border border-blue-200 px-3 py-1 rounded-full self-start sm:self-auto">
+                  {profiles.filter((p) => p.role === "super_admin" || p.role === "admin").length} Active Administrators
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-gray-700">
+                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-6 py-4">Executive Name &amp; Email</th>
+                      <th className="px-6 py-4">Council Portfolio</th>
+                      <th className="px-6 py-4">Panel Authority</th>
+                      <th className="px-6 py-4">Account Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {profiles
+                      .filter((p) => p.role === "super_admin" || p.role === "admin")
+                      .map((adm) => {
+                        const isRootAdmin =
+                          adm.email?.toLowerCase() === "tech.rotaract3192@gmail.com";
+                        return (
+                          <tr key={adm.id || adm.clerk_id} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#0758fc] font-black text-xs flex items-center justify-center shrink-0">
+                                  {(adm.full_name || adm.email || "U")[0]?.toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-extrabold text-gray-900">{adm.full_name || "Council Member"}</p>
+                                  <p className="text-[11px] text-gray-500 font-mono">{adm.email}</p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span className="font-extrabold text-gray-900 bg-gray-100 text-gray-800 px-3 py-1 rounded-xl text-[11px] inline-flex items-center gap-1.5 border border-gray-200">
+                                {adm.designation || "District Executive"}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span
+                                className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                                  adm.role === "super_admin"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                }`}
+                              >
+                                {adm.role === "super_admin" ? "👑 SUPER ADMIN" : "🛡️ ADMIN"}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ● {adm.status || "ACTIVE"}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4 text-right">
+                              <button
+                                type="button"
+                                disabled={revokingUserId === (adm.id || adm.clerk_id)}
+                                onClick={() =>
+                                  handleRevokeSuperAdmin(adm.id || adm.clerk_id, adm.full_name || adm.email)
+                                }
+                                className="text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                                title={isRootAdmin ? "Reset portfolio designation to default" : "Demote from super admin to regular attendee"}
+                              >
+                                {revokingUserId === (adm.id || adm.clerk_id) ? (
+                                  <Loader2 size={12} className="animate-spin inline mr-1" />
+                                ) : (
+                                  <ShieldAlert size={12} />
+                                )}
+                                <span>{isRootAdmin ? "Reset Portfolio" : "Revoke Access"}</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── SECTION 3: PLATFORM FEATURE FLAGS & TOGGLES ── */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-black text-gray-900">Platform Feature Flags &amp; Toggles</h3>
+                <p className="text-xs text-gray-500">Live operational switches controlling gate scanning, coupons, and payments</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {featureFlags.map((flag) => (
+                  <div
+                    key={flag.id}
+                    className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all"
+                  >
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900 truncate">{flag.name}</p>
+                        <span
+                          className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                            flag.is_enabled
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-gray-100 text-gray-600 border-gray-200"
+                          }`}
+                        >
+                          {flag.is_enabled ? "ENABLED" : "DISABLED"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 line-clamp-2">
+                        {flag.description || "Operational kill-switch controlling platform runtime behavior."}
+                      </p>
+                      <p className="text-[10px] font-mono text-gray-400">Key: {flag.name}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFlag(flag.id || flag.name, flag.is_enabled)}
+                      className={`w-14 h-8 rounded-full transition-colors cursor-pointer relative shrink-0 p-1 flex items-center ${
+                        flag.is_enabled ? "bg-[#0758fc]" : "bg-gray-200"
+                      }`}
+                      title={flag.is_enabled ? "Click to disable" : "Click to enable"}
+                    >
+                      <span
+                        className={`block w-6 h-6 bg-white rounded-full transition-transform shadow-md ${
+                          flag.is_enabled ? "translate-x-6" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

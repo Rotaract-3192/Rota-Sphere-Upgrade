@@ -14,7 +14,7 @@ import { generateSecureTicketToken } from "@/lib/services/ticketService";
 import { logAuditAction } from "@/lib/services/auditService";
 import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
-import { sendTicketEmailWithQR } from "@/lib/notifications/notificationService";
+import { sendTicketEmailWithQR, sendBookingReceivedEmail } from "@/lib/notifications/notificationService";
 
 export interface CheckoutAttendeeItem {
   ticketTierId: string;
@@ -410,7 +410,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       },
     });
 
-    // 8. Send Ticket Email with QR attachment for confirmed free passes
+    // 8. Send Ticket Email with QR attachment for confirmed free passes, or Booking Received email for paid UPI orders
     if (isFree && customerEmail) {
       sendTicketEmailWithQR({
         to: customerEmail,
@@ -426,6 +426,19 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           tierName: tierMap.get(input.attendees[idx]?.ticketTierId)?.name || "Delegate Pass",
         })),
       }).catch((err) => logger.error("Async ticket email failed", { error: String(err) }));
+    } else if (!isFree && customerEmail) {
+      sendBookingReceivedEmail({
+        to: customerEmail,
+        fullName: input.attendees[0]?.name || user?.profile?.full_name || "Delegate",
+        eventTitle: event.title,
+        eventDate: new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
+        eventCity: event.city || "District 3192",
+        orderNumber,
+        orderTotal: `₹${feeCalculation.totalPayable.toFixed(2)}`,
+        upiTransactionId: input.upiTransactionId?.trim() || undefined,
+        ticketCount: generatedTickets.length,
+        tierNames: input.attendees.map((a) => tierMap.get(a.ticketTierId)?.name || "Pass"),
+      }).catch((err) => logger.error("Async booking received email failed", { error: String(err) }));
     }
 
     revalidatePath("/tickets");

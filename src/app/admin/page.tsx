@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth/getUser";
+import { getCurrentUser, isConfiguredAdminEmail } from "@/lib/auth/getUser";
 import { executeSql } from "@/lib/db/directDb";
 import { SuperAdminDashboardClient } from "./SuperAdminDashboardClient";
 import { redirect } from "next/navigation";
@@ -17,7 +17,9 @@ export default async function AdminPage() {
 
   const isSuperAdmin =
     user.profile?.role === "super_admin" ||
-    user.email === "tech.rotaract3192@gmail.com";
+    user.profile?.role === "admin" ||
+    user.email === "tech.rotaract3192@gmail.com" ||
+    isConfiguredAdminEmail(user.email);
   if (!isSuperAdmin) {
     redirect("/dashboard");
   }
@@ -80,6 +82,12 @@ export default async function AdminPage() {
   `).catch(() => ({ data: [] }));
   const privacyRequests = privacyReqsData || [];
 
+  const { getAllUserProfilesAction } = await import("@/app/actions/adminActions");
+  const profilesRes = await getAllUserProfilesAction().catch(() => ({ success: false, data: [] }));
+  const initialProfiles = (profilesRes.data && profilesRes.data.length > 0)
+    ? profilesRes.data
+    : [user.profile];
+
   return (
     <SuperAdminDashboardClient
       user={user}
@@ -93,6 +101,7 @@ export default async function AdminPage() {
       initialOrganizerRequests={organizerRequests}
       initialComplaints={complaints}
       initialPrivacyRequests={privacyRequests}
+      initialProfiles={initialProfiles}
     />
   );
 }

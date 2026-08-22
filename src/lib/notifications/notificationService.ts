@@ -159,7 +159,7 @@ export async function sendTicketEmailWithQR({
     )
     .join("");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   const html = `
     <!DOCTYPE html>
@@ -232,6 +232,130 @@ export async function sendTicketEmailWithQR({
 }
 
 /**
+ * Send Booking Received & Verification Pending Email to Attendee
+ * Triggered immediately upon order placement before the host organizer approves the payment.
+ */
+export async function sendBookingReceivedEmail({
+  to,
+  fullName,
+  eventTitle,
+  eventDate,
+  eventCity,
+  orderNumber,
+  orderTotal,
+  upiTransactionId,
+  ticketCount,
+  tierNames,
+}: {
+  to: string;
+  fullName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventCity: string;
+  orderNumber: string;
+  orderTotal: string;
+  upiTransactionId?: string;
+  ticketCount: number;
+  tierNames?: string[];
+}): Promise<boolean> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
+
+  const tierSummaryHtml =
+    tierNames && tierNames.length > 0
+      ? `<div style="margin-top:8px;font-size:12px;color:#64748b;text-align:right;">${tierNames.join(", ")}</div>`
+      : "";
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>Booking Received — Payment Verification Pending</title>
+    </head>
+    <body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;margin:0;padding:32px 16px;color:#0f172a;">
+      <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
+        
+        <!-- Header Banner -->
+        <div style="background:#0758fc;padding:28px 32px;text-align:left;">
+          <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0;letter-spacing:-0.5px;">RotaSphere</h1>
+          <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:700;margin:6px 0 0;text-transform:uppercase;letter-spacing:1px;">Booking Received · Under Review ⏳</p>
+        </div>
+
+        <!-- Body Content -->
+        <div style="padding:32px;">
+          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 6px;">${eventTitle}</h2>
+          <p style="font-size:14px;color:#64748b;margin:0 0 24px;font-weight:500;">📅 ${eventDate} &nbsp;·&nbsp; 📍 ${eventCity}</p>
+          
+          <p style="font-size:15px;color:#334155;margin:0 0 20px;line-height:1.6;">
+            Hi <strong>${fullName}</strong>,<br/>
+            We have received your booking and payment details for <strong>${eventTitle}</strong>.
+          </p>
+
+          <!-- Review Notice Callout -->
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:18px 20px;margin-bottom:24px;">
+            <div style="margin-bottom:6px;">
+              <span style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;">Organizer Review</span>
+            </div>
+            <p style="font-size:13px;color:#1e40af;line-height:1.6;margin:0;">
+              The event organizing committee is reviewing your payment screenshot and UTR transaction reference. Once verified and approved by the host, your official entry QR pass will be generated and emailed to you.
+            </p>
+          </div>
+
+          <!-- Order Summary Box -->
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-top:20px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:12px;color:#64748b;font-weight:600;">Order Reference:</span>
+              <span style="font-size:12px;font-family:monospace;font-weight:700;color:#0f172a;">${orderNumber}</span>
+            </div>
+            ${
+              upiTransactionId
+                ? `<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                     <span style="font-size:12px;color:#64748b;font-weight:600;">Submitted UTR / Ref:</span>
+                     <span style="font-size:12px;font-family:monospace;font-weight:700;color:#0758fc;">${upiTransactionId}</span>
+                   </div>`
+                : ""
+            }
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:12px;color:#64748b;font-weight:600;">Reserved Passes:</span>
+              <span style="font-size:12px;font-weight:700;color:#0f172a;">${ticketCount} Ticket${ticketCount > 1 ? "s" : ""}</span>
+            </div>
+            ${tierSummaryHtml}
+            <div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;">
+              <span style="font-size:12px;color:#64748b;font-weight:600;">Total Amount:</span>
+              <span style="font-size:15px;font-weight:800;color:#0758fc;">${orderTotal}</span>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div style="margin-top:28px;text-align:center;">
+            <a href="${appUrl}/tickets" 
+               style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(7,88,252,0.3);">
+              View My Passes Dashboard →
+            </a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="font-size:12px;color:#94a3b8;margin:0;">
+            © ${new Date().getFullYear()} RotaSphere Platform · District 3192 Rotaract<br/>
+            <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">Visit RotaSphere</a>
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `⏳ Booking Received: ${eventTitle} (${orderNumber}) - Verification Pending`,
+    html,
+  });
+}
+
+/**
  * Send Bulk Email Announcement / Event Rules Broadcast
  */
 export async function sendBulkBroadcastEmail({
@@ -250,7 +374,7 @@ export async function sendBulkBroadcastEmail({
   let sentCount = 0;
   let failedCount = 0;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
   const formattedBody = messageBody.replace(/\n/g, "<br/>");
 
   const html = `
@@ -279,7 +403,7 @@ export async function sendBulkBroadcastEmail({
 
         <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="font-size:12px;color:#94a3b8;margin:0;">
-            © ${new Date().getFullYear()} RotaSphere · <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">rotasphere.in</a>
+            © ${new Date().getFullYear()} RotaSphere · <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">events.rotaract3192.org</a>
           </p>
         </div>
       </div>

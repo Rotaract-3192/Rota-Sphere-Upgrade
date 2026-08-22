@@ -9,14 +9,14 @@
 - **Primary Use**: Event Ticketing, Delegate Passes, QR Check-in, Club Governance, District Gallery
 
 ## Public Endpoints
-- Homepage: https://rotaract3192.org/
-- Explore Events & Passes: https://rotaract3192.org/events
-- Chartered Clubs Directory: https://rotaract3192.org/clubs
-- District Photo Gallery: https://rotaract3192.org/gallery
-- Attendee Tickets & Passes: https://rotaract3192.org/tickets
-- About District 3192: https://rotaract3192.org/district
-- Help & Support: https://rotaract3192.org/help
-- Contact: https://rotaract3192.org/contact
+- Homepage: https://events.rotaract3192.org/
+- Explore Events & Passes: https://events.rotaract3192.org/events
+- Chartered Clubs Directory: https://events.rotaract3192.org/clubs
+- District Photo Gallery: https://events.rotaract3192.org/gallery
+- Attendee Tickets & Passes: https://events.rotaract3192.org/tickets
+- About District 3192: https://events.rotaract3192.org/district
+- Help & Support: https://events.rotaract3192.org/help
+- Contact: https://events.rotaract3192.org/contact
 
 ## Platform Capabilities
 - Instant ticket generation with encrypted QR passes for gate check-in.
