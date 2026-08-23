@@ -25,6 +25,7 @@ import {
   getEventTiersAction,
 } from "@/app/actions/orderActions";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
+import { SearchableClubSelect } from "@/components/ui/SearchableClubSelect";
 
 interface ManualAttendeeModalProps {
   isOpen: boolean;
@@ -514,46 +515,21 @@ export function ManualAttendeeModal({
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="block text-[11px] font-bold text-gray-700">Select Rotaract Club</label>
-                      <select
-                        value={selectedClub}
-                        onChange={(e) => handleClubChange(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] cursor-pointer"
-                      >
-                        <option value="">Select Club...</option>
-                        {DISTRICT_CLUBS.map((c, idx) => (
-                          <option key={idx} value={c.name}>
-                            {c.name} ({c.zone})
-                          </option>
-                        ))}
-                        <option value="custom">Other / External Club</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-[11px] font-bold text-gray-700">District Zone</label>
-                      <input
-                        type="text"
-                        placeholder="District Zone"
-                        value={zone}
-                        onChange={(e) => setZone(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {memberType === "Rotaract" && selectedClub === "custom" && (
-                  <div className="pt-1 animate-in fade-in-50">
-                    <input
-                      type="text"
-                      required
-                      placeholder="Type Rotaract Club Name..."
-                      value={customClubName}
-                      onChange={(e) => setCustomClubName(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-bold text-gray-700">Search District 3192 Club</label>
+                    <SearchableClubSelect
+                      value={selectedClub}
+                      customValue={customClubName}
+                      zone={zone}
+                      onChange={(clubName, clubZone, isCustom) => {
+                        setSelectedClub(clubName);
+                        setZone(clubZone);
+                        if (!isCustom && clubName !== "custom") {
+                          setCustomClubName("");
+                        }
+                      }}
+                      onCustomChange={(customVal) => setCustomClubName(customVal)}
+                      placeholder="Type to search District 3192 clubs (e.g. Koramangala, Bangalore)..."
                     />
                   </div>
                 )}

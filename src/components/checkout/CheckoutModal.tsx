@@ -42,6 +42,7 @@ import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
+import { SearchableClubSelect } from "@/components/ui/SearchableClubSelect";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
@@ -1091,7 +1092,7 @@ export function CheckoutModal({
                               />
                             </div>
                           ) : (
-                            /* Rotaract Club Selector */
+                            /* Searchable Rotaract Club Selector */
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
@@ -1104,45 +1105,26 @@ export function CheckoutModal({
                                 )}
                               </div>
 
-                              <select
+                              <SearchableClubSelect
                                 value={att.clubName}
-                                onChange={(e) => {
-                                  const val = e.target.value;
+                                customValue={att.customClubName}
+                                zone={att.zone}
+                                onChange={(clubName, clubZone, isCustom) => {
                                   const updated = [...attendees];
-                                  updated[idx].clubName = val;
-                                  if (val === "custom") {
-                                    updated[idx].zone = "";
-                                  } else if (val) {
-                                    updated[idx].zone = getClubZone(val);
-                                  } else {
-                                    updated[idx].zone = "";
+                                  updated[idx].clubName = clubName;
+                                  updated[idx].zone = clubZone;
+                                  if (!isCustom && clubName !== "custom") {
+                                    updated[idx].customClubName = "";
                                   }
                                   setAttendees(updated);
                                 }}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
-                              >
-                                <option value="">Select Rotaract Club...</option>
-                                {DISTRICT_CLUBS.map((c, cIdx) => (
-                                  <option key={cIdx} value={c.name}>
-                                    {c.name} ({c.zone})
-                                  </option>
-                                ))}
-                                <option value="custom">Other / External Rotaract Club</option>
-                              </select>
-
-                              {att.clubName === "custom" && (
-                                <input
-                                  type="text"
-                                  placeholder="Type Rotaract Club Name..."
-                                  value={att.customClubName}
-                                  onChange={(e) => {
-                                    const updated = [...attendees];
-                                    updated[idx].customClubName = e.target.value;
-                                    setAttendees(updated);
-                                  }}
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 outline-none focus:border-[#0758fc]"
-                                />
-                              )}
+                                onCustomChange={(customVal) => {
+                                  const updated = [...attendees];
+                                  updated[idx].customClubName = customVal;
+                                  setAttendees(updated);
+                                }}
+                                placeholder="Type to search District 3192 clubs (e.g. Koramangala, Bangalore)..."
+                              />
                             </div>
                           )}
                         </div>
