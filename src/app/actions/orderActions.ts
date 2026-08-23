@@ -22,6 +22,10 @@ export interface CheckoutAttendeeItem {
   name: string;
   email: string;
   phone?: string;
+  memberType?: string;
+  clubName?: string;
+  designation?: string;
+  zone?: string;
   customAnswers?: Record<string, any>;
 }
 
@@ -52,7 +56,7 @@ export interface LegacyCreateOrderInput {
   upiTransactionId?: string;
 }
 
-// Ensure database schema columns exist for UPI payments
+// Ensure database schema columns exist for UPI payments & Attendee details
 async function ensureUpiColumns() {
   try {
     // Add missing UPI columns to saas_events
@@ -110,6 +114,10 @@ async function ensureUpiColumns() {
           'REFUND_REQUESTED'
         ));
       ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS custom_answers JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS member_type VARCHAR(64);
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS club_name VARCHAR(255);
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS designation VARCHAR(255);
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS zone VARCHAR(100);
     `);
   } catch (_) { /* ignore if constraint already updated */ }
 }
@@ -363,6 +371,11 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       const ticketCode = `TKT-${orderNumber.slice(-6)}-${i + 1}`;
       const qrToken = generateSecureTicketToken(ticketCode, input.eventId);
 
+      const resolvedMemberType = attendee.memberType || "Rotaract";
+      const resolvedClub = attendee.clubName?.trim() || "";
+      const resolvedDesignation = attendee.designation?.trim() || "";
+      const resolvedZone = attendee.zone?.trim() || "";
+
       const insertTicketSql = `
         INSERT INTO saas_tickets (
           ticket_code,
@@ -373,6 +386,10 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           attendee_name,
           attendee_email,
           attendee_phone,
+          member_type,
+          club_name,
+          designation,
+          zone,
           qr_token,
           status,
           payment_proof_url,
@@ -386,10 +403,20 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           ${escapeSql(attendee.name)},
           ${escapeSql(attendee.email)},
           ${escapeSql(attendee.phone)},
+          ${escapeSql(resolvedMemberType)},
+          ${escapeSql(resolvedClub || null)},
+          ${escapeSql(resolvedDesignation || null)},
+          ${escapeSql(resolvedZone || null)},
           ${escapeSql(qrToken)},
           ${escapeSql(ticketStatus)},
           ${escapeSql(input.paymentProofUrl || null)},
-          ${escapeSql(JSON.stringify(attendee.customAnswers || {}))}
+          ${escapeSql(JSON.stringify({
+            ...(attendee.customAnswers || {}),
+            member_type: resolvedMemberType,
+            club_name: resolvedClub,
+            designation: resolvedDesignation,
+            zone: resolvedZone,
+          }))}
         )
         RETURNING id, ticket_code, qr_token;
       `;
@@ -698,7 +725,9 @@ export interface ManualAttendeeInput {
   name: string;
   email: string;
   phone?: string;
+  memberType?: string;
   clubName?: string;
+  designation?: string;
   zone?: string;
   customAnswers?: Record<string, any>;
   paymentMethod?: "OFFLINE_CASH" | "DIRECT_BANK_TRANSFER" | "VIP_COMPLIMENTARY" | "MANUAL_UPI" | string;
@@ -766,6 +795,9 @@ export async function createManualAttendeeAction(
     const paymentMode = input.paymentMethod || (amountPaid === 0 ? "VIP_COMPLIMENTARY" : "OFFLINE_CASH");
     const orderNumber = `RS-ORD-M${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
+    const resolvedMemberType = input.memberType || "Rotaract";
+    const resolvedDesignation = input.designation?.trim() || "";
+
     // 4. Insert Paid Order
     const insertOrderSql = `
       INSERT INTO saas_orders (
@@ -798,7 +830,9 @@ export async function createManualAttendeeAction(
         ${escapeSql(paymentMode)},
         ${escapeSql(input.referenceNote?.trim() || "Manual Spot Entry")},
         ${escapeSql(JSON.stringify({
+          member_type: resolvedMemberType,
           club_name: clubName,
+          designation: resolvedDesignation,
           zone,
           food_preference: input.foodPreference,
           manual_entry_by: user.email,
@@ -827,6 +861,10 @@ export async function createManualAttendeeAction(
         attendee_name,
         attendee_email,
         attendee_phone,
+        member_type,
+        club_name,
+        designation,
+        zone,
         qr_token,
         status,
         custom_answers
@@ -839,11 +877,17 @@ export async function createManualAttendeeAction(
         ${escapeSql(input.name.trim())},
         ${escapeSql(input.email.trim())},
         ${escapeSql(input.phone?.trim() || null)},
+        ${escapeSql(resolvedMemberType)},
+        ${escapeSql(clubName || null)},
+        ${escapeSql(resolvedDesignation || null)},
+        ${escapeSql(zone || null)},
         ${escapeSql(qrToken)},
         'CONFIRMED',
         ${escapeSql(JSON.stringify({
           ...(input.customAnswers || {}),
+          member_type: resolvedMemberType,
           club_name: clubName || input.customAnswers?.club_name,
+          designation: resolvedDesignation,
           zone: zone || input.customAnswers?.zone,
           food_preference: input.foodPreference || input.customAnswers?.food_preference,
           payment_mode: paymentMode,

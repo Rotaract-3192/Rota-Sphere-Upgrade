@@ -32,16 +32,23 @@ import {
   Camera,
   Upload,
   Trash2,
+  Building,
+  User,
+  Briefcase,
+  Award,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
+import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import Link from "next/link";
 import Image from "next/image";
+
+const DISTRICT_CLUBS = getDistrictClubsWithZones();
 
 interface CheckoutModalProps {
   event: SaasEvent;
@@ -114,13 +121,29 @@ export function CheckoutModal({
 
   // Attendees list
   const [attendees, setAttendees] = useState<
-    Array<{ tierId: string; name: string; email: string; phone: string; customAnswers?: Record<string, any> }>
+    Array<{
+      tierId: string;
+      name: string;
+      email: string;
+      phone: string;
+      memberType: "Rotaract" | "Rotary" | "Non-Rotaract";
+      clubName: string;
+      customClubName: string;
+      designation: string;
+      zone: string;
+      customAnswers?: Record<string, any>;
+    }>
   >([
     {
       tierId: tiers[0]?.id || "",
       name: "",
       email: "",
       phone: "",
+      memberType: "Rotaract",
+      clubName: "",
+      customClubName: "",
+      designation: "",
+      zone: "",
       customAnswers: {},
     },
   ]);
@@ -197,7 +220,18 @@ export function CheckoutModal({
     setSelectedCounts(newCounts);
 
     // Rebuild attendee slots while preserving what user typed
-    const newAttendees: Array<{ tierId: string; name: string; email: string; phone: string; customAnswers?: Record<string, any> }> = [];
+    const newAttendees: Array<{
+      tierId: string;
+      name: string;
+      email: string;
+      phone: string;
+      memberType: "Rotaract" | "Rotary" | "Non-Rotaract";
+      clubName: string;
+      customClubName: string;
+      designation: string;
+      zone: string;
+      customAnswers?: Record<string, any>;
+    }> = [];
     let prevIndex = 0;
     tiers.forEach((t) => {
       const count = newCounts[t.id] || 0;
@@ -208,12 +242,34 @@ export function CheckoutModal({
           name: existing?.name || "",
           email: existing?.email || "",
           phone: existing?.phone || "",
+          memberType: existing?.memberType || "Rotaract",
+          clubName: existing?.clubName || "",
+          customClubName: existing?.customClubName || "",
+          designation: existing?.designation || "",
+          zone: existing?.zone || "",
           customAnswers: existing?.customAnswers || {},
         });
         prevIndex++;
       }
     });
-    setAttendees(newAttendees.length > 0 ? newAttendees : [{ tierId: tiers[0]?.id || "", name: "", email: "", phone: "", customAnswers: {} }]);
+    setAttendees(
+      newAttendees.length > 0
+        ? newAttendees
+        : [
+            {
+              tierId: tiers[0]?.id || "",
+              name: "",
+              email: "",
+              phone: "",
+              memberType: "Rotaract",
+              clubName: "",
+              customClubName: "",
+              designation: "",
+              zone: "",
+              customAnswers: {},
+            },
+          ]
+    );
   }
 
   function handleApplyCoupon() {
@@ -272,13 +328,34 @@ export function CheckoutModal({
     setLoading(true);
     setErrorMessage(null);
 
-    const formattedAttendees = attendees.map((a) => ({
-      ticketTierId: a.tierId,
-      name: a.name.trim(),
-      email: a.email.trim(),
-      phone: a.phone.trim() || undefined,
-      customAnswers: a.customAnswers || {},
-    }));
+    const formattedAttendees = attendees.map((a) => {
+      const finalClub =
+        a.memberType === "Non-Rotaract"
+          ? (a.clubName?.trim() || "Guest / Non-Rotaractor")
+          : a.memberType === "Rotary"
+          ? a.clubName?.trim() || ""
+          : a.clubName === "custom"
+          ? a.customClubName?.trim() || ""
+          : a.clubName?.trim() || "";
+      const resolvedZone = a.zone || (finalClub ? getClubZone(finalClub) : "");
+      return {
+        ticketTierId: a.tierId,
+        name: a.name.trim(),
+        email: a.email.trim(),
+        phone: a.phone.trim() || undefined,
+        memberType: a.memberType,
+        clubName: finalClub || undefined,
+        designation: a.designation.trim() || undefined,
+        zone: resolvedZone || undefined,
+        customAnswers: {
+          ...(a.customAnswers || {}),
+          member_type: a.memberType,
+          club_name: finalClub,
+          designation: a.designation.trim(),
+          zone: resolvedZone,
+        },
+      };
+    });
 
     const res = await createCheckoutOrderAction({
       eventId: event.id,
@@ -856,88 +933,290 @@ export function CheckoutModal({
             {/* Attendee Details Form */}
             {attendees.length > 0 && totalTicketCount > 0 && (
               <div className="space-y-4 pt-2">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
-                  Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                    Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-medium">
+                    Badges &amp; entry passes will be issued with these details
+                  </span>
+                </div>
 
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                  {attendees.map((att, idx) => (
-                    <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
-                      <span className="text-[10px] font-bold uppercase text-[#0758fc] tracking-wider block">
-                        Attendee #{idx + 1}
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          required
-                          placeholder="Full Name *"
-                          value={att.name}
-                          onChange={(e) => {
-                            const updated = [...attendees];
-                            updated[idx].name = e.target.value;
-                            setAttendees(updated);
-                          }}
-                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#0758fc]"
-                        />
-                        <input
-                          type="email"
-                          required
-                          placeholder="Email Address *"
-                          value={att.email}
-                          onChange={(e) => {
-                            const updated = [...attendees];
-                            updated[idx].email = e.target.value;
-                            setAttendees(updated);
-                          }}
-                          className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#0758fc]"
-                        />
-                      </div>
-
-                      {/* Event Custom Registration Questions */}
-                      {customQuestions.length > 0 && (
-                        <div className="pt-2 border-t border-gray-200/60 space-y-2.5">
-                          <span className="text-[10px] font-extrabold uppercase text-gray-500 tracking-wider block">
-                            Registration Questions
+                <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
+                  {attendees.map((att, idx) => {
+                    const matchedTier = tiers.find((t) => t.id === att.tierId);
+                    return (
+                      <div key={idx} className="p-4 sm:p-5 bg-gray-50/90 rounded-3xl border border-gray-200 space-y-4 shadow-xs">
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between border-b border-gray-200/70 pb-2.5">
+                          <span className="text-xs font-black uppercase text-[#0758fc] tracking-wider flex items-center gap-1.5">
+                            <User size={14} /> Attendee #{idx + 1}
                           </span>
-                          {customQuestions.map((q) => (
-                            <div key={q.id} className="space-y-1 text-left">
-                              <label className="block text-[11px] font-bold text-gray-700">
-                                {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
-                              </label>
-                              {q.question_type === "dropdown" ? (
-                                <select
-                                  value={att.customAnswers?.[q.id] || ""}
-                                  onChange={(e) => {
+                          {matchedTier && (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-[#0758fc] border border-blue-200">
+                              {matchedTier.name} ({Number(matchedTier.price) === 0 ? "FREE" : `₹${matchedTier.price}`})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 1. Delegate Name & Email */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-700">Full Name *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Full Name *"
+                              value={att.name}
+                              onChange={(e) => {
+                                const updated = [...attendees];
+                                updated[idx].name = e.target.value;
+                                setAttendees(updated);
+                              }}
+                              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-700">Email Address *</label>
+                            <input
+                              type="email"
+                              required
+                              placeholder="Email Address *"
+                              value={att.email}
+                              onChange={(e) => {
+                                const updated = [...attendees];
+                                updated[idx].email = e.target.value;
+                                setAttendees(updated);
+                              }}
+                              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 2. Phone Number */}
+                        <div className="space-y-1">
+                          <label className="block text-[11px] font-bold text-gray-700">Phone Number (Optional)</label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. +91 98765 43210"
+                            value={att.phone}
+                            onChange={(e) => {
+                              const updated = [...attendees];
+                              updated[idx].phone = e.target.value;
+                              setAttendees(updated);
+                            }}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                          />
+                        </div>
+
+                        {/* 3. Rotary Affiliation (3 Distinct Parts: Rotaract / Rotary / Non-Rotaract) */}
+                        <div className="space-y-1.5 pt-1">
+                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                            <span>Affiliation Category *</span>
+                            <span className="text-[10px] text-gray-400 font-normal">Select your affiliation</span>
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
+                              const isSelected = (att.memberType || "Rotaract") === type;
+                              return (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => {
                                     const updated = [...attendees];
-                                    updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                    updated[idx].memberType = type;
+                                    if (type === "Non-Rotaract") {
+                                      updated[idx].clubName = "Non-Rotaract Guest";
+                                      updated[idx].zone = "General / Guest";
+                                    } else if (type === "Rotary") {
+                                      updated[idx].clubName = "";
+                                      updated[idx].zone = "Rotary International";
+                                    } else {
+                                      updated[idx].clubName = "";
+                                      updated[idx].zone = "";
+                                    }
                                     setAttendees(updated);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                  className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center cursor-pointer active:scale-95 ${
+                                    isSelected
+                                      ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
+                                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100/80"
+                                  }`}
                                 >
-                                  <option value="">Select an option...</option>
-                                  {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
-                                    <option key={optIdx} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
-                              ) : (
+                                  {type === "Rotaract"
+                                    ? "● Rotaract"
+                                    : type === "Rotary"
+                                    ? "● Rotary"
+                                    : "● Non-Rotarian"}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 4. Club Name & Zone Resolution */}
+                        <div className="space-y-2 p-3 bg-white rounded-2xl border border-gray-200/80">
+                          {att.memberType === "Rotary" ? (
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                <Building size={13} className="text-[#0758fc]" /> Rotary Club Name
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
+                                value={att.clubName}
+                                onChange={(e) => {
+                                  const updated = [...attendees];
+                                  updated[idx].clubName = e.target.value;
+                                  setAttendees(updated);
+                                }}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white"
+                              />
+                            </div>
+                          ) : att.memberType === "Non-Rotaract" ? (
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                <Building size={13} className="text-[#0758fc]" /> Organization / College / Company (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
+                                value={att.clubName === "Non-Rotaract Guest" ? "" : att.clubName}
+                                onChange={(e) => {
+                                  const updated = [...attendees];
+                                  updated[idx].clubName = e.target.value || "Non-Rotaract Guest";
+                                  setAttendees(updated);
+                                }}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white"
+                              />
+                            </div>
+                          ) : (
+                            /* Rotaract Club Selector */
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                  <Building size={13} className="text-[#0758fc]" /> Rotaract Club
+                                </label>
+                                {att.zone && (
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-[#0758fc] border border-blue-200">
+                                    Zone: {att.zone}
+                                  </span>
+                                )}
+                              </div>
+
+                              <select
+                                value={att.clubName}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const updated = [...attendees];
+                                  updated[idx].clubName = val;
+                                  if (val === "custom") {
+                                    updated[idx].zone = "";
+                                  } else if (val) {
+                                    updated[idx].zone = getClubZone(val);
+                                  } else {
+                                    updated[idx].zone = "";
+                                  }
+                                  setAttendees(updated);
+                                }}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                              >
+                                <option value="">Select Rotaract Club...</option>
+                                {DISTRICT_CLUBS.map((c, cIdx) => (
+                                  <option key={cIdx} value={c.name}>
+                                    {c.name} ({c.zone})
+                                  </option>
+                                ))}
+                                <option value="custom">Other / External Rotaract Club</option>
+                              </select>
+
+                              {att.clubName === "custom" && (
                                 <input
                                   type="text"
-                                  placeholder={q.question_text}
-                                  value={att.customAnswers?.[q.id] || ""}
+                                  placeholder="Type Rotaract Club Name..."
+                                  value={att.customClubName}
                                   onChange={(e) => {
                                     const updated = [...attendees];
-                                    updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                    updated[idx].customClubName = e.target.value;
                                     setAttendees(updated);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 outline-none focus:border-[#0758fc]"
                                 />
                               )}
                             </div>
-                          ))}
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        {/* 5. Designation / Role (NORMAL TEXT INPUT COLUMN — NOT A DROPDOWN) */}
+                        <div className="space-y-1">
+                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Briefcase size={13} className="text-[#0758fc]" /> Designation / Role
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-normal">Free text input</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. President, Sergeant-at-Arms, DRR, Secretary, Member..."
+                            value={att.designation}
+                            onChange={(e) => {
+                              const updated = [...attendees];
+                              updated[idx].designation = e.target.value;
+                              setAttendees(updated);
+                            }}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 placeholder-gray-400"
+                          />
+                          <p className="text-[10px] text-gray-400">
+                            Type any club or district portfolio (e.g. Sergeant-at-Arms, President, DRR, Secretary, Director, Member, Guest)
+                          </p>
+                        </div>
+
+                        {/* 6. Event Custom Registration Questions */}
+                        {customQuestions.length > 0 && (
+                          <div className="pt-3 border-t border-gray-200/60 space-y-2.5">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-500 tracking-wider block">
+                              Additional Event Questions
+                            </span>
+                            {customQuestions.map((q) => (
+                              <div key={q.id} className="space-y-1 text-left">
+                                <label className="block text-[11px] font-bold text-gray-700">
+                                  {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
+                                </label>
+                                {q.question_type === "dropdown" ? (
+                                  <select
+                                    value={att.customAnswers?.[q.id] || ""}
+                                    onChange={(e) => {
+                                      const updated = [...attendees];
+                                      updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                      setAttendees(updated);
+                                    }}
+                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                  >
+                                    <option value="">Select an option...</option>
+                                    {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
+                                      <option key={optIdx} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder={q.question_text}
+                                    value={att.customAnswers?.[q.id] || ""}
+                                    onChange={(e) => {
+                                      const updated = [...attendees];
+                                      updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
+                                      setAttendees(updated);
+                                    }}
+                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

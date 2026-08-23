@@ -77,20 +77,46 @@ export function getClubZone(rawClubName?: string | null): string {
 }
 
 /**
- * Resolves both Club Name and District Zone from a ticket record or attendee custom answers
+ * Resolves both Club Name and District Zone from a ticket record or attendee custom answers,
+ * along with Rotary affiliation (memberType) and Designation.
  */
 export function resolveClubAndZone(ticketOrAttendee: {
+  member_type?: string;
+  memberType?: string;
+  club_name?: string;
   clubName?: string;
   club?: string;
   rotaract_club?: string;
   organization_name?: string;
+  designation?: string;
+  zone?: string;
   custom_answers?: Record<string, any> | null;
   customAnswers?: Record<string, any> | null;
-}): { clubName: string; zone: string } {
+}): { clubName: string; zone: string; memberType: string; designation: string } {
   const custom = ticketOrAttendee.custom_answers || ticketOrAttendee.customAnswers || {};
 
-  // 1. Check direct fields
+  // 1. Resolve memberType
+  const rawMemberType =
+    ticketOrAttendee.member_type ||
+    ticketOrAttendee.memberType ||
+    custom.member_type ||
+    custom.memberType ||
+    custom.affiliation ||
+    "Rotaract";
+  const memberType = String(rawMemberType);
+
+  // 2. Resolve designation
+  const rawDesignation =
+    ticketOrAttendee.designation ||
+    custom.designation ||
+    custom.role ||
+    custom.portfolio ||
+    "";
+  const designation = String(rawDesignation).trim();
+
+  // 3. Check direct fields
   let candidateClub =
+    ticketOrAttendee.club_name ||
     ticketOrAttendee.clubName ||
     ticketOrAttendee.club ||
     ticketOrAttendee.rotaract_club ||
@@ -102,7 +128,7 @@ export function resolveClubAndZone(ticketOrAttendee: {
     custom.college_or_club ||
     "";
 
-  // 2. Check if questions have any club answers
+  // 4. Check if questions have any club answers
   if (!candidateClub && custom && typeof custom === "object") {
     for (const [k, val] of Object.entries(custom)) {
       if (/club/i.test(k) && typeof val === "string" && val.trim().length > 0) {
@@ -112,8 +138,8 @@ export function resolveClubAndZone(ticketOrAttendee: {
     }
   }
 
-  // 3. Check if zone is explicitly provided in custom answers
-  let explicitZone = custom.zone || custom.district_zone || "";
+  // 5. Check if zone is explicitly provided in custom answers
+  let explicitZone = ticketOrAttendee.zone || custom.zone || custom.district_zone || "";
 
   if (candidateClub && typeof candidateClub === "string" && candidateClub.trim().length > 0) {
     const cleanClub = candidateClub.trim();
@@ -121,11 +147,15 @@ export function resolveClubAndZone(ticketOrAttendee: {
     return {
       clubName: cleanClub,
       zone: resolvedZone,
+      memberType,
+      designation,
     };
   }
 
   return {
-    clubName: "Individual Delegate",
-    zone: explicitZone || "General / Unassigned",
+    clubName: memberType === "Non-Rotaract" ? "Non-Rotaract Guest" : "Individual Delegate",
+    zone: explicitZone || (memberType === "Non-Rotaract" ? "General / Guest" : "General / Unassigned"),
+    memberType,
+    designation,
   };
 }

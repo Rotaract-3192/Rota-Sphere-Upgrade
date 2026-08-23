@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Layers,
   Sparkles,
+  Briefcase,
 } from "lucide-react";
 import {
   createManualAttendeeAction,
@@ -57,8 +58,10 @@ export function ManualAttendeeModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [memberType, setMemberType] = useState<"Rotaract" | "Rotary" | "Non-Rotaract">("Rotaract");
   const [selectedClub, setSelectedClub] = useState("");
   const [customClubName, setCustomClubName] = useState("");
+  const [designation, setDesignation] = useState("");
   const [zone, setZone] = useState("");
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
   const [paymentMethod, setPaymentMethod] = useState<string>("OFFLINE_CASH");
@@ -168,7 +171,14 @@ export function ManualAttendeeModal({
     setLoading(true);
     setErrorMessage(null);
 
-    const finalClub = selectedClub === "custom" ? customClubName.trim() : selectedClub;
+    const finalClub =
+      memberType === "Non-Rotaract"
+        ? (selectedClub || "Guest / Non-Rotaractor")
+        : memberType === "Rotary"
+        ? selectedClub.trim()
+        : selectedClub === "custom"
+        ? customClubName.trim()
+        : selectedClub;
 
     const payload: ManualAttendeeInput = {
       eventId: selectedEventId,
@@ -176,7 +186,9 @@ export function ManualAttendeeModal({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
+      memberType,
       clubName: finalClub || undefined,
+      designation: designation.trim() || undefined,
       zone: zone.trim() || undefined,
       paymentMethod,
       amountPaid: Number(amountPaid) || 0,
@@ -208,7 +220,9 @@ export function ManualAttendeeModal({
           created_at: new Date().toISOString(),
           custom_answers: {
             ...customAnswers,
+            member_type: memberType,
             club_name: finalClub,
+            designation: designation.trim(),
             zone: zone.trim(),
             payment_mode: paymentMethod,
           },
@@ -223,8 +237,10 @@ export function ManualAttendeeModal({
     setName("");
     setEmail("");
     setPhone("");
+    setMemberType("Rotaract");
     setSelectedClub("");
     setCustomClubName("");
+    setDesignation("");
     setZone("");
     setCustomAnswers({});
     setReferenceNote("");
@@ -421,11 +437,11 @@ export function ManualAttendeeModal({
                 </div>
               </div>
 
-              {/* 3. Rotaract Club & Auto-Populated Zone */}
-              <div className="p-4 bg-blue-50/40 border border-blue-200/60 rounded-3xl space-y-3">
+              {/* 3. Rotary Affiliation & Club Category (3 Parts) */}
+              <div className="p-4 bg-blue-50/40 border border-blue-200/60 rounded-3xl space-y-3.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold uppercase tracking-wider text-[#0758fc] flex items-center gap-1.5">
-                    <Building size={14} /> Rotaract / Rotary Club &amp; District Zone
+                    <Building size={14} /> Affiliation &amp; Club Details
                   </span>
                   {zone && (
                     <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-[#0758fc] border border-blue-200">
@@ -434,48 +450,133 @@ export function ManualAttendeeModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Select Rotaract Club</label>
-                    <select
-                      value={selectedClub}
-                      onChange={(e) => handleClubChange(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] cursor-pointer"
-                    >
-                      <option value="">Select Club...</option>
-                      {DISTRICT_CLUBS.map((c, idx) => (
-                        <option key={idx} value={c.name}>
-                          {c.name} ({c.zone})
-                        </option>
-                      ))}
-                      <option value="custom">Other / External Club</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-gray-700">District Zone</label>
-                    <input
-                      type="text"
-                      placeholder="District Zone"
-                      value={zone}
-                      onChange={(e) => setZone(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
-                    />
+                {/* 3-Part Category Switcher */}
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-gray-700">Affiliation Category</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
+                      const isSelected = memberType === type;
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setMemberType(type);
+                            if (type === "Non-Rotaract") {
+                              setSelectedClub("Non-Rotaract Guest");
+                              setZone("General / Guest");
+                            } else if (type === "Rotary") {
+                              setSelectedClub("");
+                              setZone("Rotary International");
+                            } else {
+                              setSelectedClub("");
+                              setZone("");
+                            }
+                          }}
+                          className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center cursor-pointer active:scale-95 ${
+                            isSelected
+                              ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
+                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100/80"
+                          }`}
+                        >
+                          {type === "Rotaract"
+                            ? "● Rotaract"
+                            : type === "Rotary"
+                            ? "● Rotary"
+                            : "● Non-Rotarian"}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {selectedClub === "custom" && (
+                {/* Club Details Based on Affiliation */}
+                {memberType === "Rotary" ? (
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">Rotary Club Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
+                      value={selectedClub === "Non-Rotaract Guest" ? "" : selectedClub}
+                      onChange={(e) => setSelectedClub(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                    />
+                  </div>
+                ) : memberType === "Non-Rotaract" ? (
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">Organization / College / Company (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
+                      value={selectedClub === "Non-Rotaract Guest" ? "" : selectedClub}
+                      onChange={(e) => setSelectedClub(e.target.value || "Non-Rotaract Guest")}
+                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-bold text-gray-700">Select Rotaract Club</label>
+                      <select
+                        value={selectedClub}
+                        onChange={(e) => handleClubChange(e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] cursor-pointer"
+                      >
+                        <option value="">Select Club...</option>
+                        {DISTRICT_CLUBS.map((c, idx) => (
+                          <option key={idx} value={c.name}>
+                            {c.name} ({c.zone})
+                          </option>
+                        ))}
+                        <option value="custom">Other / External Club</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-bold text-gray-700">District Zone</label>
+                      <input
+                        type="text"
+                        placeholder="District Zone"
+                        value={zone}
+                        onChange={(e) => setZone(e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {memberType === "Rotaract" && selectedClub === "custom" && (
                   <div className="pt-1 animate-in fade-in-50">
                     <input
                       type="text"
                       required
-                      placeholder="Club Name"
+                      placeholder="Type Rotaract Club Name..."
                       value={customClubName}
                       onChange={(e) => setCustomClubName(e.target.value)}
                       className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 )}
+
+                {/* 4. Designation / Role (NORMAL TEXT INPUT COLUMN — NOT A DROPDOWN) */}
+                <div className="space-y-1 pt-1 border-t border-blue-200/50">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-[#0758fc]" /> Designation / Role
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal">Free text input</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. President, Sergeant-at-Arms, DRR, Secretary, Member..."
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 placeholder-gray-400"
+                  />
+                  <p className="text-[10px] text-gray-400">
+                    Type any official designation (President, Sergeant-at-Arms, DRR, Secretary, Member, Guest, etc.)
+                  </p>
+                </div>
               </div>
 
               {/* 4. Event Custom Registration Questions (Matches Normal Ticket Entry 1:1) */}

@@ -265,6 +265,11 @@ export interface SaasTicket {
   attendee_name: string;
   attendee_email: string;
   attendee_phone: string | null;
+  member_type?: string | null;
+  club_name?: string | null;
+  designation?: string | null;
+  zone?: string | null;
+  custom_answers?: Record<string, any> | null;
   qr_token: string;
   status: TicketStatus;
   checked_in_at: string | null;

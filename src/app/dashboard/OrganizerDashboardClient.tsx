@@ -234,11 +234,18 @@ export function OrganizerDashboardClient({
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
       const q = attendeeSearch.toLowerCase().trim();
+      const directClub = t.club_name || t.custom_answers?.club_name || "";
+      const directDesig = t.designation || t.custom_answers?.designation || "";
+      const directMemberType = t.member_type || t.custom_answers?.member_type || "";
+
       const matchesSearch =
         !q ||
         t.attendee_name?.toLowerCase().includes(q) ||
         t.attendee_email?.toLowerCase().includes(q) ||
-        t.ticket_code?.toLowerCase().includes(q);
+        t.ticket_code?.toLowerCase().includes(q) ||
+        directClub.toLowerCase().includes(q) ||
+        directDesig.toLowerCase().includes(q) ||
+        directMemberType.toLowerCase().includes(q);
 
       const matchesEvent =
         selectedAttendeeEventId === "ALL" ||
@@ -1140,7 +1147,7 @@ export function OrganizerDashboardClient({
                   <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-400 uppercase tracking-wider font-bold">
                     <tr>
                       <th className="py-3.5 px-6">Ticket Code</th>
-                      <th className="py-3.5 px-6">Attendee</th>
+                      <th className="py-3.5 px-6">Attendee &amp; Role</th>
                       <th className="py-3.5 px-6">Club &amp; Zone</th>
                       <th className="py-3.5 px-6">Event &amp; Tier</th>
                       <th className="py-3.5 px-6">Status</th>
@@ -1155,20 +1162,40 @@ export function OrganizerDashboardClient({
                       </tr>
                     ) : (
                       filteredTickets.map((t: any) => {
-                        const { clubName, zone } = resolveClubAndZone(t);
+                        const { clubName, zone, memberType, designation } = resolveClubAndZone(t);
                         return (
                           <tr key={t.id} className="hover:bg-gray-50/50">
                             <td className="py-3.5 px-6 font-mono font-bold text-gray-900">{t.ticket_code}</td>
                             <td className="py-3.5 px-6">
-                              <p className="font-bold text-gray-900">{t.attendee_name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-gray-900">{t.attendee_name}</p>
+                                {designation && (
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                    {designation}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[11px] text-gray-400">{t.attendee_email}</p>
                               {t.attendee_phone && (
                                 <p className="text-[10px] text-gray-400">{t.attendee_phone}</p>
                               )}
                             </td>
                             <td className="py-3.5 px-6">
-                              <p className="font-bold text-gray-800 line-clamp-1">{clubName}</p>
-                              <span className="inline-block mt-0.5 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                                    memberType === "Rotary"
+                                      ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                      : memberType === "Non-Rotaract"
+                                      ? "bg-gray-100 text-gray-700 border border-gray-300"
+                                      : "bg-blue-100 text-[#0758fc] border border-blue-200"
+                                  }`}
+                                >
+                                  {memberType}
+                                </span>
+                                <p className="font-bold text-gray-800 line-clamp-1">{clubName}</p>
+                              </div>
+                              <span className="inline-block mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
                                 {zone}
                               </span>
                             </td>

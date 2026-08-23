@@ -257,20 +257,23 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.roundRect(60, cardBoxY, 700, 200, 24);
       ctx.stroke();
 
-      // Delegate Name Label
+      // Delegate Name Label & Designation
+      const desig = ticket.designation || ticket.custom_answers?.designation || "";
+      const attClub = ticket.club_name || ticket.custom_answers?.club_name || "";
+
       ctx.fillStyle = "#64748b";
       ctx.font = "bold 12px sans-serif";
-      ctx.fillText("ATTENDEE / DELEGATE", 90, cardBoxY + 38);
+      ctx.fillText(desig ? `ATTENDEE / ${desig.toUpperCase()}` : "ATTENDEE / DELEGATE", 90, cardBoxY + 38);
 
       // Large Attendee Name
       ctx.fillStyle = "#0f172a";
       ctx.font = "900 28px sans-serif";
       ctx.fillText(attendeeName, 90, cardBoxY + 75);
 
-      // Attendee Email
+      // Attendee Email & Club
       ctx.fillStyle = "#475569";
       ctx.font = "15px sans-serif";
-      ctx.fillText(attendeeEmail, 90, cardBoxY + 105);
+      ctx.fillText(attClub ? `${attendeeEmail}   •   ${attClub}` : attendeeEmail, 90, cardBoxY + 105);
 
       // Tier Pill (e.g. Early Bird / Delegate Pass)
       ctx.fillStyle = "#0758fc";
@@ -664,7 +667,19 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                   {isApproved && (
                     <div className="p-4 sm:p-5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between gap-4">
                       <div className="space-y-1.5 min-w-0 flex-1">
-                        <p className="text-xs font-bold text-gray-900 truncate">{ticket.attendee_name || "Delegate"}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-xs font-bold text-gray-900 truncate">{ticket.attendee_name || "Delegate"}</p>
+                          {(ticket.designation || ticket.custom_answers?.designation) && (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                              {ticket.designation || ticket.custom_answers?.designation}
+                            </span>
+                          )}
+                        </div>
+                        {(ticket.club_name || ticket.custom_answers?.club_name) && (
+                          <p className="text-[11px] font-semibold text-gray-700 truncate">
+                            🏛 {ticket.club_name || ticket.custom_answers?.club_name}
+                          </p>
+                        )}
                         <p className="text-[11px] text-gray-500 truncate">{ticket.attendee_email}</p>
                         <div className="flex items-center gap-1.5 pt-1">
                           <span className="text-[10px] font-mono bg-white border border-gray-200 text-gray-800 px-2 py-0.5 rounded-md font-semibold">
