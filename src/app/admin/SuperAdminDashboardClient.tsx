@@ -885,7 +885,7 @@ export function SuperAdminDashboardClient({
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-gray-900 flex flex-col lg:flex-row font-sans">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-gray-950 text-gray-900 dark:text-white flex flex-col lg:flex-row font-sans">
 
       {/* ── MOBILE SLIDE-OVER DRAWER (Visible on < lg screens) ─────────── */}
       {mobileSidebarOpen && (
@@ -999,8 +999,8 @@ export function SuperAdminDashboardClient({
         <div className="flex flex-col h-full">
 
           {/* Brand / Logo */}
-          <div className="px-5 pt-6 pb-4 border-b border-gray-800 space-y-3">
-            <div className="flex items-center gap-2.5">
+          <div className="px-6 pt-7 pb-6 border-b border-gray-800">
+            <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 shrink-0">
                 <Image
                   src="/brand/logo.png"
@@ -1011,22 +1011,19 @@ export function SuperAdminDashboardClient({
                 />
               </div>
               <div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#0758fc] block leading-none">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0758fc] block leading-none">
                   SUPER ADMIN
                 </span>
-                <span className="text-sm font-extrabold text-white leading-tight block">
+                <span className="text-base font-black text-white leading-tight block mt-0.5">
                   RotaSphere
                 </span>
+                <span className="text-[10px] text-gray-400 block font-medium">District 3192</span>
               </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">District 3192 Governance</span>
             </div>
           </div>
 
           {/* Nav Items */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
+          <nav className="p-3.5 space-y-1 flex-1">
             {NAV_ITEMS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1038,7 +1035,7 @@ export function SuperAdminDashboardClient({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
                       ? "bg-[#0758fc] text-white shadow-sm"
                       : isUrgent
@@ -1128,7 +1125,7 @@ export function SuperAdminDashboardClient({
         </div>
 
         {/* ── MOBILE HORIZONTAL SWIPEABLE TABS (Visible on < lg) ─────────── */}
-        <div className="lg:hidden bg-white border-b border-gray-200 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar sticky top-[53px] z-20 shadow-2xs">
+        <div className="lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar sticky top-[53px] z-20 shadow-2xs">
           {NAV_ITEMS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1143,8 +1140,8 @@ export function SuperAdminDashboardClient({
                   isActive
                     ? "bg-[#0758fc] text-white shadow-xs"
                     : isUrgent
-                    ? "bg-amber-50 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
                 <Icon size={13} />
@@ -1156,7 +1153,7 @@ export function SuperAdminDashboardClient({
                         ? "bg-white/30 text-white"
                         : isUrgent
                         ? "bg-amber-500 text-white"
-                        : "bg-gray-300 text-gray-800"
+                        : "bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                     }`}
                   >
                     {tab.count}
@@ -1168,9 +1165,9 @@ export function SuperAdminDashboardClient({
         </div>
 
         {/* Desktop Top bar inside main */}
-        <div className="hidden lg:flex bg-white border-b border-gray-200 px-6 py-3.5 items-center justify-between sticky top-0 z-20 shadow-xs">
+        <div className="hidden lg:flex bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3.5 items-center justify-between sticky top-0 z-20 shadow-xs">
           <div>
-            <h1 className="text-base font-black text-gray-900">
+            <h1 className="text-base font-black text-gray-900 dark:text-white">
               {activeTab === "overview" && "Executive Overview"}
               {activeTab === "requests" && "Host Access Requests"}
               {activeTab === "upi" && "UPI Payment Verification Hub"}
@@ -1181,7 +1178,7 @@ export function SuperAdminDashboardClient({
               {activeTab === "audit" && "Immutable Audit Logs"}
               {activeTab === "flags" && "Feature Flags"}
             </h1>
-            <p className="text-xs text-gray-500">Super Admin · District 3192 Governance Center</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Super Admin · District 3192 Governance Center</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1217,38 +1214,38 @@ export function SuperAdminDashboardClient({
             {/* Scorecard KPI Tiles */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               
-              <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Platform GMV</span>
-                  <div className="w-9 h-9 rounded-2xl bg-rose-50 text-[#0758fc] flex items-center justify-center">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gross Platform GMV</span>
+                  <div className="w-9 h-9 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-[#0758fc] dark:text-blue-400 flex items-center justify-center">
                     <TrendingUp size={18} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl sm:text-3xl font-black text-gray-900">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
                     ₹{totalGmv.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                     <ArrowUpRight size={14} /> {totalGmv > 0 ? "Live Settlement Velocity" : "0% Platform Fee · Direct UPI"}
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-[#0758fc] to-rose-400 rounded-full w-full opacity-70" />
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending UPI Approvals</span>
-                  <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pending UPI Approvals</span>
+                  <div className="w-9 h-9 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                     <QrCode size={18} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl sm:text-3xl font-black text-amber-600">
+                  <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">
                     {pendingUpiOrders.length} <span className="text-base text-gray-400 font-medium">pending</span>
                   </div>
                   <button
                     onClick={() => setActiveTab("upi")}
-                    className="text-xs text-amber-700 hover:underline font-bold flex items-center gap-1"
+                    className="text-xs text-amber-700 dark:text-amber-300 hover:underline font-bold flex items-center gap-1"
                   >
                     Verify UTR payments <ArrowRight size={12} />
                   </button>
@@ -1256,36 +1253,36 @@ export function SuperAdminDashboardClient({
                 <div className="h-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full w-full opacity-70" />
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Confirmed Passes</span>
-                  <div className="w-9 h-9 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Confirmed Passes</span>
+                  <div className="w-9 h-9 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                     <Ticket size={18} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl sm:text-3xl font-black text-gray-900">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
                     {totalTicketsSold} <span className="text-base text-gray-400 font-medium">issued</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-purple-600 font-bold">
+                  <div className="flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 font-bold">
                     <CheckCircle2 size={14} /> {totalCheckInsCount} checked-in at gates
                   </div>
                 </div>
                 <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-full opacity-70" />
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-3 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">District Clubs & Events</span>
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">District Clubs & Events</span>
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Building size={18} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl sm:text-3xl font-black text-gray-900">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
                     {verifiedClubsCount} <span className="text-base text-gray-400 font-medium">Clubs</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                     <Sparkles size={14} /> {activeEventsCount} published events live
                   </div>
                 </div>
@@ -1298,14 +1295,14 @@ export function SuperAdminDashboardClient({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
               {/* Main Area Curve: GMV & Revenue Trajectory */}
-              <div className="lg:col-span-2 bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+              <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-extrabold text-gray-900">Platform GMV &amp; Velocity Curve</h3>
-                    <p className="text-xs text-gray-500">Real-time revenue processing trajectory across District 3192</p>
+                    <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Platform GMV &amp; Velocity Curve</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Real-time revenue processing trajectory across District 3192</p>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start sm:self-auto">
+                  <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl self-start sm:self-auto">
                     {(["7d", "30d", "all"] as const).map((r) => (
                       <button
                         key={r}
@@ -1410,29 +1407,29 @@ export function SuperAdminDashboardClient({
               </div>
 
               {/* Gate Check-in Velocity */}
-              <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6 flex flex-col justify-between">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6 flex flex-col justify-between">
                 <div className="space-y-1">
-                  <h3 className="text-base font-extrabold text-gray-900">Gate Scanner Clearance</h3>
-                  <p className="text-xs text-gray-500">Live entry pace across checkpoints</p>
+                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Gate Scanner Clearance</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Live entry pace across checkpoints</p>
                 </div>
 
                 {/* Progress Visualizer */}
                 <div className="space-y-4">
-                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200/60 flex items-center justify-between">
+                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black">
                         <CheckCircle size={20} />
                       </div>
                       <div>
-                        <p className="text-xs font-extrabold text-emerald-900">Gate Clearance Rate</p>
-                        <p className="text-[11px] text-emerald-700">
+                        <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-300">Gate Clearance Rate</p>
+                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                           {totalTicketsSold > 0
                             ? `${((totalCheckInsCount / totalTicketsSold) * 100).toFixed(1)}% checked in`
                             : "0% (No passes issued)"}
                         </p>
                       </div>
                     </div>
-                    <span className="text-lg font-black text-emerald-900">
+                    <span className="text-lg font-black text-emerald-900 dark:text-emerald-200">
                       {totalCheckInsCount}/{totalTicketsSold}
                     </span>
                   </div>
@@ -1440,31 +1437,31 @@ export function SuperAdminDashboardClient({
                   {/* Distribution Progress Bars */}
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold text-gray-700">
+                      <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
                         <span>VIP &amp; Delegate Passes</span>
-                        <span className="text-[#0758fc]">{tierDistribution.vipPct}%</span>
+                        <span className="text-[#0758fc] dark:text-blue-400">{tierDistribution.vipPct}%</span>
                       </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div className="h-full bg-[#0758fc] rounded-full transition-all duration-500" style={{ width: `${tierDistribution.vipPct}%` }} />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold text-gray-700">
+                      <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
                         <span>General &amp; Student Admission</span>
-                        <span className="text-amber-500">{tierDistribution.generalPct}%</span>
+                        <span className="text-amber-500 dark:text-amber-400">{tierDistribution.generalPct}%</span>
                       </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${tierDistribution.generalPct}%` }} />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold text-gray-700">
+                      <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
                         <span>Early Bird &amp; Fellowship</span>
-                        <span className="text-purple-600">{tierDistribution.earlyBirdPct}%</span>
+                        <span className="text-purple-600 dark:text-purple-400">{tierDistribution.earlyBirdPct}%</span>
                       </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${tierDistribution.earlyBirdPct}%` }} />
                       </div>
                     </div>
@@ -1472,12 +1469,12 @@ export function SuperAdminDashboardClient({
                 </div>
 
                 {/* Gate Scanner Status */}
-                <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between text-xs">
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-850 rounded-2xl border border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="font-bold text-gray-800">Check-In Webhook Node</span>
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Check-In Webhook Node</span>
                   </div>
-                  <span className="font-mono font-bold text-emerald-600">22ms avg latency</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">22ms avg latency</span>
                 </div>
               </div>
 
@@ -1493,26 +1490,26 @@ export function SuperAdminDashboardClient({
           <div className="space-y-6 animate-in fade-in-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-gray-900">Organizer &amp; Host Access Requests</h2>
-                <p className="text-xs text-gray-500">
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">Organizer &amp; Host Access Requests</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Review and grant event publishing privileges to Rotaract Club officers.
                 </p>
               </div>
             </div>
 
             {organizerRequests.length === 0 ? (
-              <div className="p-12 bg-white rounded-3xl border border-gray-200 text-center space-y-3">
+              <div className="p-12 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 text-center space-y-3">
                 <Users size={36} className="text-gray-400 mx-auto" />
-                <h3 className="text-base font-bold text-gray-800">No Access Requests Submitted</h3>
-                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">No Access Requests Submitted</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
                   When attendees apply to host events for their Rotaract clubs, their applications will appear here for admin approval.
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs">
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-gray-600">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                  <table className="w-full text-left text-xs text-gray-600 dark:text-gray-300">
+                    <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                       <tr>
                         <th className="px-6 py-4">Applicant</th>
                         <th className="px-6 py-4">Club Name &amp; Designation</th>
@@ -1522,26 +1519,26 @@ export function SuperAdminDashboardClient({
                         <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 font-medium">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                       {organizerRequests.map((req: any) => {
                         const isPending = req.status === "PENDING";
                         const isApproved = req.status === "APPROVED";
                         const isProcessing = reqProcessingId === req.id;
 
                         return (
-                          <tr key={req.id} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={req.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                             <td className="px-6 py-4">
-                              <p className="font-extrabold text-gray-900">{req.user_name}</p>
-                              <p className="text-[11px] text-gray-500 font-mono">{req.user_email}</p>
+                              <p className="font-extrabold text-gray-900 dark:text-white">{req.user_name}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">{req.user_email}</p>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="font-bold text-gray-900">{req.club_name}</p>
-                              <p className="text-[11px] text-[#0758fc] font-extrabold">{req.position}</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{req.club_name}</p>
+                              <p className="text-[11px] text-[#0758fc] dark:text-blue-400 font-extrabold">{req.position}</p>
                             </td>
                             <td className="px-6 py-4 max-w-xs">
-                              <p className="text-xs text-gray-800 line-clamp-2">{req.reason}</p>
+                              <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{req.reason}</p>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-[11px] text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-[11px] text-gray-500 dark:text-gray-400">
                               {new Date(req.created_at).toLocaleDateString("en-IN", {
                                 day: "numeric",
                                 month: "short",
@@ -1552,10 +1549,10 @@ export function SuperAdminDashboardClient({
                               <span
                                 className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                                   isPending
-                                    ? "bg-amber-50 text-amber-800 border-amber-300 font-black animate-pulse"
+                                    ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-black animate-pulse"
                                     : isApproved
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                    ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                    : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 }`}
                               >
                                 ● {req.status}
@@ -1577,7 +1574,7 @@ export function SuperAdminDashboardClient({
                                     type="button"
                                     disabled={isProcessing}
                                     onClick={() => handleRejectRequest(req.id)}
-                                    className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                                    className="bg-gray-100 dark:bg-gray-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
                                   >
                                     <XCircle size={14} /> Reject
                                   </button>
@@ -1603,14 +1600,14 @@ export function SuperAdminDashboardClient({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-gray-900">Dynamic UPI Payment &amp; UTR Verification</h2>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white">Dynamic UPI Payment &amp; UTR Verification</h2>
                   {pendingUpiOrders.length > 0 && (
-                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
                       {pendingUpiOrders.length} Pending Approval
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   Verify attendee 12-digit UTR numbers against club bank accounts to activate digital QR entry passes.
                 </p>
               </div>
@@ -1618,15 +1615,15 @@ export function SuperAdminDashboardClient({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => downloadCsv("RotaSphere_UPI_Payments.xlsx", filteredUpiOrders)}
-                  className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
+                  <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" /> Export Excel (.xlsx)
                 </button>
               </div>
             </div>
 
             {/* Filter Toolbar */}
-            <div className="bg-white border border-gray-200/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex-1 relative">
                 <Search size={15} className="absolute left-3.5 top-3 text-gray-400" />
                 <input
@@ -1634,16 +1631,16 @@ export function SuperAdminDashboardClient({
                   placeholder="Search by Order Ref, Attendee, UTR number, or Event..."
                   value={upiSearch}
                   onChange={(e) => setUpiSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-gray-500">Status:</span>
+                <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Status:</span>
                 <select
                   value={upiFilter}
                   onChange={(e) => setUpiFilter(e.target.value as any)}
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 outline-none cursor-pointer"
+                  className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
                 >
                   <option value="ALL">All Payments</option>
                   <option value="PENDING_VERIFICATION">Pending Approval Only</option>
@@ -1654,10 +1651,10 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Orders Table */}
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Order Ref &amp; Event</th>
                       <th className="px-6 py-4">Attendee Details</th>
@@ -1667,10 +1664,10 @@ export function SuperAdminDashboardClient({
                       <th className="px-6 py-4 text-right">Moderation</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {filteredUpiOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                           No payments matched your search filter.
                         </td>
                       </tr>
@@ -1682,11 +1679,11 @@ export function SuperAdminDashboardClient({
                         const isProcessing = verifyingOrderId === ord.id;
 
                         return (
-                          <tr key={ord.id} className={`transition-colors ${isPending ? "bg-amber-50/20" : "hover:bg-gray-50/80"}`}>
+                          <tr key={ord.id} className={`transition-colors ${isPending ? "bg-amber-50/20 dark:bg-amber-950/20" : "hover:bg-gray-50/80 dark:hover:bg-gray-800/50"}`}>
                             <td className="px-6 py-4">
                               <div className="space-y-0.5">
-                                <span className="font-mono font-bold text-gray-900 block">{ord.order_number || "ORD-LIVE"}</span>
-                                <span className="text-[11px] text-gray-500 font-semibold truncate block max-w-[200px]">
+                                <span className="font-mono font-bold text-gray-900 dark:text-white block">{ord.order_number || "ORD-LIVE"}</span>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold truncate block max-w-[200px]">
                                   {ord.event_title || "District Conference"}
                                 </span>
                               </div>
@@ -1694,14 +1691,14 @@ export function SuperAdminDashboardClient({
 
                             <td className="px-6 py-4">
                               <div className="space-y-0.5">
-                                <span className="font-bold text-gray-900 block">{ord.customer_name || "Delegate"}</span>
-                                <span className="text-[11px] text-gray-500 block">{ord.customer_email}</span>
+                                <span className="font-bold text-gray-900 dark:text-white block">{ord.customer_name || "Delegate"}</span>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 block">{ord.customer_email}</span>
                                 {ord.customer_phone && <span className="text-[10px] text-gray-400 block">{ord.customer_phone}</span>}
                               </div>
                             </td>
 
                             <td className="px-6 py-4">
-                              <span className="text-sm font-black text-gray-900 block">
+                              <span className="text-sm font-black text-gray-900 dark:text-white block">
                                 ₹{Number(ord.total_amount || 0).toFixed(2)}
                               </span>
                               <span className="text-[10px] text-gray-400 font-mono">Payee: {ord.upi_payee_id || "District VPA"}</span>
@@ -1710,16 +1707,16 @@ export function SuperAdminDashboardClient({
                             <td className="px-6 py-4">
                               {ord.upi_transaction_id ? (
                                 <div className="space-y-1">
-                                  <div className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
-                                    <span className="font-mono font-extrabold text-gray-900 text-xs">{ord.upi_transaction_id}</span>
+                                  <div className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-1 rounded-lg">
+                                    <span className="font-mono font-extrabold text-gray-900 dark:text-white text-xs">{ord.upi_transaction_id}</span>
                                     <button
                                       type="button"
                                       onClick={() => handleCopyUtrText(ord.upi_transaction_id)}
-                                      className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                                      className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
                                       title="Copy UTR"
                                     >
                                       {copiedUtr === ord.upi_transaction_id ? (
-                                        <Check size={12} className="text-emerald-600" />
+                                        <Check size={12} className="text-emerald-600 dark:text-emerald-400" />
                                       ) : (
                                         <Copy size={12} />
                                       )}
@@ -1729,7 +1726,7 @@ export function SuperAdminDashboardClient({
                                     <button
                                       type="button"
                                       onClick={() => setProofModalOrder(ord)}
-                                      className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                                      className="text-[11px] text-[#0758fc] dark:text-blue-400 font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
                                     >
                                       <Camera size={12} /> View Payment Photo Proof
                                     </button>
@@ -1744,16 +1741,16 @@ export function SuperAdminDashboardClient({
                               <span
                                 className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                                   isPending
-                                    ? "bg-amber-50 text-amber-800 border-amber-300 font-black"
+                                    ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-black"
                                     : isApproved
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                    ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                    : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 }`}
                               >
                                 ● {isPending ? "PENDING UTR APPROVAL" : isApproved ? "APPROVED / PAID" : "REJECTED"}
                               </span>
                               {isRejected && ord.payment_rejection_reason && (
-                                <p className="text-[10px] text-rose-600 mt-1 max-w-xs italic">
+                                <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1 max-w-xs italic">
                                   Reason: {ord.payment_rejection_reason}
                                 </p>
                               )}
@@ -1786,7 +1783,7 @@ export function SuperAdminDashboardClient({
                                       setRejectModalOrder(ord);
                                       setRejectionReason("UTR reference not found in bank statement");
                                     }}
-                                    className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                                    className="bg-gray-100 dark:bg-gray-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
                                   >
                                     <XCircle size={13} /> Reject
                                   </button>
@@ -1794,11 +1791,11 @@ export function SuperAdminDashboardClient({
                               )}
 
                               {isApproved && (
-                                <span className="text-[11px] text-emerald-700 font-bold">Passes Active</span>
+                                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">Passes Active</span>
                               )}
 
                               {isRejected && (
-                                <span className="text-[11px] text-rose-600 font-bold">Order Cancelled</span>
+                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">Order Cancelled</span>
                               )}
                             </td>
                           </tr>
@@ -1813,23 +1810,16 @@ export function SuperAdminDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            TAB: GRIEVANCES & STATUTORY DPDP COMPLIANCE REPORTS
+            TAB 3: GRIEVANCE REDRESSAL & DPDP COMPLIANCE
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "grievances" && (
-          <div className="space-y-8 animate-in fade-in-50">
-            {/* Header banner */}
+          <div className="space-y-6 animate-in fade-in-50">
+            {/* Header & Export Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-gray-900">Grievance Redressal &amp; DPDP Reports</h2>
-                  {pendingGrievanceCount > 0 && (
-                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
-                      {pendingGrievanceCount} Action Required
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Statutory 24-hour acknowledgement and 15-day resolution SLAs under DPDP Act 2023 &amp; Consumer Protection (E-Commerce) Rules.
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">Statutory Grievance Redressal &amp; DPDP Center</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Manage consumer rights requests, audit data deletions, and process grievance tickets within statutory SLA windows.
                 </p>
               </div>
 
@@ -1837,14 +1827,14 @@ export function SuperAdminDashboardClient({
                 <button
                   type="button"
                   onClick={() => downloadCsv("rotasphere-grievance-report.csv", complaints)}
-                  className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
                 >
                   <Download size={14} /> Export Grievances CSV
                 </button>
                 <button
                   type="button"
                   onClick={() => downloadJson("rotasphere-grievance-report.json", { complaints, privacyRequests })}
-                  className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
                 >
                   <FileJson size={14} /> Export JSON
                 </button>
@@ -1853,41 +1843,41 @@ export function SuperAdminDashboardClient({
 
             {/* Scorecard KPI Tiles */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-5 shadow-2xs space-y-2">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Open Grievances</span>
-                <div className="text-2xl font-black text-rose-600">
+                <div className="text-2xl font-black text-rose-600 dark:text-rose-400">
                   {complaints.filter((c: any) => c.status === "open").length}
                 </div>
-                <p className="text-[11px] text-gray-500 font-medium">Pending initial triage (&lt;24h SLA)</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Pending initial triage (&lt;24h SLA)</p>
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-5 shadow-2xs space-y-2">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Under Investigation</span>
-                <div className="text-2xl font-black text-amber-600">
+                <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
                   {complaints.filter((c: any) => c.status === "under_review" || c.status === "awaiting_info").length}
                 </div>
-                <p className="text-[11px] text-gray-500 font-medium">Active club / ombudsman review</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Active club / ombudsman review</p>
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-5 shadow-2xs space-y-2">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">DPDP Rights Requests</span>
-                <div className="text-2xl font-black text-[#0758fc]">
+                <div className="text-2xl font-black text-[#0758fc] dark:text-blue-400">
                   {privacyRequests.filter((r: any) => r.status === "open" || r.status === "in_progress").length}
                 </div>
-                <p className="text-[11px] text-gray-500 font-medium">Access, Erasure &amp; Portability</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Access, Erasure &amp; Portability</p>
               </div>
 
-              <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-5 shadow-2xs space-y-2">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Resolved &amp; Closed</span>
-                <div className="text-2xl font-black text-emerald-600">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                   {complaints.filter((c: any) => c.status === "resolved").length + privacyRequests.filter((r: any) => r.status === "completed").length}
                 </div>
-                <p className="text-[11px] text-gray-500 font-medium">Compliant closures on record</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Compliant closures on record</p>
               </div>
             </div>
 
             {/* Filter and Search Bar */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                 <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
                   {(["ALL", "open", "under_review", "resolved", "rejected"] as const).map((filterVal) => {
@@ -1914,13 +1904,13 @@ export function SuperAdminDashboardClient({
                         className={`text-xs font-extrabold px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                           grievanceFilter === filterVal
                             ? "bg-[#0758fc] text-white shadow-xs"
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300"
                         }`}
                       >
                         <span>{label}</span>
                         <span
                           className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                            grievanceFilter === filterVal ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600"
+                            grievanceFilter === filterVal ? "bg-white/25 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                           }`}
                         >
                           {count}
@@ -1937,15 +1927,15 @@ export function SuperAdminDashboardClient({
                     placeholder="Search by case #, name, email..."
                     value={grievanceSearch}
                     onChange={(e) => setGrievanceSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0758fc] focus:bg-white"
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800"
                   />
                 </div>
               </div>
 
               {/* Grievances & Complaints Table */}
-              <div className="overflow-x-auto rounded-2xl border border-gray-200">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50/90 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50/90 dark:bg-gray-800/90 text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800">
                     <tr>
                       <th className="px-5 py-3.5">Case Reference</th>
                       <th className="px-5 py-3.5">Complainant</th>
@@ -1955,7 +1945,7 @@ export function SuperAdminDashboardClient({
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {complaints
                       .filter((c: any) => {
                         const matchesFilter = grievanceFilter === "ALL" || c.status === grievanceFilter;
@@ -1977,29 +1967,29 @@ export function SuperAdminDashboardClient({
                         const isRejected = comp.status === "rejected";
 
                         return (
-                          <tr key={comp.id || comp.complaint_number} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={comp.id || comp.complaint_number} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                             <td className="px-5 py-3.5 whitespace-nowrap">
-                              <p className="font-mono font-bold text-gray-900">{comp.complaint_number || comp.id?.slice(0, 12)}</p>
+                              <p className="font-mono font-bold text-gray-900 dark:text-white">{comp.complaint_number || comp.id?.slice(0, 12)}</p>
                               <p className="text-[10px] text-gray-400">
                                 {comp.created_at ? new Date(comp.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent"}
                               </p>
                             </td>
 
                             <td className="px-5 py-3.5">
-                              <p className="font-bold text-gray-900">{comp.user_name || "User"}</p>
-                              <p className="text-[11px] text-gray-500 font-mono">{comp.user_email}</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{comp.user_name || "User"}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">{comp.user_email}</p>
                             </td>
 
                             <td className="px-5 py-3.5 whitespace-nowrap">
-                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 border border-gray-200">
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                                 {comp.category || "General"}
                               </span>
                             </td>
 
                             <td className="px-5 py-3.5 max-w-xs sm:max-w-sm">
-                              <p className="text-xs text-gray-800 line-clamp-2">{comp.description}</p>
+                              <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{comp.description}</p>
                               {comp.resolution && (
-                                <p className="text-[10px] text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5 mt-1 line-clamp-1">
+                                <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 rounded px-1.5 py-0.5 mt-1 line-clamp-1 border border-emerald-200 dark:border-emerald-800">
                                   <strong>Resolution:</strong> {comp.resolution}
                                 </p>
                               )}
@@ -2009,12 +1999,12 @@ export function SuperAdminDashboardClient({
                               <span
                                 className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                                   isOpen
-                                    ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse font-black"
+                                    ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 animate-pulse font-black"
                                     : isReview
-                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    ? "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                     : isResolved
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-gray-100 text-gray-600 border-gray-200"
+                                    ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                                 }`}
                               >
                                 ● {comp.status}
@@ -2028,7 +2018,7 @@ export function SuperAdminDashboardClient({
                                   setSelectedComplaint(comp);
                                   setResolutionInput(comp.resolution || "");
                                 }}
-                                className="text-[11px] font-bold text-[#0758fc] hover:underline px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
+                                className="text-[11px] font-bold text-[#0758fc] dark:text-blue-400 hover:underline px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
                               >
                                 Inspect
                               </button>
@@ -2050,7 +2040,7 @@ export function SuperAdminDashboardClient({
                                   type="button"
                                   disabled={isUpdating}
                                   onClick={() => handleUpdateComplaintStatus(comp.id || comp.complaint_number, "under_review")}
-                                  className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                  className="bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-800 dark:text-amber-300 font-bold px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
                                 >
                                   Investigate
                                 </button>
@@ -2062,10 +2052,10 @@ export function SuperAdminDashboardClient({
 
                     {complaints.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                           <CheckCircle2 size={32} className="mx-auto text-emerald-500/60 mb-2" />
-                          <p className="font-bold text-gray-600 text-sm">No Open Grievances</p>
-                          <p className="text-xs text-gray-400 mt-1">All user and attendee disputes are currently resolved.</p>
+                          <p className="font-bold text-gray-600 dark:text-gray-300 text-sm">No Open Grievances</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">All user and attendee disputes are currently resolved.</p>
                         </td>
                       </tr>
                     )}
@@ -2075,22 +2065,22 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* DPDP Data Subject Rights Requests Sub-Table */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 space-y-4 shadow-2xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-black text-gray-900">DPDP Data Subject Rights Requests</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <h3 className="text-base font-black text-gray-900 dark:text-white">DPDP Data Subject Rights Requests</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     User requests for Data Access, Erasure, Correction, and Portability under DPDP Act 2023.
                   </p>
                 </div>
-                <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg">
                   {privacyRequests.length} Total Requests
                 </span>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-gray-200">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50/90 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50/90 dark:bg-gray-800/90 text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800">
                     <tr>
                       <th className="px-5 py-3.5">Request #</th>
                       <th className="px-5 py-3.5">Data Principal</th>
@@ -2100,34 +2090,34 @@ export function SuperAdminDashboardClient({
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {privacyRequests.map((req: any) => {
                       const isUpdating = updatingRequestId === req.id || updatingRequestId === req.request_number;
                       const isCompleted = req.status === "completed";
 
                       return (
-                        <tr key={req.id || req.request_number} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="px-5 py-3.5 whitespace-nowrap font-mono font-bold text-gray-900">
+                        <tr key={req.id || req.request_number} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+                          <td className="px-5 py-3.5 whitespace-nowrap font-mono font-bold text-gray-900 dark:text-white">
                             {req.request_number || req.id?.slice(0, 10)}
                           </td>
                           <td className="px-5 py-3.5">
-                            <p className="font-bold text-gray-900">{req.user_name || "User"}</p>
-                            <p className="text-[11px] text-gray-500 font-mono">{req.user_email}</p>
+                            <p className="font-bold text-gray-900 dark:text-white">{req.user_name || "User"}</p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">{req.user_email}</p>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                               {req.request_type}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 max-w-xs">
-                            <p className="text-xs text-gray-800 line-clamp-2">{req.description || "Data principal request"}</p>
+                            <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{req.description || "Data principal request"}</p>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
                             <span
-                              className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                              className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                                 isCompleted
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                  : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                               }`}
                             >
                               ● {req.status}
@@ -2146,7 +2136,7 @@ export function SuperAdminDashboardClient({
                               </button>
                             )}
                             {isCompleted && (
-                              <span className="text-[10px] font-bold text-emerald-600">Fulfilled</span>
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Fulfilled</span>
                             )}
                           </td>
                         </tr>
@@ -2155,7 +2145,7 @@ export function SuperAdminDashboardClient({
 
                     {privacyRequests.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                        <td colSpan={6} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
                           <p className="text-xs">No pending data access or erasure requests.</p>
                         </td>
                       </tr>
@@ -2173,13 +2163,13 @@ export function SuperAdminDashboardClient({
         {activeTab === "kyc" && (
           <div className="space-y-6 animate-in fade-in-50">
             {/* Header & Controls */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-xs">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0758fc] border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-[10px] font-extrabold uppercase tracking-wider">
                   <Award size={12} /> DISTRICT 3192 GOVERNANCE
                 </div>
-                <h2 className="text-xl font-black text-gray-900">District Clubs &amp; Organizations Directory</h2>
-                <p className="text-xs text-gray-500">
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">District Clubs &amp; Organizations Directory</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Manage official Rotaract clubs across all 6 zones, assign leadership, and configure club permissions.
                 </p>
               </div>
@@ -2188,7 +2178,7 @@ export function SuperAdminDashboardClient({
                 <button
                   onClick={handleSyncAllClubs}
                   disabled={syncingClubs}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs px-3.5 py-2.5 rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   title="Re-synchronize all 85 authentic District 3192 clubs from Excel directory"
                 >
                   <RefreshCw size={14} className={syncingClubs ? "animate-spin" : ""} />
@@ -2205,7 +2195,7 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Filter & Search Strip */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs space-y-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 shadow-xs space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                 <div className="sm:col-span-8 relative">
                   <Search size={15} className="absolute left-3.5 top-3.5 text-gray-400" />
@@ -2214,7 +2204,7 @@ export function SuperAdminDashboardClient({
                     placeholder="Search by club name, partner rotary, president, or zone..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#0758fc] focus:bg-white rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-gray-900 outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none transition-all"
                   />
                 </div>
 
@@ -2222,7 +2212,7 @@ export function SuperAdminDashboardClient({
                   <select
                     value={kycFilter}
                     onChange={(e) => setKycFilter(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 focus:border-[#0758fc] focus:bg-white rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none cursor-pointer transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-[#0758fc] rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer transition-all"
                   >
                     <option value="ALL">All KYC &amp; Verification Statuses</option>
                     <option value="VERIFIED">Verified Active Clubs</option>
@@ -2233,7 +2223,7 @@ export function SuperAdminDashboardClient({
               </div>
 
               {/* Zone Filter Pills */}
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                 <span className="text-[11px] font-extrabold uppercase text-gray-400 mr-2 flex items-center gap-1">
                   <Filter size={12} /> Zone:
                 </span>
@@ -2245,7 +2235,7 @@ export function SuperAdminDashboardClient({
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       selectedZoneFilter === z
                         ? "bg-[#0758fc] text-white shadow-xs"
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     }`}
                   >
                     {z === "ALL" ? "All Zones" : `Zone ${z}`}
@@ -2258,10 +2248,10 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Clubs Table */}
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Club Name &amp; Zone</th>
                       <th className="px-6 py-4">Club Type</th>
@@ -2272,21 +2262,21 @@ export function SuperAdminDashboardClient({
                       <th className="px-6 py-4 text-right">Management</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {filteredOrgs.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-12 text-gray-400">
+                        <td colSpan={7} className="text-center py-12 text-gray-400 dark:text-gray-500">
                           No District 3192 clubs match your current search and zone filters.
                         </td>
                       </tr>
                     ) : (
                       filteredOrgs.map((org) => (
-                        <tr key={org.id} className="hover:bg-gray-50/80 transition-colors">
+                        <tr key={org.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="space-y-0.5">
-                              <span className="font-extrabold text-gray-900 block text-sm">{org.name}</span>
+                              <span className="font-extrabold text-gray-900 dark:text-white block text-sm">{org.name}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-[#0758fc] font-extrabold bg-blue-50 border border-blue-200/60 px-2 py-0.2 rounded-md">
+                                <span className="text-[10px] text-[#0758fc] dark:text-blue-400 font-extrabold bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800 px-2 py-0.2 rounded-md">
                                   Zone {org.zone || "District 3192"}
                                 </span>
                                 <span className="text-[10px] text-gray-400 font-mono">slug: {org.slug}</span>
@@ -2295,13 +2285,13 @@ export function SuperAdminDashboardClient({
                           </td>
 
                           <td className="px-6 py-4">
-                            <span className="text-xs font-semibold text-gray-700">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                               {org.club_type || "Community Based"}
                             </span>
                           </td>
 
                           <td className="px-6 py-4">
-                            <span className="text-xs text-gray-600 font-medium">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                               {org.partner_club || "District 3192"}
                             </span>
                           </td>
@@ -2309,23 +2299,23 @@ export function SuperAdminDashboardClient({
                           <td className="px-6 py-4">
                             <div className="space-y-0.5">
                               {org.president_name ? (
-                                <span className="font-bold text-gray-900 block">{org.president_name}</span>
+                                <span className="font-bold text-gray-900 dark:text-white block">{org.president_name}</span>
                               ) : (
                                 <span className="text-gray-400 italic">No president listed</span>
                               )}
                               {org.contact_email && (
-                                <a href={`mailto:${org.contact_email}`} className="text-[11px] text-[#0758fc] hover:underline block truncate max-w-[180px]">
+                                <a href={`mailto:${org.contact_email}`} className="text-[11px] text-[#0758fc] dark:text-blue-400 hover:underline block truncate max-w-[180px]">
                                   {org.contact_email}
                                 </a>
                               )}
                               {org.president_phone && (
-                                <span className="text-[10px] text-gray-500 block font-mono">{org.president_phone}</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 block font-mono">{org.president_phone}</span>
                               )}
                             </div>
                           </td>
 
                           <td className="px-6 py-4">
-                            <span className="text-xs font-bold text-gray-800">
+                            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
                               {org.event_count || 0} Events
                             </span>
                           </td>
@@ -2334,10 +2324,10 @@ export function SuperAdminDashboardClient({
                             <span
                               className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                                 org.kyc_status === "VERIFIED" || org.is_verified
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                                   : org.kyc_status === "REJECTED"
-                                  ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                                  ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                                  : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                               }`}
                             >
                               ● {org.kyc_status || (org.is_verified ? "VERIFIED" : "PENDING")}
@@ -2348,7 +2338,7 @@ export function SuperAdminDashboardClient({
                             <button
                               type="button"
                               onClick={() => handleOpenEditClub(org)}
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
+                              className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
                             >
                               Edit
                             </button>
@@ -2356,7 +2346,7 @@ export function SuperAdminDashboardClient({
                             <button
                               type="button"
                               onClick={() => handleDeleteClub(org.id, org.name)}
-                              className="bg-gray-100 hover:bg-rose-50 text-gray-700 hover:text-rose-600 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
+                              className="bg-gray-100 dark:bg-gray-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 font-bold px-3 py-1.5 rounded-xl transition-all text-xs cursor-pointer inline-flex items-center gap-1"
                             >
                               Archive
                             </button>
@@ -2378,8 +2368,8 @@ export function SuperAdminDashboardClient({
           <div className="space-y-6 animate-in fade-in-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-gray-900">Event Catalog &amp; Moderation Hub</h2>
-                <p className="text-xs text-gray-500">Live events across District 3192 discovery channels</p>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">Event Catalog &amp; Moderation Hub</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Live events across District 3192 discovery channels</p>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -2412,31 +2402,31 @@ export function SuperAdminDashboardClient({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredEvents.map((evt) => (
-                <div key={evt.id} className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
+                <div key={evt.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-50 text-[#0758fc]">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 text-[#0758fc] dark:text-blue-400">
                         {evt.category || "Flagship"}
                       </span>
                       <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                         evt.status === "PUBLISHED"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
+                          ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                          : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                       }`}>
                         ● {evt.status}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-extrabold text-gray-900 line-clamp-1">{evt.title}</h3>
-                    <p className="text-xs text-gray-500 line-clamp-2">{evt.description || "District 3192 Official Event."}</p>
+                    <h3 className="text-base font-extrabold text-gray-900 dark:text-white line-clamp-1">{evt.title}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{evt.description || "District 3192 Official Event."}</p>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/events/${evt.slug || evt.id}`}
                         target="_blank"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-gray-900"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                       >
                         <ExternalLink size={13} /> View Live
                       </Link>
@@ -2448,7 +2438,7 @@ export function SuperAdminDashboardClient({
                           exportEventAttendeesToExcel(evt.title, eventTickets);
                         }}
                         title="Download formatted Excel delegate roster with Zonal Breakdown"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
                       >
                         <FileSpreadsheet size={12} /> Excel
                       </button>
@@ -2458,7 +2448,7 @@ export function SuperAdminDashboardClient({
                       {evt.status === "PUBLISHED" ? (
                         <button
                           onClick={() => handleSetEventStatus(evt.id, "DRAFT")}
-                          className="text-[11px] font-bold text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors cursor-pointer"
+                          className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
                         >
                           Suspend
                         </button>
@@ -2485,39 +2475,39 @@ export function SuperAdminDashboardClient({
           <div className="space-y-6 animate-in fade-in-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-gray-900">Platform Financial Ledger &amp; Revenue Overview</h2>
-                <p className="text-xs text-gray-500">Gross Merchandise Value, SaaS Platform Fees, and Payout Balances</p>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">Platform Financial Ledger &amp; Revenue Overview</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Gross Merchandise Value, SaaS Platform Fees, and Payout Balances</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => downloadCsv("RotaSphere_Finance_Ledger.xlsx", orders)}
-                  className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
+                  <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" /> Export Excel (.xlsx)
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-1">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-1">
                 <span className="text-xs font-bold text-gray-400 uppercase">Gross Ticket Sales (GMV)</span>
-                <p className="text-2xl font-black text-gray-900">₹{totalGmv.toFixed(2)}</p>
+                <p className="text-2xl font-black text-gray-900 dark:text-white">₹{totalGmv.toFixed(2)}</p>
               </div>
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-1">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-1">
                 <span className="text-xs font-bold text-gray-400 uppercase">Platform Commission (0%)</span>
-                <p className="text-2xl font-black text-[#0758fc]">₹{totalPlatformFees.toFixed(2)}</p>
+                <p className="text-2xl font-black text-[#0758fc] dark:text-blue-400">₹{totalPlatformFees.toFixed(2)}</p>
               </div>
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-1">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-xs space-y-1">
                 <span className="text-xs font-bold text-gray-400 uppercase">Net Organizer Payouts</span>
-                <p className="text-2xl font-black text-emerald-600">₹{(totalGmv - totalPlatformFees).toFixed(2)}</p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">₹{(totalGmv - totalPlatformFees).toFixed(2)}</p>
               </div>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Order Ref</th>
                       <th className="px-6 py-4">Amount</th>
@@ -2526,22 +2516,22 @@ export function SuperAdminDashboardClient({
                       <th className="px-6 py-4">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {orders.map((ord) => (
-                      <tr key={ord.id} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-gray-900">{ord.order_number || "ORD-LIVE"}</td>
-                        <td className="px-6 py-4 font-extrabold text-gray-900">₹{Number(ord.total_amount || 0).toFixed(2)}</td>
-                        <td className="px-6 py-4 font-mono font-bold text-[#0758fc]">
+                      <tr key={ord.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-gray-900 dark:text-white">{ord.order_number || "ORD-LIVE"}</td>
+                        <td className="px-6 py-4 font-extrabold text-gray-900 dark:text-white">₹{Number(ord.total_amount || 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 font-mono font-bold text-[#0758fc] dark:text-blue-400">
                           ₹{Number(ord.platform_fee || 0).toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 uppercase font-bold text-gray-500">{ord.payment_gateway || "UPI_QR"}</td>
+                        <td className="px-6 py-4 uppercase font-bold text-gray-500 dark:text-gray-400">{ord.payment_gateway || "UPI_QR"}</td>
                         <td className="px-6 py-4">
                           <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
                             ord.status === "PAID"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                               : ord.status === "PENDING_VERIFICATION"
-                              ? "bg-amber-50 text-amber-800 border-amber-300"
-                              : "bg-rose-50 text-rose-700 border-rose-200"
+                              ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                              : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                           }`}>
                             ● {ord.status}
                           </span>
@@ -2562,8 +2552,8 @@ export function SuperAdminDashboardClient({
           <div className="space-y-6 animate-in fade-in-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-gray-900">Live Gate Scanner &amp; Check-In Logs</h2>
-                <p className="text-xs text-gray-500">Real-time attendance clearance logs from entry scanners</p>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">Live Gate Scanner &amp; Check-In Logs</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Real-time attendance clearance logs from entry scanners</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -2643,21 +2633,21 @@ export function SuperAdminDashboardClient({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => downloadCsv("RotaSphere_Audit_Logs.xlsx", filteredAuditLogs)}
-                  className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <FileSpreadsheet size={15} className="text-emerald-600" /> Export Excel (.xlsx)
+                  <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" /> Export Excel (.xlsx)
                 </button>
 
                 <button
                   onClick={() => downloadJson("RotaSphere_Audit_Logs.json", filteredAuditLogs)}
-                  className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <FileJson size={15} className="text-indigo-600" /> Export JSON
+                  <FileJson size={15} className="text-indigo-600 dark:text-indigo-400" /> Export JSON
                 </button>
 
                 <button
                   onClick={() => window.print()}
-                  className="bg-gray-900 hover:bg-black text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="bg-gray-900 dark:bg-gray-800 hover:bg-black dark:hover:bg-gray-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer size={15} /> Print Report
                 </button>
@@ -2665,7 +2655,7 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Audit Filter Toolbar */}
-            <div className="bg-white border border-gray-200/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex-1 relative">
                 <Search size={15} className="absolute left-3.5 top-3 text-gray-400" />
                 <input
@@ -2673,17 +2663,17 @@ export function SuperAdminDashboardClient({
                   placeholder="Filter by action, actor email, or entity ID..."
                   value={auditSearch}
                   onChange={(e) => setAuditSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-2xl pl-9 pr-4 py-2 text-xs outline-none focus:border-[#0758fc]"
                 />
               </div>
 
               <div className="flex items-center gap-2.5 shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-gray-500">Action:</span>
+                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Action:</span>
                   <select
                     value={auditActionFilter}
                     onChange={(e) => setAuditActionFilter(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none cursor-pointer"
+                    className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
                   >
                     <option value="ALL">All Actions</option>
                     <option value="ORDER">Orders</option>
@@ -2696,11 +2686,11 @@ export function SuperAdminDashboardClient({
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-gray-500">Role:</span>
+                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Role:</span>
                   <select
                     value={auditRoleFilter}
                     onChange={(e) => setAuditRoleFilter(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none cursor-pointer"
+                    className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
                   >
                     <option value="ALL">All Roles</option>
                     <option value="super_admin">Super Admin</option>
@@ -2712,10 +2702,10 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Audit Logs Table with Inspection Drawer */}
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Action Event</th>
                       <th className="px-6 py-4">Actor Role</th>
@@ -2725,10 +2715,10 @@ export function SuperAdminDashboardClient({
                       <th className="px-6 py-4 text-right">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {filteredAuditLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                           No audit events matched your filter criteria.
                         </td>
                       </tr>
@@ -2737,29 +2727,29 @@ export function SuperAdminDashboardClient({
                         <tr
                           key={log.id}
                           onClick={() => setSelectedAuditLog(log)}
-                          className="hover:bg-rose-50/40 transition-colors cursor-pointer group"
+                          className="hover:bg-rose-50/40 dark:hover:bg-rose-950/20 transition-colors cursor-pointer group"
                         >
-                          <td className="px-6 py-4 font-mono font-bold text-[#0758fc]">
-                            <span className="bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg">
+                          <td className="px-6 py-4 font-mono font-bold text-[#0758fc] dark:text-blue-400">
+                            <span className="bg-rose-50 dark:bg-rose-950/60 border border-rose-100 dark:border-rose-800 px-2.5 py-1 rounded-lg">
                               {log.action}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                               {log.actor_role || "SYSTEM"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 font-semibold text-gray-800">
+                          <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
                             {log.actor_email || "tech.rotaract3192@gmail.com"}
                           </td>
-                          <td className="px-6 py-4 font-mono text-[11px] text-gray-500">
+                          <td className="px-6 py-4 font-mono text-[11px] text-gray-500 dark:text-gray-400">
                             {log.entity_type} {log.entity_id ? `(#${log.entity_id.slice(0, 8)})` : ""}
                           </td>
                           <td className="px-6 py-4 text-gray-400 text-[11px]">
                             {log.created_at ? new Date(log.created_at).toLocaleString("en-IN") : "Just now"}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 group-hover:text-[#0758fc] transition-colors">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 group-hover:text-[#0758fc] dark:group-hover:text-blue-400 transition-colors">
                               Inspect <ChevronRight size={13} />
                             </span>
                           </td>
@@ -2774,17 +2764,14 @@ export function SuperAdminDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            TAB 8: FEATURE FLAGS
-            ══════════════════════════════════════════════════════════════════ */}
-        {/* ══════════════════════════════════════════════════════════════════
             TAB 8: APP SETTINGS & DISTRICT COUNCIL DELEGATION
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "flags" && (
           <div className="space-y-8 animate-in fade-in-50">
             {/* Header */}
             <div>
-              <h2 className="text-xl font-black text-gray-900">App Settings &amp; Administrative Governance</h2>
-              <p className="text-xs text-gray-500">
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">App Settings &amp; Administrative Governance</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Delegate Super Admin Panel access to District Council Executive Officers and configure platform runtime feature flags.
               </p>
             </div>
@@ -2794,22 +2781,22 @@ export function SuperAdminDashboardClient({
               <div
                 className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs font-semibold ${
                   grantMessage.type === "success"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-rose-50 text-rose-800 border-rose-200"
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                    : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                 }`}
               >
                 <div className="flex items-center gap-2">
                   {grantMessage.type === "success" ? (
-                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                    <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   ) : (
-                    <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                    <AlertCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
                   )}
                   <span>{grantMessage.text}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setGrantMessage(null)}
-                  className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                  className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
                 >
                   <X size={14} />
                 </button>
@@ -2817,19 +2804,19 @@ export function SuperAdminDashboardClient({
             )}
 
             {/* ── SECTION 1: DISTRICT COUNCIL EXECUTIVE DELEGATION CARD ── */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-5">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-5">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-md border border-blue-100 dark:border-blue-800">
                       DISTRICT COUNCIL ACCESS
                     </span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-800">
                       SUPER ADMIN PANEL
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-gray-900">Grant Super Admin Panel Access</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="text-lg font-black text-gray-900 dark:text-white">Grant Super Admin Panel Access</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Authorize executive members (e.g. District Treasurer, District Secretary) to log in and manage the Super Admin Panel.
                   </p>
                 </div>
@@ -2838,7 +2825,7 @@ export function SuperAdminDashboardClient({
                   type="button"
                   onClick={handleRefreshUsers}
                   disabled={refreshingUsers}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3.5 py-2 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 border border-gray-200 dark:border-gray-700 px-3.5 py-2 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
                   title="Sync users list directly from Clerk and database"
                 >
                   <RefreshCw size={13} className={refreshingUsers ? "animate-spin text-[#0758fc]" : "text-gray-500"} />
@@ -2850,7 +2837,7 @@ export function SuperAdminDashboardClient({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Select User */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       Select Registered User *
                     </label>
                     <div className="relative">
@@ -2858,7 +2845,7 @@ export function SuperAdminDashboardClient({
                         required
                         value={selectedUserId}
                         onChange={(e) => setSelectedUserId(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800 cursor-pointer"
                       >
                         <option value="">-- Choose a user account ({profiles.length} registered) --</option>
                         {profiles.map((p) => (
@@ -2875,26 +2862,26 @@ export function SuperAdminDashboardClient({
 
                   {/* Access Level */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       Administrative Access Level *
                     </label>
                     <select
                       value={selectedAdminRole}
                       onChange={(e) => setSelectedAdminRole(e.target.value as any)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800 cursor-pointer"
                     >
                       <option value="super_admin">👑 Super Admin (Full Governance, Financial Clearance &amp; Settings)</option>
                       <option value="admin">🛡️ Admin (Operations, KYC &amp; Moderation)</option>
                     </select>
                     <p className="text-[11px] text-gray-400">
-                      Both Super Admin and Admin roles have full authorization to access the <code className="text-gray-700">/admin</code> command center.
+                      Both Super Admin and Admin roles have full authorization to access the <code className="text-gray-700 dark:text-gray-300">/admin</code> command center.
                     </p>
                   </div>
                 </div>
 
                 {/* Council Designation Presets */}
                 <div className="space-y-2.5">
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     District Executive Portfolio / Designation *
                   </label>
 
@@ -2922,7 +2909,7 @@ export function SuperAdminDashboardClient({
                           className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer border ${
                             isSelected
                               ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs scale-102"
-                              : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                              : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750"
                           }`}
                         >
                           <span>{preset.icon}</span>
@@ -2940,7 +2927,7 @@ export function SuperAdminDashboardClient({
                         placeholder="e.g. District Director - Public Relations, District Serjeant-at-Arms..."
                         value={customDesignation}
                         onChange={(e) => setCustomDesignation(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800"
                       />
                     </div>
                   )}
@@ -2964,25 +2951,25 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* ── SECTION 2: ACTIVE SUPER ADMINS & COUNCIL OFFICERS TABLE ── */}
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
-              <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-850">
                 <div>
-                  <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-                    <UserCheck size={18} className="text-[#0758fc]" />
+                  <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <UserCheck size={18} className="text-[#0758fc] dark:text-blue-400" />
                     Authorized District Council Executives &amp; Super Admins
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Users with active access permissions to the Super Admin Panel (<code className="text-gray-700">/admin</code>)
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Users with active access permissions to the Super Admin Panel (<code className="text-gray-700 dark:text-gray-300">/admin</code>)
                   </p>
                 </div>
-                <span className="text-xs font-extrabold bg-blue-50 text-[#0758fc] border border-blue-200 px-3 py-1 rounded-full self-start sm:self-auto">
+                <span className="text-xs font-extrabold bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full self-start sm:self-auto">
                   {profiles.filter((p) => p.role === "super_admin" || p.role === "admin").length} Active Administrators
                 </span>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-700">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
+                  <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="px-6 py-4">Executive Name &amp; Email</th>
                       <th className="px-6 py-4">Council Portfolio</th>
@@ -2991,28 +2978,28 @@ export function SuperAdminDashboardClient({
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {profiles
                       .filter((p) => p.role === "super_admin" || p.role === "admin")
                       .map((adm) => {
                         const isRootAdmin =
                           adm.email?.toLowerCase() === "tech.rotaract3192@gmail.com";
                         return (
-                          <tr key={adm.id || adm.clerk_id} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={adm.id || adm.clerk_id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#0758fc] font-black text-xs flex items-center justify-center shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/80 text-[#0758fc] dark:text-blue-400 font-black text-xs flex items-center justify-center shrink-0">
                                   {(adm.full_name || adm.email || "U")[0]?.toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className="font-extrabold text-gray-900">{adm.full_name || "Council Member"}</p>
-                                  <p className="text-[11px] text-gray-500 font-mono">{adm.email}</p>
+                                  <p className="font-extrabold text-gray-900 dark:text-white">{adm.full_name || "Council Member"}</p>
+                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">{adm.email}</p>
                                 </div>
                               </div>
                             </td>
 
                             <td className="px-6 py-4">
-                              <span className="font-extrabold text-gray-900 bg-gray-100 text-gray-800 px-3 py-1 rounded-xl text-[11px] inline-flex items-center gap-1.5 border border-gray-200">
+                              <span className="font-extrabold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-xl text-[11px] inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700">
                                 {adm.designation || "District Executive"}
                               </span>
                             </td>
@@ -3021,8 +3008,8 @@ export function SuperAdminDashboardClient({
                               <span
                                 className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
                                   adm.role === "super_admin"
-                                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                    ? "bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                    : "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
                                 }`}
                               >
                                 {adm.role === "super_admin" ? "👑 SUPER ADMIN" : "🛡️ ADMIN"}
@@ -3030,7 +3017,7 @@ export function SuperAdminDashboardClient({
                             </td>
 
                             <td className="px-6 py-4">
-                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                 ● {adm.status || "ACTIVE"}
                               </span>
                             </td>
@@ -3042,7 +3029,7 @@ export function SuperAdminDashboardClient({
                                 onClick={() =>
                                   handleRevokeSuperAdmin(adm.id || adm.clerk_id, adm.full_name || adm.email)
                                 }
-                                className="text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                                className="text-amber-700 dark:text-amber-300 hover:text-amber-800 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
                                 title={isRootAdmin ? "Reset portfolio designation to default" : "Demote from super admin to regular attendee"}
                               >
                                 {revokingUserId === (adm.id || adm.clerk_id) ? (
@@ -3064,30 +3051,30 @@ export function SuperAdminDashboardClient({
             {/* ── SECTION 3: PLATFORM FEATURE FLAGS & TOGGLES ── */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-black text-gray-900">Platform Feature Flags &amp; Toggles</h3>
-                <p className="text-xs text-gray-500">Live operational switches controlling gate scanning, coupons, and payments</p>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">Platform Feature Flags &amp; Toggles</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Live operational switches controlling gate scanning, coupons, and payments</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {featureFlags.map((flag) => (
                   <div
                     key={flag.id}
-                    className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all"
+                    className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all"
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900 truncate">{flag.name}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{flag.name}</p>
                         <span
                           className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
                             flag.is_enabled
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-gray-100 text-gray-600 border-gray-200"
+                              ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                           }`}
                         >
                           {flag.is_enabled ? "ENABLED" : "DISABLED"}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 line-clamp-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                         {flag.description || "Operational kill-switch controlling platform runtime behavior."}
                       </p>
                       <p className="text-[10px] font-mono text-gray-400">Key: {flag.name}</p>
@@ -3097,7 +3084,7 @@ export function SuperAdminDashboardClient({
                       type="button"
                       onClick={() => handleToggleFlag(flag.id || flag.name, flag.is_enabled)}
                       className={`w-14 h-8 rounded-full transition-colors cursor-pointer relative shrink-0 p-1 flex items-center ${
-                        flag.is_enabled ? "bg-[#0758fc]" : "bg-gray-200"
+                        flag.is_enabled ? "bg-[#0758fc]" : "bg-gray-200 dark:bg-gray-700"
                       }`}
                       title={flag.is_enabled ? "Click to disable" : "Click to enable"}
                     >
@@ -3125,32 +3112,32 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "480px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 dark:text-white mx-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600 dark:text-rose-400">
                   REJECT UPI TRANSACTION
                 </span>
-                <h3 className="text-xl font-black text-gray-900">Reason for Rejection</h3>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Reason for Rejection</h3>
               </div>
               <button
                 onClick={() => setRejectModalOrder(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 space-y-1 text-xs">
-              <p className="font-bold text-gray-900">Order Ref: {rejectModalOrder.order_number}</p>
-              <p className="text-gray-600">Attendee: {rejectModalOrder.customer_name} ({rejectModalOrder.customer_email})</p>
-              <p className="font-mono text-[#0758fc] font-bold">UTR: {rejectModalOrder.upi_transaction_id || "None"}</p>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-1 text-xs">
+              <p className="font-bold text-gray-900 dark:text-white">Order Ref: {rejectModalOrder.order_number}</p>
+              <p className="text-gray-600 dark:text-gray-400">Attendee: {rejectModalOrder.customer_name} ({rejectModalOrder.customer_email})</p>
+              <p className="font-mono text-[#0758fc] dark:text-blue-400 font-bold">UTR: {rejectModalOrder.upi_transaction_id || "None"}</p>
             </div>
 
             <form onSubmit={handleRejectPaymentSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                   Select or Enter Rejection Reason *
                 </label>
                 <textarea
@@ -3159,7 +3146,7 @@ export function SuperAdminDashboardClient({
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="e.g. UTR not found on statement, Amount underpaid, Duplicate transaction ID..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs outline-none focus:border-[#0758fc] shadow-sm"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc] shadow-sm"
                 />
               </div>
 
@@ -3174,7 +3161,7 @@ export function SuperAdminDashboardClient({
                     key={preset}
                     type="button"
                     onClick={() => setRejectionReason(preset)}
-                    className="text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg cursor-pointer"
+                    className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg cursor-pointer"
                   >
                     {preset}
                   </button>
@@ -3185,7 +3172,7 @@ export function SuperAdminDashboardClient({
                 <button
                   type="button"
                   onClick={() => setRejectModalOrder(null)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3215,43 +3202,43 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "600px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[85vh] overflow-y-auto"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 dark:text-white mx-auto max-h-[85vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] dark:text-blue-400">
                   CRYPTOGRAPHIC LOG ENTRY
                 </span>
-                <h3 className="text-xl font-black text-gray-900">{selectedAuditLog.action}</h3>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">{selectedAuditLog.action}</h3>
                 <p className="text-xs text-gray-400 font-mono">ID: {selectedAuditLog.id}</p>
               </div>
               <button
                 onClick={() => setSelectedAuditLog(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Audit Metadata Grid */}
-            <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs">
+            <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Actor Role</span>
-                <span className="font-extrabold text-gray-900">{selectedAuditLog.actor_role || "super_admin"}</span>
+                <span className="font-extrabold text-gray-900 dark:text-white">{selectedAuditLog.actor_role || "super_admin"}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Actor Email</span>
-                <span className="font-extrabold text-gray-900 truncate block">
+                <span className="font-extrabold text-gray-900 dark:text-white truncate block">
                   {selectedAuditLog.actor_email || "tech.rotaract3192@gmail.com"}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Target Entity</span>
-                <span className="font-mono text-gray-800">{selectedAuditLog.entity_type}</span>
+                <span className="font-mono text-gray-800 dark:text-gray-200">{selectedAuditLog.entity_type}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Timestamp</span>
-                <span className="text-gray-800">
+                <span className="text-gray-800 dark:text-gray-200">
                   {selectedAuditLog.created_at ? new Date(selectedAuditLog.created_at).toLocaleString() : "Just now"}
                 </span>
               </div>
@@ -3260,35 +3247,35 @@ export function SuperAdminDashboardClient({
             {/* JSON State Inspection & Copy */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   State Mutation Payload
                 </span>
                 <button
                   onClick={() => handleCopyJson(selectedAuditLog)}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0758fc] hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0758fc] dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   <Copy size={13} /> {copiedPayload ? "Copied!" : "Copy Payload"}
                 </button>
               </div>
 
-              <pre className="p-4 bg-gray-900 text-emerald-400 rounded-2xl text-xs font-mono overflow-x-auto max-h-[220px]">
+              <pre className="p-4 bg-gray-950 text-emerald-400 rounded-2xl text-xs font-mono overflow-x-auto max-h-[220px] border border-gray-800">
                 {JSON.stringify(selectedAuditLog.new_state || selectedAuditLog, null, 2)}
               </pre>
             </div>
 
-            <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between text-xs text-emerald-900">
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs text-emerald-900 dark:text-emerald-300">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="font-semibold">Cryptographically Signed &amp; Tamper Protected</span>
               </div>
-              <span className="font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+              <span className="font-mono text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-md">
                 SHA-256
               </span>
             </div>
 
             <button
               onClick={() => setSelectedAuditLog(null)}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+              className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
             >
               Close Inspector
             </button>
@@ -3305,32 +3292,32 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "480px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 dark:text-white mx-auto max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                   DISTRICT 3192 ONBOARDING
                 </span>
-                <h3 className="text-xl font-black text-gray-900">Charter New Club</h3>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Charter New Club</h3>
               </div>
               <button
                 onClick={() => setIsAddOrgOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {orgError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-2xl text-xs font-semibold">
                 {orgError}
               </div>
             )}
 
             <form onSubmit={handleCreateOrg} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                   Club Official Name *
                 </label>
                 <input
@@ -3339,13 +3326,13 @@ export function SuperAdminDashboardClient({
                   placeholder="e.g. Rotaract Club of Bengaluru Central"
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                     District Region
                   </label>
                   <input
@@ -3353,11 +3340,11 @@ export function SuperAdminDashboardClient({
                     placeholder="e.g. District 3192"
                     value={newOrgDistrict}
                     onChange={(e) => setNewOrgDistrict(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                     SaaS Fee (%)
                   </label>
                   <input
@@ -3366,13 +3353,13 @@ export function SuperAdminDashboardClient({
                     placeholder="0"
                     value={newOrgFee}
                     onChange={(e) => setNewOrgFee(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                   Contact Email (Optional)
                 </label>
                 <input
@@ -3380,7 +3367,7 @@ export function SuperAdminDashboardClient({
                   placeholder="president@rotaract3192.org"
                   value={newOrgEmail}
                   onChange={(e) => setNewOrgEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs outline-none focus:border-[#0758fc]"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                 />
               </div>
 
@@ -3388,7 +3375,7 @@ export function SuperAdminDashboardClient({
                 <button
                   type="button"
                   onClick={() => setIsAddOrgOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3414,35 +3401,35 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "560px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 dark:text-white mx-auto max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] dark:text-blue-400">
                   DISTRICT 3192 DIRECTORY
                 </span>
-                <h3 className="text-xl font-black text-gray-900">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">
                   {editingClub ? "Edit Club Details" : "Add New Rotaract Club"}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditClubOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {clubError && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-2xl text-xs font-semibold">
                 {clubError}
               </div>
             )}
 
             <form onSubmit={handleSaveClubSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
                   Club Official Name *
                 </label>
                 <input
@@ -3451,19 +3438,19 @@ export function SuperAdminDashboardClient({
                   placeholder="e.g. Rotaract Club of Bengaluru Central"
                   value={clubForm.name}
                   onChange={(e) => setClubForm({ ...clubForm, name: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
                     District Zone *
                   </label>
                   <select
                     value={clubForm.zone}
                     onChange={(e) => setClubForm({ ...clubForm, zone: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850 cursor-pointer"
                   >
                     <option value="Taranga">Zone Taranga</option>
                     <option value="Varuna">Zone Varuna</option>
@@ -3476,13 +3463,13 @@ export function SuperAdminDashboardClient({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
                     Club Base Type *
                   </label>
                   <select
                     value={clubForm.clubType}
                     onChange={(e) => setClubForm({ ...clubForm, clubType: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850 cursor-pointer"
                   >
                     <option value="Community Based">Community Based</option>
                     <option value="Institution Based">Institution / College</option>
@@ -3492,7 +3479,7 @@ export function SuperAdminDashboardClient({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
                     Partner Rotary Club
                   </label>
                   <input
@@ -3500,12 +3487,12 @@ export function SuperAdminDashboardClient({
                     placeholder="e.g. Bangalore West"
                     value={clubForm.partnerClub}
                     onChange={(e) => setClubForm({ ...clubForm, partnerClub: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
                     Official Club Email
                   </label>
                   <input
@@ -3513,45 +3500,45 @@ export function SuperAdminDashboardClient({
                     placeholder="rotaract@gmail.com"
                     value={clubForm.contactEmail}
                     onChange={(e) => setClubForm({ ...clubForm, contactEmail: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850"
                   />
                 </div>
               </div>
 
               {/* President Details */}
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 block">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl space-y-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                   Club President Details (Optional)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-600 mb-1">President Name</label>
+                    <label className="block text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-1">President Name</label>
                     <input
                       type="text"
                       placeholder="Rtr. John Doe"
                       value={clubForm.presidentName}
                       onChange={(e) => setClubForm({ ...clubForm, presidentName: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-600 mb-1">Phone Number</label>
+                    <label className="block text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-1">Phone Number</label>
                     <input
                       type="text"
                       placeholder="9876543210"
                       value={clubForm.presidentPhone}
                       onChange={(e) => setClubForm({ ...clubForm, presidentPhone: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-600 mb-1">Email ID</label>
+                    <label className="block text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-1">Email ID</label>
                     <input
                       type="email"
                       placeholder="president@gmail.com"
                       value={clubForm.presidentEmail}
                       onChange={(e) => setClubForm({ ...clubForm, presidentEmail: e.target.value })}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 </div>
@@ -3561,7 +3548,7 @@ export function SuperAdminDashboardClient({
                 <button
                   type="button"
                   onClick={() => setIsEditClubOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3587,50 +3574,50 @@ export function SuperAdminDashboardClient({
       {/* ── SUPER ADMIN INTERACTIVE PHOTO REVIEW & APPROVAL MODAL ─────── */}
       {proofModalOrder && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in-50">
-          <div className="relative max-w-3xl w-full bg-white rounded-3xl p-5 sm:p-8 shadow-2xl space-y-5 text-left max-h-[90vh] overflow-y-auto">
+          <div className="relative max-w-3xl w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 shadow-2xl space-y-5 text-left max-h-[90vh] overflow-y-auto text-gray-900 dark:text-white">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#0758fc] block">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0758fc] dark:text-blue-400 block">
                   District Super Admin • Verify Payment Screenshot
                 </span>
-                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
                   Order Ref: <span className="font-mono text-base">{proofModalOrder.order_number}</span>
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setProofModalOrder(null)}
-                className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors"
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-750 flex items-center justify-center cursor-pointer transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Delegate & Payment Meta */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3.5 text-xs">
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Delegate Name</span>
-                <span className="font-bold text-gray-900 block truncate">{proofModalOrder.customer_name}</span>
+                <span className="font-bold text-gray-900 dark:text-white block truncate">{proofModalOrder.customer_name}</span>
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Amount Paid</span>
-                <span className="font-extrabold text-emerald-700 block">₹{proofModalOrder.total_amount}</span>
+                <span className="font-extrabold text-emerald-700 dark:text-emerald-400 block">₹{proofModalOrder.total_amount}</span>
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Entered UTR ID</span>
-                <span className="font-mono font-bold text-gray-900 block truncate bg-white border border-gray-200 px-1.5 py-0.5 rounded-md">
+                <span className="font-mono font-bold text-gray-900 dark:text-white block truncate bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded-md">
                   {proofModalOrder.upi_transaction_id || "N/A"}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Submitted Email</span>
-                <span className="font-bold text-gray-600 block truncate">{proofModalOrder.customer_email}</span>
+                <span className="font-bold text-gray-600 dark:text-gray-300 block truncate">{proofModalOrder.customer_email}</span>
               </div>
             </div>
 
             {/* Payment Receipt Image Viewport */}
-            <div className="max-h-[55vh] overflow-y-auto rounded-2xl border border-gray-300 bg-gray-950 p-3 flex flex-col items-center justify-center">
+            <div className="max-h-[55vh] overflow-y-auto rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-950 p-3 flex flex-col items-center justify-center">
               {proofModalOrder.payment_proof_url || proofModalOrder.upi_receipt_url || proofModalOrder.upi_screenshot_url ? (
                 <img
                   src={proofModalOrder.payment_proof_url || proofModalOrder.upi_receipt_url || proofModalOrder.upi_screenshot_url}
@@ -3646,8 +3633,8 @@ export function SuperAdminDashboardClient({
             </div>
 
             {/* Action Bar */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100">
-              <span className="text-xs text-gray-500 font-medium">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 Verify that the 12-digit UTR and amount on the screenshot match your bank account statement.
               </span>
               <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
@@ -3657,7 +3644,7 @@ export function SuperAdminDashboardClient({
                     setProofModalOrder(null);
                     setRejectModalOrder(proofModalOrder);
                   }}
-                  className="flex-1 sm:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-5 py-3 rounded-2xl transition-all cursor-pointer text-center"
+                  className="flex-1 sm:flex-initial bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold text-xs px-5 py-3 rounded-2xl transition-all cursor-pointer text-center"
                 >
                   Reject Payment
                 </button>
@@ -3688,43 +3675,42 @@ export function SuperAdminDashboardClient({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: "620px" }}
-            className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 mx-auto max-h-[90vh] overflow-y-auto"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 text-gray-900 dark:text-white mx-auto max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc] dark:text-blue-400">
                   STATUTORY GRIEVANCE REDRESSAL
                 </span>
-                <h3 className="text-xl font-black text-gray-900">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">
                   Case: {selectedComplaint.complaint_number || selectedComplaint.id?.slice(0, 12)}
                 </h3>
               </div>
               <button
-                type="button"
                 onClick={() => setSelectedComplaint(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Complainant Metadata Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Complainant</span>
-                <span className="font-extrabold text-gray-900">{selectedComplaint.user_name || "User"}</span>
+                <span className="font-extrabold text-gray-900 dark:text-white">{selectedComplaint.user_name || "User"}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Contact Email</span>
-                <span className="font-mono text-gray-800 text-[11px] truncate block">{selectedComplaint.user_email}</span>
+                <span className="font-mono text-gray-800 dark:text-gray-200 text-[11px] truncate block">{selectedComplaint.user_email}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Category</span>
-                <span className="font-bold text-[#0758fc]">{selectedComplaint.category || "General"}</span>
+                <span className="font-bold text-[#0758fc] dark:text-blue-400">{selectedComplaint.category || "General"}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Filed Date</span>
-                <span className="text-gray-700">
+                <span className="text-gray-700 dark:text-gray-300">
                   {selectedComplaint.created_at ? new Date(selectedComplaint.created_at).toLocaleString("en-IN") : "Recent"}
                 </span>
               </div>
@@ -3734,23 +3720,23 @@ export function SuperAdminDashboardClient({
               </div>
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Statutory SLA</span>
-                <span className="font-bold text-emerald-600">15-Day Resolution</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">15-Day Resolution</span>
               </div>
             </div>
 
             {/* Description Body */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                 Full Complaint &amp; Incident Narrative
               </label>
-              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-800 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-gray-200 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
                 {selectedComplaint.description}
               </div>
             </div>
 
             {/* Resolution Recording */}
             <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                 Record Official Resolution &amp; Ombudsman Findings
               </label>
               <textarea
@@ -3758,7 +3744,7 @@ export function SuperAdminDashboardClient({
                 value={resolutionInput}
                 onChange={(e) => setResolutionInput(e.target.value)}
                 placeholder="Enter statutory resolution notes for the complainant audit record..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs outline-none focus:border-[#0758fc] focus:bg-white"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-850"
               />
 
               <div className="flex flex-wrap gap-1.5">
@@ -3772,7 +3758,7 @@ export function SuperAdminDashboardClient({
                     key={preset}
                     type="button"
                     onClick={() => setResolutionInput(preset)}
-                    className="text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded-lg cursor-pointer"
+                    className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg cursor-pointer"
                   >
                     {preset}
                   </button>
@@ -3785,7 +3771,7 @@ export function SuperAdminDashboardClient({
               <button
                 type="button"
                 onClick={() => setSelectedComplaint(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-2xl text-xs transition-colors cursor-pointer"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-2.5 rounded-2xl text-xs transition-colors cursor-pointer"
               >
                 Close
               </button>

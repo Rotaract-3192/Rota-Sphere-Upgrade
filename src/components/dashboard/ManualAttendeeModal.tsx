@@ -257,9 +257,9 @@ export function ManualAttendeeModal({
       <div onClick={onClose} className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer" />
 
       {/* Modal Card */}
-      <div className="relative z-10 w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 mx-auto">
+      <div className="relative z-10 w-full max-w-2xl bg-white dark:bg-gray-900 border border-transparent dark:border-gray-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 dark:text-white mx-auto">
         {/* Header */}
-        <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
+        <div className="bg-gray-900 dark:bg-gray-950 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0 border-b border-gray-800">
           <div className="flex items-center gap-3 relative z-10">
             <div className="w-11 h-11 rounded-2xl bg-[#0758fc]/20 border border-[#0758fc]/40 text-[#60a5fa] flex items-center justify-center shrink-0">
               <UserPlus size={22} />
@@ -285,30 +285,30 @@ export function ManualAttendeeModal({
         <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
           {/* Success State */}
           {successResult ? (
-            <div className="p-6 bg-emerald-50/70 border border-emerald-200 rounded-3xl text-center space-y-5 animate-in zoom-in-95">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <div className="p-6 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-3xl text-center space-y-5 animate-in zoom-in-95">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
                 <CheckCircle2 size={36} />
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-xl font-black text-emerald-950">Pass Issued Successfully!</h3>
-                <p className="text-xs text-emerald-800 font-medium">
+                <h3 className="text-xl font-black text-emerald-950 dark:text-emerald-200">Pass Issued Successfully!</h3>
+                <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
                   Manual attendee ticket for <strong className="font-extrabold">{successResult.attendeeName}</strong> has been registered.
                 </p>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-xs space-y-2 text-left max-w-md mx-auto font-mono text-xs">
-                <div className="flex justify-between border-b border-gray-100 pb-2">
-                  <span className="text-gray-500 font-sans">Ticket Pass Code:</span>
-                  <span className="font-bold text-[#0758fc]">{successResult.ticketCode}</span>
+              <div className="bg-white dark:bg-gray-850 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-xs space-y-2 text-left max-w-md mx-auto font-mono text-xs">
+                <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 font-sans">Ticket Pass Code:</span>
+                  <span className="font-bold text-[#0758fc] dark:text-blue-400">{successResult.ticketCode}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-100 pb-2">
-                  <span className="text-gray-500 font-sans">Order Number:</span>
-                  <span className="font-bold text-gray-800">{successResult.orderNumber}</span>
+                <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 font-sans">Order Number:</span>
+                  <span className="font-bold text-gray-800 dark:text-gray-200">{successResult.orderNumber}</span>
                 </div>
                 <div className="flex justify-between pt-1">
-                  <span className="text-gray-500 font-sans">Gate Entry Status:</span>
-                  <span className="font-bold text-emerald-600 uppercase">CONFIRMED (READY TO SCAN)</span>
+                  <span className="text-gray-500 dark:text-gray-400 font-sans">Gate Entry Status:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase">CONFIRMED (READY TO SCAN)</span>
                 </div>
               </div>
 
@@ -323,7 +323,7 @@ export function ManualAttendeeModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold text-xs px-6 py-3 rounded-2xl transition-all cursor-pointer"
+                  className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-bold text-xs px-6 py-3 rounded-2xl transition-all cursor-pointer"
                 >
                   Close &amp; View Attendees
                 </button>
@@ -332,8 +332,8 @@ export function ManualAttendeeModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {errorMessage && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
-                  <AlertCircle size={16} className="shrink-0 text-rose-600" />
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle size={16} className="shrink-0 text-rose-600 dark:text-rose-400" />
                   <span>{errorMessage}</span>
                 </div>
               )}
@@ -342,15 +342,15 @@ export function ManualAttendeeModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Event Selector */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                    <Layers size={14} className="text-[#0758fc]" />
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#0758fc] dark:text-blue-400" />
                     Event *
                   </label>
                   <select
                     required
                     value={selectedEventId}
                     onChange={(e) => setSelectedEventId(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 cursor-pointer"
                   >
                     {events.map((ev) => (
                       <option key={ev.id} value={ev.id}>
@@ -362,8 +362,8 @@ export function ManualAttendeeModal({
 
                 {/* Tier Selector */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                    <QrCode size={14} className="text-[#0758fc]" />
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <QrCode size={14} className="text-[#0758fc] dark:text-blue-400" />
                     Ticket Tier *
                   </label>
                   <select
@@ -371,7 +371,7 @@ export function ManualAttendeeModal({
                     value={selectedTierId}
                     onChange={(e) => handleTierChange(e.target.value)}
                     disabled={loadingTiers}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer disabled:opacity-50"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 cursor-pointer disabled:opacity-50"
                   >
                     {loadingTiers && <option value="">Loading ticket tiers...</option>}
                     {!loadingTiers && tiers.length === 0 && <option value="">No tiers configured</option>}
@@ -387,65 +387,65 @@ export function ManualAttendeeModal({
 
               {/* 2. Delegate Details (Identical to Normal Registration) */}
               <div className="space-y-3 pt-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                   Delegate Details
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-gray-700">Full Name *</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Full Name *</label>
                     <div className="relative">
-                      <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                       <input
                         type="text"
                         required
                         placeholder="Full Name *"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-gray-700">Email Address *</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Email Address *</label>
                     <div className="relative">
-                      <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                       <input
                         type="email"
                         required
                         placeholder="Email Address *"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 pt-1">
-                  <label className="block text-[11px] font-bold text-gray-700">Phone Number</label>
+                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Phone Number</label>
                   <div className="relative">
-                    <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                     <input
                       type="tel"
                       placeholder="Phone Number"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 3. Rotary Affiliation & Club Category (3 Parts) */}
-              <div className="p-4 bg-blue-50/40 border border-blue-200/60 rounded-3xl space-y-3.5">
+              <div className="p-4 bg-blue-50/40 dark:bg-gray-800/80 border border-blue-200/60 dark:border-gray-700 rounded-3xl space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#0758fc] flex items-center gap-1.5">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#0758fc] dark:text-blue-400 flex items-center gap-1.5">
                     <Building size={14} /> Affiliation &amp; Club Details
                   </span>
                   {zone && (
-                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-[#0758fc] border border-blue-200">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                       Zone: {zone}
                     </span>
                   )}
@@ -453,7 +453,7 @@ export function ManualAttendeeModal({
 
                 {/* 3-Part Category Switcher */}
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-bold text-gray-700">Affiliation Category</label>
+                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Affiliation Category</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
                       const isSelected = memberType === type;
@@ -477,7 +477,7 @@ export function ManualAttendeeModal({
                           className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center cursor-pointer active:scale-95 ${
                             isSelected
                               ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100/80"
+                              : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800"
                           }`}
                         >
                           {type === "Rotaract"
@@ -494,29 +494,29 @@ export function ManualAttendeeModal({
                 {/* Club Details Based on Affiliation */}
                 {memberType === "Rotary" ? (
                   <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Rotary Club Name</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Rotary Club Name</label>
                     <input
                       type="text"
                       placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
                       value={selectedClub === "Non-Rotaract Guest" ? "" : selectedClub}
                       onChange={(e) => setSelectedClub(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-white outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 ) : memberType === "Non-Rotaract" ? (
                   <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Organization / College / Company (Optional)</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Organization / College / Company (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
                       value={selectedClub === "Non-Rotaract Guest" ? "" : selectedClub}
                       onChange={(e) => setSelectedClub(e.target.value || "Non-Rotaract Guest")}
-                      className="w-full bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0758fc]"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 text-xs font-bold text-gray-800 dark:text-white outline-none focus:border-[#0758fc]"
                     />
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-gray-700">Search District 3192 Club</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Search District 3192 Club</label>
                     <SearchableClubSelect
                       value={selectedClub}
                       customValue={customClubName}
@@ -535,21 +535,21 @@ export function ManualAttendeeModal({
                 )}
 
                 {/* 4. Designation / Role (NORMAL TEXT INPUT COLUMN — NOT A DROPDOWN) */}
-                <div className="space-y-1 pt-1 border-t border-blue-200/50">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                <div className="space-y-1 pt-1 border-t border-blue-200/50 dark:border-gray-700/50">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Briefcase size={13} className="text-[#0758fc]" /> Designation / Role
+                      <Briefcase size={13} className="text-[#0758fc] dark:text-blue-400" /> Designation / Role
                     </span>
-                    <span className="text-[10px] text-gray-400 font-normal">Free text input</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">Free text input</span>
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. President, Sergeant-at-Arms, DRR, Secretary, Member..."
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 placeholder-gray-400"
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
                   />
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">
                     Type any official designation (President, Sergeant-at-Arms, DRR, Secretary, Member, Guest, etc.)
                   </p>
                 </div>
@@ -557,15 +557,15 @@ export function ManualAttendeeModal({
 
               {/* 4. Event Custom Registration Questions (Matches Normal Ticket Entry 1:1) */}
               {customQuestions.length > 0 && (
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-3xl space-y-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-700 block">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-3xl space-y-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 block">
                     Event Registration Questions
                   </span>
 
                   <div className="space-y-3">
                     {customQuestions.map((q) => (
                       <div key={q.id} className="space-y-1 text-left">
-                        <label className="block text-[11px] font-bold text-gray-700">
+                        <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
                           {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
                         </label>
                         {q.question_type === "dropdown" ? (
@@ -574,7 +574,7 @@ export function ManualAttendeeModal({
                             onChange={(e) =>
                               setCustomAnswers({ ...customAnswers, [q.id]: e.target.value })
                             }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] cursor-pointer"
+                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc] cursor-pointer"
                           >
                             <option value="">Select an option...</option>
                             {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
@@ -591,7 +591,7 @@ export function ManualAttendeeModal({
                             onChange={(e) =>
                               setCustomAnswers({ ...customAnswers, [q.id]: e.target.value })
                             }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                           />
                         )}
                       </div>
@@ -602,17 +602,17 @@ export function ManualAttendeeModal({
 
               {/* 5. Payment & Billing Details */}
               <div className="space-y-3 pt-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                   Payment Collection &amp; Receipt Note
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5 sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Payment Mode</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Payment Mode</label>
                     <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white cursor-pointer"
+                      className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900 cursor-pointer"
                     >
                       <option value="OFFLINE_CASH">💵 Cash at Desk</option>
                       <option value="DIRECT_BANK_TRANSFER">🏦 Bank IMPS/NEFT</option>
@@ -622,41 +622,41 @@ export function ManualAttendeeModal({
                   </div>
 
                   <div className="space-y-1.5 sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Amount Collected (₹)</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Amount Collected (₹)</label>
                     <div className="relative">
-                      <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                       <input
                         type="number"
                         min={0}
                         step="0.01"
                         value={amountPaid}
                         onChange={(e) => setAmountPaid(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold outline-none focus:border-[#0758fc] focus:bg-white"
+                        className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5 sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-gray-700">Receipt / Reference Note</label>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Receipt / Reference Note</label>
                     <input
                       type="text"
                       placeholder="Receipt / UTR / Note"
                       value={referenceNote}
                       onChange={(e) => setReferenceNote(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium outline-none focus:border-[#0758fc] focus:bg-white"
+                      className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 6. Dispatch Email Checkbox */}
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between gap-3">
+              <div className="p-3.5 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-2xl flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                    <Mail size={13} className="text-[#0758fc]" />
+                  <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <Mail size={13} className="text-[#0758fc] dark:text-blue-400" />
                     Send Ticket Confirmation Email with QR Pass
                   </p>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
                     Sends official digital ticket, scannable QR token, and calendar invite to attendee's email.
                   </p>
                 </div>
@@ -664,16 +664,16 @@ export function ManualAttendeeModal({
                   type="checkbox"
                   checked={sendEmail}
                   onChange={(e) => setSendEmail(e.target.checked)}
-                  className="w-4 h-4 text-[#0758fc] rounded border-gray-300 focus:ring-[#0758fc] cursor-pointer"
+                  className="w-4 h-4 text-[#0758fc] rounded border-gray-300 dark:border-gray-600 focus:ring-[#0758fc] cursor-pointer"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-3 rounded-2xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="px-5 py-3 rounded-2xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

@@ -1141,10 +1141,10 @@ export function OrganizerDashboardClient({
               </div>
             )}
 
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-400 uppercase tracking-wider font-bold">
+                  <thead className="bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold">
                     <tr>
                       <th className="py-3.5 px-6">Ticket Code</th>
                       <th className="py-3.5 px-6">Attendee &amp; Role</th>
@@ -1153,10 +1153,10 @@ export function OrganizerDashboardClient({
                       <th className="py-3.5 px-6">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
                     {filteredTickets.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-400">
+                        <td colSpan={5} className="p-8 text-center text-gray-400 dark:text-gray-500">
                           No attendees registered yet.
                         </td>
                       </tr>
@@ -1164,20 +1164,20 @@ export function OrganizerDashboardClient({
                       filteredTickets.map((t: any) => {
                         const { clubName, zone, memberType, designation } = resolveClubAndZone(t);
                         return (
-                          <tr key={t.id} className="hover:bg-gray-50/50">
-                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900">{t.ticket_code}</td>
+                          <tr key={t.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900 dark:text-white">{t.ticket_code}</td>
                             <td className="py-3.5 px-6">
                               <div className="flex items-center gap-2">
-                                <p className="font-bold text-gray-900">{t.attendee_name}</p>
+                                <p className="font-bold text-gray-900 dark:text-white">{t.attendee_name}</p>
                                 {designation && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                                     {designation}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-gray-400">{t.attendee_email}</p>
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500">{t.attendee_email}</p>
                               {t.attendee_phone && (
-                                <p className="text-[10px] text-gray-400">{t.attendee_phone}</p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500">{t.attendee_phone}</p>
                               )}
                             </td>
                             <td className="py-3.5 px-6">
@@ -1185,30 +1185,30 @@ export function OrganizerDashboardClient({
                                 <span
                                   className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
                                     memberType === "Rotary"
-                                      ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                      ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
                                       : memberType === "Non-Rotaract"
-                                      ? "bg-gray-100 text-gray-700 border border-gray-300"
-                                      : "bg-blue-100 text-[#0758fc] border border-blue-200"
+                                      ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
+                                      : "bg-blue-100 dark:bg-blue-950/80 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800"
                                   }`}
                                 >
                                   {memberType}
                                 </span>
-                                <p className="font-bold text-gray-800 line-clamp-1">{clubName}</p>
+                                <p className="font-bold text-gray-800 dark:text-gray-200 line-clamp-1">{clubName}</p>
                               </div>
-                              <span className="inline-block mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#0758fc] border border-blue-200">
+                              <span className="inline-block mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                                 {zone}
                               </span>
                             </td>
                             <td className="py-3.5 px-6">
-                              <p className="text-gray-800 font-medium line-clamp-1">{t.saas_events?.title || "Event"}</p>
-                              <p className="text-[11px] text-gray-500 font-bold">{t.saas_ticket_tiers?.name || "Standard Pass"}</p>
+                              <p className="text-gray-800 dark:text-gray-200 font-medium line-clamp-1">{t.saas_events?.title || "Event"}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{t.saas_ticket_tiers?.name || "Standard Pass"}</p>
                             </td>
                             <td className="py-3.5 px-6">
                               <span
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
                                   t.status === "USED"
-                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                                 }`}
                               >
                                 ● {t.status === "USED" ? "CHECKED_IN" : "CONFIRMED"}
@@ -1238,39 +1238,39 @@ export function OrganizerDashboardClient({
               const pending = orders.filter((o: any) => o.status === "PENDING_VERIFICATION");
               if (pending.length === 0) return null;
               return (
-                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 space-y-4">
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-3xl p-6 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shrink-0">
                       <Clock size={20} />
                     </div>
                     <div>
-                      <h3 className="text-base font-extrabold text-amber-900">
+                      <h3 className="text-base font-extrabold text-amber-900 dark:text-amber-200">
                         {pending.length} Pending UPI Payment{pending.length > 1 ? "s" : ""} — Action Required
                       </h3>
-                      <p className="text-xs text-amber-700">These registrants submitted their UTR reference. Verify against your bank account and approve or reject.</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">These registrants submitted their UTR reference. Verify against your bank account and approve or reject.</p>
                     </div>
                   </div>
 
-                  <div className="divide-y divide-amber-200">
+                  <div className="divide-y divide-amber-200 dark:divide-amber-800">
                     {pending.map((o: any) => (
                       <div key={o.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-gray-900 text-xs bg-white border border-amber-200 px-2.5 py-1 rounded-lg">{o.order_number}</span>
-                            <span className="font-extrabold text-gray-900 text-sm">₹{o.total_amount}</span>
+                            <span className="font-mono font-bold text-gray-900 dark:text-white text-xs bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 px-2.5 py-1 rounded-lg">{o.order_number}</span>
+                            <span className="font-extrabold text-gray-900 dark:text-white text-sm">₹{o.total_amount}</span>
                           </div>
-                          <p className="text-xs font-bold text-gray-800">{o.customer_name}</p>
-                          <p className="text-[11px] text-gray-500">{o.customer_email}</p>
+                          <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{o.customer_name}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">{o.customer_email}</p>
                           {o.upi_transaction_id && (
-                            <p className="text-xs text-gray-700">
-                              UTR: <span className="font-mono font-extrabold text-gray-900 bg-white border border-amber-200 px-1.5 py-0.5 rounded-md">{o.upi_transaction_id}</span>
+                            <p className="text-xs text-gray-700 dark:text-gray-300">
+                              UTR: <span className="font-mono font-extrabold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 px-1.5 py-0.5 rounded-md">{o.upi_transaction_id}</span>
                             </p>
                           )}
                           {(o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url) && (
                             <button
                               type="button"
                               onClick={() => setPreviewProofUrl(o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url)}
-                              className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 cursor-pointer mt-0.5"
+                              className="text-[11px] text-[#0758fc] dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer mt-0.5"
                             >
                               <ExternalLink size={11} /> View Payment Screenshot Proof
                             </button>
@@ -1306,7 +1306,7 @@ export function OrganizerDashboardClient({
                               }
                             }}
                             disabled={actionLoadingId === o.id}
-                            className="bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                            className="bg-white dark:bg-gray-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                           >
                             <X size={14} /> Reject
                           </button>
@@ -1319,10 +1319,10 @@ export function OrganizerDashboardClient({
             })()}
 
             {/* Full Orders Table */}
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-400 uppercase tracking-wider font-bold">
+                  <thead className="bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold">
                     <tr>
                       <th className="py-3.5 px-6">Order ID</th>
                       <th className="py-3.5 px-6">Customer</th>
@@ -1332,10 +1332,10 @@ export function OrganizerDashboardClient({
                       <th className="py-3.5 px-6 text-right">Moderation</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium text-gray-700 dark:text-gray-300">
                     {orders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-gray-400">
+                        <td colSpan={6} className="p-8 text-center text-gray-400 dark:text-gray-500">
                           No orders processed yet.
                         </td>
                       </tr>
@@ -1346,30 +1346,30 @@ export function OrganizerDashboardClient({
                         const isRejected = o.status === "PAYMENT_REJECTED";
 
                         return (
-                          <tr key={o.id} className={`hover:bg-gray-50/50 ${isPending ? "bg-amber-50/30" : ""}`}>
-                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900">{o.order_number}</td>
+                          <tr key={o.id} className={`hover:bg-gray-50/50 dark:hover:bg-gray-800/40 ${isPending ? "bg-amber-50/30 dark:bg-amber-950/20" : ""}`}>
+                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900 dark:text-white">{o.order_number}</td>
                             <td className="py-3.5 px-6">
-                              <p className="font-bold text-gray-900">{o.customer_name}</p>
-                              <p className="text-[11px] text-gray-400">{o.customer_email}</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{o.customer_name}</p>
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500">{o.customer_email}</p>
                             </td>
                             <td className="py-3.5 px-6">
                               {o.upi_transaction_id ? (
                                 <div className="space-y-1">
-                                  <span className="font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md text-xs block w-fit">
+                                  <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md text-xs block w-fit">
                                     {o.upi_transaction_id}
                                   </span>
                                   {isPending && (o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url) && (
                                     <button
                                       type="button"
                                       onClick={() => setProofModalOrder(o)}
-                                      className="text-[11px] text-[#0758fc] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                                      className="text-[11px] text-[#0758fc] dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                                     >
                                       <Camera size={12} /> View Payment Photo Proof
                                     </button>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-gray-400 italic text-[11px]">Free / N/A</span>
+                                <span className="text-gray-400 dark:text-gray-500 italic text-[11px]">Free / N/A</span>
                               )}
                             </td>
                             <td className="py-3.5 px-6">

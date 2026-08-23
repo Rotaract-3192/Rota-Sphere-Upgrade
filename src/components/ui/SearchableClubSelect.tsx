@@ -96,8 +96,8 @@ export function SearchableClubSelect({
     return (
       <div className={`space-y-2 ${className}`}>
         <div className="flex items-center justify-between">
-          <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
-            <Globe size={13} className="text-[#0758fc]" /> External / Other Rotaract Club
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <Globe size={13} className="text-[#0758fc] dark:text-blue-400" /> External / Other Rotaract Club
           </label>
           <button
             type="button"
@@ -106,20 +106,20 @@ export function SearchableClubSelect({
               setSearchQuery("");
               setIsOpen(true);
             }}
-            className="text-[10px] font-extrabold text-[#0758fc] hover:underline cursor-pointer flex items-center gap-1"
+            className="text-[10px] font-extrabold text-[#0758fc] dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
           >
             ← Back to District 3192 List
           </button>
         </div>
         <div className="relative">
-          <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             required={required}
             placeholder="Type Rotaract Club Name (e.g. Rotaract Club of Bombay)..."
             value={customValue}
             onChange={(e) => onCustomChange && onCustomChange(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
           />
         </div>
       </div>
@@ -134,15 +134,15 @@ export function SearchableClubSelect({
           setIsOpen(true);
           inputRef.current?.focus();
         }}
-        className={`w-full bg-gray-50 border transition-all rounded-xl pl-9 pr-9 py-2.5 text-xs font-semibold flex items-center cursor-text relative ${
+        className={`w-full bg-gray-50 dark:bg-gray-800/80 border transition-all rounded-xl pl-9 pr-9 py-2.5 text-xs font-semibold flex items-center cursor-text relative ${
           isOpen
-            ? "border-[#0758fc] bg-white ring-2 ring-[#0758fc]/15 shadow-xs"
+            ? "border-[#0758fc] bg-white dark:bg-gray-900 ring-2 ring-[#0758fc]/15 shadow-xs"
             : value
-            ? "border-blue-200 bg-blue-50/20 text-gray-900"
-            : "border-gray-200 text-gray-800"
+            ? "border-blue-200 dark:border-blue-800/60 bg-blue-50/20 dark:bg-blue-950/30 text-gray-900 dark:text-white"
+            : "border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
         }`}
       >
-        <Search size={14} className={`absolute left-3 transition-colors ${isOpen ? "text-[#0758fc]" : "text-gray-400"}`} />
+        <Search size={14} className={`absolute left-3 transition-colors ${isOpen ? "text-[#0758fc] dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`} />
 
         <input
           ref={inputRef}
@@ -158,7 +158,7 @@ export function SearchableClubSelect({
             }
           }}
           onFocus={() => setIsOpen(true)}
-          className="w-full bg-transparent outline-none text-xs font-bold text-gray-900 placeholder:text-gray-400"
+          className="w-full bg-transparent outline-none text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
         />
 
         {searchQuery ? (
@@ -168,7 +168,7 @@ export function SearchableClubSelect({
               e.stopPropagation();
               handleClear();
             }}
-            className="absolute right-2.5 p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-200/60 transition-colors cursor-pointer"
+            className="absolute right-2.5 p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors cursor-pointer"
             title="Clear search"
           >
             <X size={13} />
@@ -176,8 +176,8 @@ export function SearchableClubSelect({
         ) : (
           <ChevronDown
             size={14}
-            className={`absolute right-3 text-gray-400 transition-transform duration-200 ${
-              isOpen ? "rotate-180 text-[#0758fc]" : ""
+            className={`absolute right-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
+              isOpen ? "rotate-180 text-[#0758fc] dark:text-blue-400" : ""
             }`}
           />
         )}
@@ -185,9 +185,9 @@ export function SearchableClubSelect({
 
       {/* Floating Dropdown Results */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-gray-200 shadow-2xl z-[99999] overflow-hidden animate-in fade-in-50 zoom-in-95">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl z-[99999] overflow-hidden animate-in fade-in-50 zoom-in-95">
           {/* Header count indicator */}
-          <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+          <div className="px-3.5 py-2 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             <span>District 3192 Clubs</span>
             <span>{filteredClubs.length} match{filteredClubs.length === 1 ? "" : "es"}</span>
           </div>
@@ -204,12 +204,12 @@ export function SearchableClubSelect({
                     onClick={() => handleSelectClub(club.name, club.zone)}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-blue-50/90 text-[#0758fc] font-black border border-blue-200"
-                        : "hover:bg-gray-50 text-gray-800 font-semibold"
+                        ? "bg-blue-50/90 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 font-black border border-blue-200 dark:border-blue-800"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
-                      <Building size={13} className={isSelected ? "text-[#0758fc]" : "text-gray-400"} />
+                      <Building size={13} className={isSelected ? "text-[#0758fc] dark:text-blue-400" : "text-gray-400 dark:text-gray-500"} />
                       <span className="truncate">{club.name}</span>
                     </div>
 
@@ -217,36 +217,36 @@ export function SearchableClubSelect({
                       <span
                         className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
                           isSelected
-                            ? "bg-blue-100 text-[#0758fc] border-blue-300"
-                            : "bg-gray-100 text-gray-600 border-gray-200"
+                            ? "bg-blue-100 dark:bg-blue-950 text-[#0758fc] dark:text-blue-400 border-blue-300 dark:border-blue-700"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                         }`}
                       >
                         {club.zone}
                       </span>
-                      {isSelected && <Check size={14} className="text-[#0758fc]" />}
+                      {isSelected && <Check size={14} className="text-[#0758fc] dark:text-blue-400" />}
                     </div>
                   </button>
                 );
               })
             ) : (
               <div className="p-4 text-center space-y-1">
-                <p className="text-xs font-bold text-gray-700">No District 3192 club matches &quot;{searchQuery}&quot;</p>
-                <p className="text-[11px] text-gray-400">You can add it as an external club below.</p>
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No District 3192 club matches &quot;{searchQuery}&quot;</p>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500">You can add it as an external club below.</p>
               </div>
             )}
 
             {/* Custom / External Club Option */}
-            <div className="pt-1 border-t border-gray-100">
+            <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 onClick={handleSelectCustom}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between text-purple-700 hover:bg-purple-50 transition-all font-bold cursor-pointer"
+                className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-all font-bold cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <Globe size={13} className="text-purple-600" />
+                  <Globe size={13} className="text-purple-600 dark:text-purple-400" />
                   <span>+ Other / External Rotaract Club</span>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                   Type Custom
                 </span>
               </button>

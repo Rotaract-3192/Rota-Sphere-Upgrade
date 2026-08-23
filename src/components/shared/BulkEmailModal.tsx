@@ -213,25 +213,25 @@ export function BulkEmailModal({
   const progressPercent = totalBatches > 0 ? Math.round((currentBatchIndex / totalBatches) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="w-full max-w-5xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col text-gray-900 relative max-h-[92vh]">
+    <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in-50">
+      <div className="w-full max-w-5xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col text-gray-900 dark:text-white relative max-h-[92vh]">
         
         {/* ── MODAL TOP HEADER BAR ────────────────────────────────────────── */}
-        <div className="bg-white border-b border-gray-100 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0758fc] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 flex items-center justify-center">
               <Mail size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0758fc] px-2.5 py-0.5 rounded-full border border-blue-200">
-                  RO TASPHERE BROADCAST STUDIO
+                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                  ROTASPHERE BROADCAST STUDIO
                 </span>
-                <span className="text-xs font-bold text-gray-500">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
                   {fetchingRecipients ? "Loading recipients..." : `${recipients.length} Target Recipients`}
                 </span>
               </div>
-              <h2 className="text-lg font-black text-gray-900 tracking-tight mt-0.5">
+              <h2 className="text-lg font-black text-gray-900 dark:text-white tracking-tight mt-0.5">
                 Bulk Email &amp; Rules Broadcast
               </h2>
             </div>
@@ -239,12 +239,14 @@ export function BulkEmailModal({
 
           <div className="flex items-center gap-3">
             {/* View Tab Switcher */}
-            <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1">
+            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setActiveViewTab("COMPOSE")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeViewTab === "COMPOSE" ? "bg-white text-gray-900 shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                  activeViewTab === "COMPOSE"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-2xs"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <Edit3 size={13} /> Compose
@@ -253,7 +255,9 @@ export function BulkEmailModal({
                 type="button"
                 onClick={() => setActiveViewTab("PREVIEW")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeViewTab === "PREVIEW" ? "bg-white text-[#0758fc] shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                  activeViewTab === "PREVIEW"
+                    ? "bg-white dark:bg-gray-700 text-[#0758fc] dark:text-blue-400 shadow-2xs"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <Eye size={13} /> Live Preview
@@ -264,9 +268,9 @@ export function BulkEmailModal({
               type="button"
               onClick={handleSendTestEmail}
               disabled={testSending || isBroadcasting}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {testSending ? <Loader2 size={14} className="animate-spin text-[#0758fc]" /> : <TestTube size={14} className="text-[#0758fc]" />}
+              {testSending ? <Loader2 size={14} className="animate-spin text-[#0758fc]" /> : <TestTube size={14} className="text-[#0758fc] dark:text-blue-400" />}
               <span>Test Email</span>
             </button>
 
@@ -283,7 +287,7 @@ export function BulkEmailModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -294,15 +298,15 @@ export function BulkEmailModal({
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
           
           {testSuccessMessage && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>{testSuccessMessage}</span>
             </div>
           )}
 
           {errorMessage && (
-            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-bold flex items-center gap-2.5">
-              <AlertCircle size={16} className="shrink-0 text-rose-600" />
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-2xl text-xs font-bold flex items-center gap-2.5">
+              <AlertCircle size={16} className="shrink-0 text-rose-600 dark:text-rose-400" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -314,13 +318,13 @@ export function BulkEmailModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {events.length > 0 && (
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                       Target Event
                     </label>
                     <select
                       value={selectedEventId}
                       onChange={(e) => setSelectedEventId(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                     >
                       {events.map((ev) => (
                         <option key={ev.id} value={ev.id}>
@@ -332,13 +336,13 @@ export function BulkEmailModal({
                 )}
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Target Audience Group
                   </label>
                   <select
                     value={targetScope}
                     onChange={(e) => setTargetScope(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   >
                     <option value="ALL_APPROVED">All Confirmed Event Delegates ({recipients.length})</option>
                     <option value="CUSTOM_EMAILS">Custom Email List</option>
@@ -349,7 +353,7 @@ export function BulkEmailModal({
 
               {targetScope === "CUSTOM_EMAILS" && (
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Custom Email Addresses (Comma Separated)
                   </label>
                   <textarea
@@ -357,7 +361,7 @@ export function BulkEmailModal({
                     value={customEmails}
                     onChange={(e) => setCustomEmails(e.target.value)}
                     placeholder="email1@domain.com, email2@domain.com..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-mono text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-xs font-mono text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
               )}
@@ -365,7 +369,7 @@ export function BulkEmailModal({
               {/* Subject Line & Banner Header */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Email Subject Line *
                   </label>
                   <input
@@ -374,12 +378,12 @@ export function BulkEmailModal({
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Important Event Rules & Entry Guidelines"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Banner Header Title
                   </label>
                   <input
@@ -387,7 +391,7 @@ export function BulkEmailModal({
                     value={bannerTitle}
                     onChange={(e) => setBannerTitle(e.target.value)}
                     placeholder="e.g. Official Delegate Guidelines"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
@@ -395,7 +399,7 @@ export function BulkEmailModal({
               {/* Message Content & Personalization Tags */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Message Content &amp; Rules *
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -405,7 +409,7 @@ export function BulkEmailModal({
                         key={tag}
                         type="button"
                         onClick={() => insertPlaceholder(tag)}
-                        className="bg-gray-100 hover:bg-gray-200 text-[#0758fc] text-[11px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                        className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-[#0758fc] dark:text-blue-400 text-[11px] font-mono font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors"
                       >
                         {tag}
                       </button>
@@ -418,14 +422,14 @@ export function BulkEmailModal({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Type your message guidelines, update details, or instructions here... (Use tags above for personalization)"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-medium text-gray-900 outline-none focus:border-[#0758fc] leading-relaxed resize-none"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-[#0758fc] leading-relaxed resize-none"
                 />
               </div>
 
               {/* Custom CTA Button Options */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Button Text (Optional)
                   </label>
                   <input
@@ -433,11 +437,11 @@ export function BulkEmailModal({
                     value={buttonText}
                     onChange={(e) => setButtonText(e.target.value)}
                     placeholder="e.g. View Photos GDrive Link"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-1.5">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
                     Button Target URL (Optional)
                   </label>
                   <input
@@ -445,20 +449,20 @@ export function BulkEmailModal({
                     value={buttonUrl}
                     onChange={(e) => setButtonUrl(e.target.value)}
                     placeholder="https://rotasphere.in/gallery"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-mono text-gray-900 outline-none focus:border-[#0758fc]"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs font-mono text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                   />
                 </div>
               </div>
 
               {/* Toggle Switch: QR Code & Badge */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div className="bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0758fc] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 flex items-center justify-center">
                     <QrCode size={18} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-900">Include Attendee QR Code &amp; Entry Badge</h4>
-                    <p className="text-[11px] text-gray-500">
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">Include Attendee QR Code &amp; Entry Badge</h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
                       Embeds recipient's unique entry QR code image &amp; ticket code for venue check-in.
                     </p>
                   </div>
@@ -467,7 +471,7 @@ export function BulkEmailModal({
                   type="button"
                   onClick={() => setIncludeQrCode(!includeQrCode)}
                   className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    includeQrCode ? "bg-[#0758fc]" : "bg-gray-300"
+                    includeQrCode ? "bg-[#0758fc]" : "bg-gray-300 dark:bg-gray-700"
                   }`}
                 >
                   <span
@@ -479,16 +483,16 @@ export function BulkEmailModal({
               </div>
 
               {/* Attachments Section */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
+              <div className="bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Paperclip size={16} className="text-[#0758fc]" />
-                    <span className="text-xs font-bold text-gray-900">Email Attachments ({attachments.length})</span>
+                    <Paperclip size={16} className="text-[#0758fc] dark:text-blue-400" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">Email Attachments ({attachments.length})</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-2xs"
+                    className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-2xs"
                   >
                     + Add Files
                   </button>
@@ -508,14 +512,14 @@ export function BulkEmailModal({
                     {attachments.map((file, idx) => (
                       <div
                         key={idx}
-                        className="bg-white border border-gray-200 text-gray-800 text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2"
                       >
-                        <FileText size={13} className="text-[#0758fc]" />
+                        <FileText size={13} className="text-[#0758fc] dark:text-blue-400" />
                         <span className="truncate max-w-[150px]">{file.name}</span>
                         <button
                           type="button"
                           onClick={() => removeAttachment(idx)}
-                          className="text-gray-400 hover:text-rose-600"
+                          className="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
                         >
                           <X size={12} />
                         </button>
@@ -530,48 +534,48 @@ export function BulkEmailModal({
             /* LIVE PREVIEW TAB */
             <div className="space-y-4 max-w-2xl mx-auto">
               <div className="text-center pb-2">
-                <span className="text-xs font-bold text-[#0758fc] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                <span className="text-xs font-bold text-[#0758fc] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
                   Live Email Template Preview
                 </span>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xl">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden shadow-xl">
                 <div className="bg-[#0758fc] p-6 text-center text-white">
                   <h3 className="text-xl font-extrabold uppercase tracking-wide">{selectedEventTitle}</h3>
                   <p className="text-xs text-white/80 font-semibold mt-1">Official Delegate Announcement</p>
                 </div>
 
                 {bannerTitle && (
-                  <div className="bg-gray-50 border-b border-gray-200 p-4 text-center">
-                    <h4 className="text-sm font-bold text-gray-900">{bannerTitle}</h4>
+                  <div className="bg-gray-50 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-700 p-4 text-center">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">{bannerTitle}</h4>
                   </div>
                 )}
 
-                <div className="p-6 space-y-4 text-gray-800">
-                  <p className="text-xs font-bold text-gray-900">Hello Alex (Sample Recipient),</p>
-                  <div className="text-xs leading-relaxed whitespace-pre-line text-gray-700">{message}</div>
+                <div className="p-6 space-y-4 text-gray-800 dark:text-gray-200">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">Hello Alex (Sample Recipient),</p>
+                  <div className="text-xs leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300">{message}</div>
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs space-y-2">
+                  <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xs space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Attendee:</span>
-                      <span className="font-bold text-gray-900">Alex</span>
+                      <span className="text-gray-500 dark:text-gray-400">Attendee:</span>
+                      <span className="font-bold text-gray-900 dark:text-white">Alex</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Category:</span>
-                      <span className="font-bold text-gray-900">VIP Pass</span>
+                      <span className="text-gray-500 dark:text-gray-400">Category:</span>
+                      <span className="font-bold text-gray-900 dark:text-white">VIP Pass</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Ticket Code:</span>
-                      <span className="font-mono font-bold text-[#0758fc]">TKT-SAMPLE-8821</span>
+                      <span className="text-gray-500 dark:text-gray-400">Ticket Code:</span>
+                      <span className="font-mono font-bold text-[#0758fc] dark:text-blue-400">TKT-SAMPLE-8821</span>
                     </div>
                   </div>
 
                   {includeQrCode && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center space-y-2">
-                      <div className="w-28 h-28 bg-white border border-gray-300 rounded-xl mx-auto flex items-center justify-center p-2">
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-center space-y-2">
+                      <div className="w-28 h-28 bg-white rounded-xl mx-auto flex items-center justify-center p-2 border border-gray-200 dark:border-gray-700">
                         <QrCode size={80} className="text-gray-800" />
                       </div>
-                      <p className="text-[10px] font-bold text-gray-500">Entry QR Gate Code</p>
+                      <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Entry QR Gate Code</p>
                     </div>
                   )}
 
@@ -584,7 +588,7 @@ export function BulkEmailModal({
                   )}
                 </div>
 
-                <div className="bg-gray-50 p-4 border-t border-gray-200 text-center text-[11px] text-gray-500">
+                <div className="bg-gray-50 dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-700 text-center text-[11px] text-gray-500 dark:text-gray-400">
                   © 2026 RotaSphere Platform · Official Event Broadcast
                 </div>
               </div>
@@ -597,17 +601,17 @@ export function BulkEmailModal({
 
       {/* ── CHUNKED BATCH DISPATCH PROGRESS MODAL ───────────────────────── */}
       {isBroadcasting && (
-        <div className="fixed inset-0 z-[999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-5 text-center relative">
-            <div className="w-14 h-14 rounded-full bg-blue-50 text-[#0758fc] flex items-center justify-center mx-auto shadow-md">
+        <div className="fixed inset-0 z-[999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in-50">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-5 text-center relative text-gray-900 dark:text-white">
+            <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 flex items-center justify-center mx-auto shadow-md">
               <Send size={24} className={broadcastComplete ? "" : "animate-pulse"} />
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-xl font-extrabold text-gray-900">
+              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">
                 {broadcastComplete ? "Broadcast Complete!" : "Broadcasting Emails..."}
               </h3>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 {broadcastComplete
                   ? `Sent ${sentCount} emails (${failedCount} failed).`
                   : batchStatusText}
@@ -616,22 +620,22 @@ export function BulkEmailModal({
 
             {!broadcastComplete && (
               <div className="space-y-2">
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden p-0.5 border border-gray-200">
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden p-0.5 border border-gray-200 dark:border-gray-700">
                   <div
                     className="bg-[#0758fc] h-full rounded-full transition-all duration-500"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs font-bold text-gray-600 font-mono">
+                <div className="flex justify-between text-xs font-bold text-gray-600 dark:text-gray-400 font-mono">
                   <span>Batch {currentBatchIndex} / {totalBatches}</span>
-                  <span className="text-[#0758fc]">{progressPercent}%</span>
+                  <span className="text-[#0758fc] dark:text-blue-400">{progressPercent}%</span>
                   <span>{sentCount} of {recipients.length}</span>
                 </div>
               </div>
             )}
 
             {!broadcastComplete ? (
-              <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 p-3 rounded-xl">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-xl">
                 Sending 5 emails per batch with 1.2s pause to protect SMTP server connections.
               </p>
             ) : (

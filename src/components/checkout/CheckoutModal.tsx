@@ -406,11 +406,11 @@ export function CheckoutModal({
       {/* Modal Dialog Box */}
       <div
         style={{ width: "100%", maxWidth: "640px" }}
-        className="relative z-10 w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 mx-auto"
+        className="relative z-10 w-full bg-white dark:bg-gray-900 border border-transparent dark:border-gray-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[92vh] text-gray-900 dark:text-white mx-auto"
       >
         {/* Modal Header */}
         {checkoutStep !== "SUCCESS" && (
-          <div className="bg-gray-900 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0">
+          <div className="bg-gray-900 dark:bg-gray-950 text-white p-5 sm:p-6 flex items-center justify-between relative overflow-hidden shrink-0 border-b border-gray-800">
             <div className="flex items-center gap-3.5 relative z-10">
               <div className="relative w-12 h-12 shrink-0">
                 <Image
@@ -442,15 +442,15 @@ export function CheckoutModal({
         {/* ── 1. GATED STATE: NOT LOGGED IN ─────────────────────────────── */}
         {!userEmail ? (
           <div className="p-6 sm:p-10 w-full text-center overflow-y-auto flex-1 flex flex-col items-center justify-center space-y-6">
-            <div className="w-16 h-16 bg-blue-50 text-[#0758fc] rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 rounded-full flex items-center justify-center mx-auto shadow-inner shrink-0">
               <Lock size={32} />
             </div>
 
             <div className="w-full text-center space-y-2">
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight text-center w-full block">
+              <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight text-center w-full block">
                 Sign In to Book Passes
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600 text-center w-full max-w-md mx-auto block leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 text-center w-full max-w-md mx-auto block leading-relaxed">
                 To issue your encrypted digital QR entry passes, save your tickets, and manage transfers, you must sign in to your RotaSphere account.
               </p>
             </div>
@@ -464,7 +464,7 @@ export function CheckoutModal({
               </Link>
               <Link
                 href={`/sign-up?redirect_url=${encodeURIComponent(currentUrl)}`}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center cursor-pointer text-center"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center cursor-pointer text-center"
               >
                 Create Account
               </Link>
@@ -495,17 +495,17 @@ export function CheckoutModal({
             )}
 
             {/* Price Summary Pill */}
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-gray-500 uppercase font-extrabold block">Total Payable Amount</span>
-                <span className="text-xl font-black text-gray-900">₹{fees.totalPayable.toFixed(2)}</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-extrabold block">Total Payable Amount</span>
+                <span className="text-xl font-black text-gray-900 dark:text-white">₹{fees.totalPayable.toFixed(2)}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleCopy(fees.totalPayable.toFixed(2), "amount")}
-                className="text-xs font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
               >
-                {copiedAmount ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                {copiedAmount ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
                 {copiedAmount ? "Copied" : "Copy Amount"}
               </button>
             </div>
@@ -519,23 +519,23 @@ export function CheckoutModal({
                 <Smartphone size={18} />
                 Pay with UPI App (GPay / PhonePe / Paytm)
               </a>
-              <p className="text-[11px] text-center text-gray-400">
+              <p className="text-[11px] text-center text-gray-400 dark:text-gray-500">
                 On mobile devices, this button directly launches your installed UPI app with the exact amount prefilled.
               </p>
             </div>
 
             {/* Divider */}
             <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-gray-200" />
-              <span className="flex-shrink mx-4 text-[10px] uppercase font-extrabold text-gray-400">
+              <div className="flex-grow border-t border-gray-200 dark:border-gray-800" />
+              <span className="flex-shrink mx-4 text-[10px] uppercase font-extrabold text-gray-400 dark:text-gray-500">
                 OR SCAN DYNAMIC UPI QR
               </span>
-              <div className="flex-grow border-t border-gray-200" />
+              <div className="flex-grow border-t border-gray-200 dark:border-gray-800" />
             </div>
 
             {/* Dynamic UPI QR Code Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
-              <div className="bg-white p-3 rounded-2xl border-2 border-gray-900 shadow-md">
+            <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
+              <div className="bg-white p-3 rounded-2xl border-2 border-gray-900 dark:border-gray-600 shadow-md">
                 {upiQrDataUrl ? (
                   <img
                     src={upiQrDataUrl}
@@ -550,21 +550,21 @@ export function CheckoutModal({
               </div>
 
               {/* Payee Info */}
-              <div className="w-full bg-white p-3.5 rounded-2xl border border-gray-200 text-xs text-center space-y-1 block">
-                <span className="text-[10px] text-gray-400 font-bold uppercase w-full block text-center">Organizer UPI ID (VPA)</span>
-                <span className="font-mono font-bold text-gray-900 w-full block text-center truncate">{targetUpiId}</span>
-                <span className="text-[10px] text-gray-500 w-full block text-center truncate">Payee: {targetPayeeName}</span>
+              <div className="w-full bg-white dark:bg-gray-900 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs text-center space-y-1 block">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase w-full block text-center">Organizer UPI ID (VPA)</span>
+                <span className="font-mono font-bold text-gray-900 dark:text-white w-full block text-center truncate">{targetUpiId}</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 w-full block text-center truncate">Payee: {targetPayeeName}</span>
               </div>
             </div>
 
             {/* Step 2: UTR Reference Form & Payment Screenshot Upload */}
-            <div className="space-y-4 p-5 bg-blue-50/60 border border-blue-200/80 rounded-3xl">
+            <div className="space-y-4 p-5 bg-blue-50/60 dark:bg-gray-800/80 border border-blue-200/80 dark:border-gray-700 rounded-3xl">
               <div className="space-y-1">
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 flex items-center gap-1.5 w-full">
-                  <Clock size={15} className="text-[#0758fc] shrink-0" />
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5 w-full">
+                  <Clock size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
                   Enter 12-Digit UPI Reference / UTR Number *
                 </label>
-                <p className="text-xs text-gray-600 w-full block leading-relaxed">
+                <p className="text-xs text-gray-600 dark:text-gray-300 w-full block leading-relaxed">
                   After completing the payment in GPay/PhonePe/Paytm, paste your 12-digit UTR/Txn Reference number below.
                 </p>
               </div>
@@ -579,45 +579,45 @@ export function CheckoutModal({
                   setUpiTransactionId(e.target.value);
                   setErrorMessage(null);
                 }}
-                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
+                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
               />
 
               {/* Prominent Payment Screenshot Attachment Field */}
-              <div className="pt-3 space-y-2 border-t border-blue-200">
-                <label className="block text-xs font-extrabold text-gray-900 flex items-center justify-between w-full">
+              <div className="pt-3 space-y-2 border-t border-blue-200 dark:border-gray-700">
+                <label className="block text-xs font-extrabold text-gray-900 dark:text-white flex items-center justify-between w-full">
                   <span className="flex items-center gap-1.5">
-                    <Camera size={15} className="text-[#0758fc] shrink-0" />
+                    <Camera size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
                     Attach Payment Screenshot Proof (Recommended)
                   </span>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full font-extrabold">
                     GPay / PhonePe / Paytm
                   </span>
                 </label>
 
                 {paymentProofUrl ? (
-                  <div className="p-3 bg-white rounded-2xl border border-gray-200 flex items-center justify-between gap-3 shadow-xs w-full">
+                  <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shadow-xs w-full">
                     <div className="flex items-center gap-3 min-w-0">
-                      <img src={paymentProofUrl} alt="Receipt Preview" className="w-14 h-14 rounded-xl object-cover border border-gray-200 shrink-0" />
+                      <img src={paymentProofUrl} alt="Receipt Preview" className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0" />
                       <div className="min-w-0">
-                        <span className="text-xs font-bold text-gray-900 block truncate">Payment Screenshot Attached</span>
-                        <span className="text-[11px] text-emerald-600 font-extrabold block">✓ Ready for Instant Verification</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white block truncate">Payment Screenshot Attached</span>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold block">✓ Ready for Instant Verification</span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPaymentProofUrl("")}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer"
+                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors shrink-0 cursor-pointer"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full border-2 border-dashed border-blue-300 hover:border-[#0758fc] bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 group text-center space-y-1">
-                    <Upload size={22} className="text-[#0758fc] group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-extrabold text-gray-900 group-hover:text-[#0758fc] transition-colors block w-full text-center">
+                  <label className="w-full border-2 border-dashed border-blue-300 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-blue-500 bg-white dark:bg-gray-900 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 dark:hover:bg-gray-800/60 group text-center space-y-1">
+                    <Upload size={22} className="text-[#0758fc] dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-extrabold text-gray-900 dark:text-white group-hover:text-[#0758fc] dark:group-hover:text-blue-400 transition-colors block w-full text-center">
                       Click to Upload Payment Receipt Screenshot
                     </span>
-                    <span className="text-[10px] text-gray-500 block w-full text-center">PNG, JPG, or WebP screenshot from GPay / PhonePe / Paytm</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 block w-full text-center">PNG, JPG, or WebP screenshot from GPay / PhonePe / Paytm</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -695,45 +695,45 @@ export function CheckoutModal({
                             key={tier.id}
                             className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
                               count > 0
-                                ? "border-[#0758fc] bg-blue-50/20 shadow-xs"
+                                ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs"
                                 : isSoldOut
-                                ? "border-gray-200 bg-gray-50 opacity-75"
-                                : "border-gray-200 bg-white"
+                                ? "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 opacity-75"
+                                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                             }`}
                           >
                             <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                                   {tier.tier_type || "Pass"}
                                 </span>
                                 {isSoldOut && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
                                     Sold Out
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                              <p className="text-sm font-black text-[#0758fc]">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, -1)}
                                 disabled={count === 0 || isSoldOut}
-                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 -
                               </button>
-                              <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
                                 disabled={isSoldOut}
-                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +
                               </button>
@@ -747,25 +747,25 @@ export function CheckoutModal({
 
                 {/* 2. Dropdown under Early Bird for General Release Passes */}
                 {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
-                  <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/50">
+                  <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/40">
                     <button
                       type="button"
                       onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
-                      className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 transition-colors"
+                      className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 dark:hover:bg-gray-800/80 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-900">General Release Passes</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">General Release Passes</span>
                         {isEarlyBirdAvailable ? (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                             Unlocks after Early Bird
                           </span>
                         ) : (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             Now Active
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-extrabold text-[#0758fc] flex items-center gap-1">
+                      <span className="text-xs font-extrabold text-[#0758fc] dark:text-blue-400 flex items-center gap-1">
                         {showGeneralDropdown ? (
                           <>Hide General Tickets <ChevronUp size={14} /></>
                         ) : (
@@ -775,43 +775,43 @@ export function CheckoutModal({
                     </button>
 
                     {showGeneralDropdown && (
-                      <div className="p-3 border-t border-gray-200 space-y-2 bg-white">
+                      <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-white dark:bg-gray-900">
                         {generalTiers.map((tier) => {
                           const count = selectedCounts[tier.id] || 0;
                           return (
                             <div
                               key={tier.id}
                               className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                                count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                                count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                               }`}
                             >
                               <div className="space-y-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                                     {tier.tier_type || "Pass"}
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                                <p className="text-sm font-black text-[#0758fc]">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                                <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                   {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                              <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleCountChange(tier.id, -1)}
                                   disabled={count === 0}
-                                  className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   -
                                 </button>
-                                <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                                <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
                                 <button
                                   type="button"
                                   onClick={() => handleCountChange(tier.id, 1)}
-                                  className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   +
                                 </button>
@@ -833,36 +833,36 @@ export function CheckoutModal({
                         <div
                           key={tier.id}
                           className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                            count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                            count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                           }`}
                         >
                           <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
-                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                                 {tier.tier_type || "Pass"}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                            <p className="text-sm font-black text-[#0758fc]">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                            <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                               {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                          <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
                             <button
                               type="button"
                               onClick={() => handleCountChange(tier.id, -1)}
                               disabled={count === 0}
-                              className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               -
                             </button>
-                            <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                            <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
                             <button
                               type="button"
                               onClick={() => handleCountChange(tier.id, 1)}
-                              className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               +
                             </button>
@@ -877,7 +877,7 @@ export function CheckoutModal({
                 {otherTiers.length > 0 && (
                   <div className="space-y-2 pt-1">
                     {earlyBirdTiers.length > 0 && (
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full inline-block">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 px-2.5 py-1 rounded-full inline-block">
                         ⭐ Special &amp; VIP Passes
                       </span>
                     )}
@@ -888,36 +888,36 @@ export function CheckoutModal({
                           <div
                             key={tier.id}
                             className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                              count > 0 ? "border-[#0758fc] bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white"
+                              count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                             }`}
                           >
                             <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-bold text-gray-900">{tier.name}</h4>
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                                   {tier.tier_type || "Pass"}
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "Full delegate entry"}</p>
-                              <p className="text-sm font-black text-[#0758fc]">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-gray-100 p-1 rounded-xl shrink-0">
+                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, -1)}
                                 disabled={count === 0}
-                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 -
                               </button>
-                              <span className="text-xs font-extrabold text-gray-900 w-4 text-center">{count}</span>
+                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                className="w-7 h-7 rounded-lg bg-white text-gray-700 font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +
                               </button>
@@ -935,10 +935,10 @@ export function CheckoutModal({
             {attendees.length > 0 && totalTicketCount > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                     Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
                   </span>
-                  <span className="text-[10px] text-gray-400 font-medium">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
                     Badges &amp; entry passes will be issued with these details
                   </span>
                 </div>
@@ -947,14 +947,14 @@ export function CheckoutModal({
                   {attendees.map((att, idx) => {
                     const matchedTier = tiers.find((t) => t.id === att.tierId);
                     return (
-                      <div key={idx} className="p-4 sm:p-5 bg-gray-50/90 rounded-3xl border border-gray-200 space-y-4 shadow-xs">
+                      <div key={idx} className="p-4 sm:p-5 bg-gray-50/90 dark:bg-gray-800/80 rounded-3xl border border-gray-200 dark:border-gray-700/80 space-y-4 shadow-xs">
                         {/* Card Header */}
-                        <div className="flex items-center justify-between border-b border-gray-200/70 pb-2.5">
-                          <span className="text-xs font-black uppercase text-[#0758fc] tracking-wider flex items-center gap-1.5">
+                        <div className="flex items-center justify-between border-b border-gray-200/70 dark:border-gray-700/70 pb-2.5">
+                          <span className="text-xs font-black uppercase text-[#0758fc] dark:text-blue-400 tracking-wider flex items-center gap-1.5">
                             <User size={14} /> Attendee #{idx + 1}
                           </span>
                           {matchedTier && (
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-[#0758fc] border border-blue-200">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                               {matchedTier.name} ({Number(matchedTier.price) === 0 ? "FREE" : `₹${matchedTier.price}`})
                             </span>
                           )}
@@ -963,7 +963,7 @@ export function CheckoutModal({
                         {/* 1. Delegate Name & Email */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <label className="block text-[11px] font-bold text-gray-700">Full Name *</label>
+                            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Full Name *</label>
                             <input
                               type="text"
                               required
@@ -974,11 +974,11 @@ export function CheckoutModal({
                                 updated[idx].name = e.target.value;
                                 setAttendees(updated);
                               }}
-                              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="block text-[11px] font-bold text-gray-700">Email Address *</label>
+                            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Email Address *</label>
                             <input
                               type="email"
                               required
@@ -989,14 +989,14 @@ export function CheckoutModal({
                                 updated[idx].email = e.target.value;
                                 setAttendees(updated);
                               }}
-                              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                             />
                           </div>
                         </div>
 
                         {/* 2. Phone Number */}
                         <div className="space-y-1">
-                          <label className="block text-[11px] font-bold text-gray-700">Phone Number (Optional)</label>
+                          <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Phone Number (Optional)</label>
                           <input
                             type="tel"
                             placeholder="e.g. +91 98765 43210"
@@ -1006,15 +1006,15 @@ export function CheckoutModal({
                               updated[idx].phone = e.target.value;
                               setAttendees(updated);
                             }}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
+                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                           />
                         </div>
 
                         {/* 3. Rotary Affiliation (3 Distinct Parts: Rotaract / Rotary / Non-Rotaract) */}
                         <div className="space-y-1.5 pt-1">
-                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center justify-between">
                             <span>Affiliation Category *</span>
-                            <span className="text-[10px] text-gray-400 font-normal">Select your affiliation</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">Select your affiliation</span>
                           </label>
                           <div className="grid grid-cols-3 gap-2">
                             {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
@@ -1041,7 +1041,7 @@ export function CheckoutModal({
                                   className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center cursor-pointer active:scale-95 ${
                                     isSelected
                                       ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
-                                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100/80"
+                                      : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800"
                                   }`}
                                 >
                                   {type === "Rotaract"
@@ -1056,11 +1056,11 @@ export function CheckoutModal({
                         </div>
 
                         {/* 4. Club Name & Zone Resolution */}
-                        <div className="space-y-2 p-3 bg-white rounded-2xl border border-gray-200/80">
+                        <div className="space-y-2 p-3 bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-200/80 dark:border-gray-700">
                           {att.memberType === "Rotary" ? (
                             <div className="space-y-1">
-                              <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                                <Building size={13} className="text-[#0758fc]" /> Rotary Club Name
+                              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotary Club Name
                               </label>
                               <input
                                 type="text"
@@ -1071,13 +1071,13 @@ export function CheckoutModal({
                                   updated[idx].clubName = e.target.value;
                                   setAttendees(updated);
                                 }}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white"
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                               />
                             </div>
                           ) : att.memberType === "Non-Rotaract" ? (
                             <div className="space-y-1">
-                              <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                                <Building size={13} className="text-[#0758fc]" /> Organization / College / Company (Optional)
+                              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Organization / College / Company (Optional)
                               </label>
                               <input
                                 type="text"
@@ -1088,18 +1088,18 @@ export function CheckoutModal({
                                   updated[idx].clubName = e.target.value || "Non-Rotaract Guest";
                                   setAttendees(updated);
                                 }}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc] focus:bg-white"
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                               />
                             </div>
                           ) : (
                             /* Searchable Rotaract Club Selector */
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <label className="block text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                                  <Building size={13} className="text-[#0758fc]" /> Rotaract Club
+                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotaract Club
                                 </label>
                                 {att.zone && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-[#0758fc] border border-blue-200">
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                                     Zone: {att.zone}
                                   </span>
                                 )}
@@ -1131,11 +1131,11 @@ export function CheckoutModal({
 
                         {/* 5. Designation / Role (NORMAL TEXT INPUT COLUMN — NOT A DROPDOWN) */}
                         <div className="space-y-1">
-                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
-                              <Briefcase size={13} className="text-[#0758fc]" /> Designation / Role
+                              <Briefcase size={13} className="text-[#0758fc] dark:text-blue-400" /> Designation / Role
                             </span>
-                            <span className="text-[10px] text-gray-400 font-normal">Free text input</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">Free text input</span>
                           </label>
                           <input
                             type="text"
@@ -1146,22 +1146,22 @@ export function CheckoutModal({
                               updated[idx].designation = e.target.value;
                               setAttendees(updated);
                             }}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 placeholder-gray-400"
+                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
                           />
-                          <p className="text-[10px] text-gray-400">
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
                             Type any club or district portfolio (e.g. Sergeant-at-Arms, President, DRR, Secretary, Director, Member, Guest)
                           </p>
                         </div>
 
                         {/* 6. Event Custom Registration Questions */}
                         {customQuestions.length > 0 && (
-                          <div className="pt-3 border-t border-gray-200/60 space-y-2.5">
-                            <span className="text-[10px] font-extrabold uppercase text-gray-500 tracking-wider block">
+                          <div className="pt-3 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2.5">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-500 dark:text-gray-400 tracking-wider block">
                               Additional Event Questions
                             </span>
                             {customQuestions.map((q) => (
                               <div key={q.id} className="space-y-1 text-left">
-                                <label className="block text-[11px] font-bold text-gray-700">
+                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
                                   {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
                                 </label>
                                 {q.question_type === "dropdown" ? (
@@ -1172,7 +1172,7 @@ export function CheckoutModal({
                                       updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
                                       setAttendees(updated);
                                     }}
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
                                   >
                                     <option value="">Select an option...</option>
                                     {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
@@ -1189,7 +1189,7 @@ export function CheckoutModal({
                                       updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
                                       setAttendees(updated);
                                     }}
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#0758fc]"
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc]"
                                   />
                                 )}
                               </div>
@@ -1203,58 +1203,35 @@ export function CheckoutModal({
               </div>
             )}
 
-            {/* Promo Code Input */}
-            <div className="space-y-2 pt-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Promo or Discount Code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs uppercase font-mono outline-none focus:border-[#0758fc]"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCoupon}
-                  className="bg-gray-900 hover:bg-black text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
-              {couponMessage && (
-                <p className={`text-[11px] font-bold ${couponApplied ? "text-emerald-600" : "text-rose-500"}`}>
-                  {couponMessage}
-                </p>
-              )}
-            </div>
+
 
             {/* Price Breakdown */}
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2 text-xs">
-              <div className="flex justify-between text-gray-600">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>Subtotal ({totalTicketCount} ticket{totalTicketCount > 1 ? "s" : ""})</span>
-                <span className="font-semibold">₹{fees.subtotal.toFixed(2)}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-200">₹{fees.subtotal.toFixed(2)}</span>
               </div>
               {couponApplied && (
-                <div className="flex justify-between text-emerald-600 font-bold">
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                   <span>Promo Discount ({discountPercent}%)</span>
                   <span>-₹{fees.discount.toFixed(2)}</span>
                 </div>
               )}
               {fees.convenienceFee > 0 && (
-                <div className="flex justify-between text-gray-500">
+                <div className="flex justify-between text-gray-500 dark:text-gray-400">
                   <span>Platform &amp; Booking Fee</span>
                   <span className="font-medium">+₹{fees.convenienceFee.toFixed(2)}</span>
                 </div>
               )}
               {fees.tax > 0 && (
-                <div className="flex justify-between text-gray-500">
+                <div className="flex justify-between text-gray-500 dark:text-gray-400">
                   <span>GST (18% on booking fee)</span>
                   <span className="font-medium">+₹{fees.tax.toFixed(2)}</span>
                 </div>
               )}
-              <div className="pt-2 border-t border-gray-200 flex justify-between text-sm font-black text-gray-900">
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between text-sm font-black text-gray-900 dark:text-white">
                 <span>Total Payable</span>
-                <span className="text-[#0758fc]">₹{fees.totalPayable.toFixed(2)}</span>
+                <span className="text-[#0758fc] dark:text-blue-400">₹{fees.totalPayable.toFixed(2)}</span>
               </div>
             </div>
 
