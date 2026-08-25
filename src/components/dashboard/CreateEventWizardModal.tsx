@@ -124,7 +124,6 @@ export function CreateEventWizardModal({
   const [allowWaitlist, setAllowWaitlist] = useState(true);
   const [allowTransfer, setAllowTransfer] = useState(true);
   const [allowRefunds, setAllowRefunds] = useState(true);
-  const [allowNonRotaract, setAllowNonRotaract] = useState(true);
   const [notifyAllMembers, setNotifyAllMembers] = useState(true);
   const [ticketTiers, setTicketTiers] = useState<
     Array<{
@@ -188,7 +187,6 @@ export function CreateEventWizardModal({
       setContactEmail(eventToEdit.contact_email || "");
       setContactPhone(eventToEdit.contact_phone || "");
       setVisibility(eventToEdit.visibility || "PUBLIC");
-      setAllowNonRotaract(eventToEdit.allow_non_rotaract !== false);
       if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
       if (eventToEdit.upi_payee_name) setUpiPayeeName(eventToEdit.upi_payee_name);
       if (eventToEdit.category_id || eventToEdit.category) setCategory(eventToEdit.category || eventToEdit.category_id);
@@ -315,8 +313,8 @@ export function CreateEventWizardModal({
         price: defaultPrice,
         totalCapacity: 100,
         description: "",
-        allowNonRotaract: allowNonRotaract,
-        allowedAudience: allowNonRotaract ? "ALL" : "ROTARACT_ONLY",
+        allowNonRotaract: true,
+        allowedAudience: "ALL",
       },
     ]);
   }
@@ -438,6 +436,13 @@ export function CreateEventWizardModal({
 
     try {
       const fullAddress = `${streetAddress}, ${city}, ${stateRegion} ${pincode}, ${country}`;
+      const overallAllowNonRotaract =
+        ticketTiers.length > 0
+          ? ticketTiers.some(
+              (t) => (t.allowedAudience ? t.allowedAudience !== "ROTARACT_ONLY" : t.allowNonRotaract !== false)
+            )
+          : true;
+
       const payload: CreateEventInput = {
         organizationId: defaultOrganizationId,
         title,
@@ -460,7 +465,7 @@ export function CreateEventWizardModal({
         allowWaitlist,
         allowTicketTransfer: allowTransfer,
         allowRefunds,
-        allowNonRotaract,
+        allowNonRotaract: overallAllowNonRotaract,
         googleMapsUrl: mapsUrl.trim() || undefined,
         notifyAllMembers,
         contactEmail,
@@ -1125,62 +1130,7 @@ export function CreateEventWizardModal({
                 </button>
               </div>
 
-              {/* 👥 ATTENDEE ELIGIBILITY & ROTARACT MEMBERSHIP GATE */}
-              <div className="p-6 bg-gradient-to-br from-blue-50/70 via-slate-50 to-indigo-50/50 border border-blue-200 rounded-3xl space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#0758fc] text-white flex items-center justify-center font-black shadow-xs shrink-0">
-                    <Users size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-gray-900">Non-Rotaractor &amp; Guest Attendance Policy</h4>
-                    <p className="text-xs text-gray-500">
-                      Specify whether people outside Rotaract (friends, corporate delegates, non-members) can register and attend this event.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                  {/* Option 1: Open to Everyone */}
-                  <button
-                    type="button"
-                    onClick={() => setAllowNonRotaract(true)}
-                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 ${
-                      allowNonRotaract
-                        ? "bg-white border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
-                        : "bg-gray-100/70 border-gray-200 text-gray-600 hover:bg-white"
-                    }`}
-                  >
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${allowNonRotaract ? "bg-blue-100 text-[#0758fc]" : "bg-gray-200 text-gray-400"}`}>
-                      <Globe size={18} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-gray-900">🌐 Open to Everyone</p>
-                      <p className="text-[11px] text-gray-500">Non-Rotaractors, public guests, &amp; members welcome</p>
-                    </div>
-                  </button>
-
-                  {/* Option 2: Rotaract & Rotary Members Only */}
-                  <button
-                    type="button"
-                    onClick={() => setAllowNonRotaract(false)}
-                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 ${
-                      !allowNonRotaract
-                        ? "bg-white border-amber-500 ring-2 ring-amber-500/20 shadow-sm"
-                        : "bg-gray-100/70 border-gray-200 text-gray-600 hover:bg-white"
-                    }`}
-                  >
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${!allowNonRotaract ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-400"}`}>
-                      <ShieldCheck size={18} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-gray-900">🛡️ Rotaract &amp; Rotary Only</p>
-                      <p className="text-[11px] text-gray-500">Restricted to chartered club members only</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. EVENT VISIBILITY */}
+              {/* EVENT VISIBILITY */}
               <div className="space-y-3">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
                   EVENT VISIBILITY *
