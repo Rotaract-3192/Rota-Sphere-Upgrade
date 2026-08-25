@@ -16,11 +16,14 @@ import {
   HelpCircle,
   Gavel,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
+import { submitGrievanceAction } from "@/app/actions/grievanceActions";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [ticketNumber, setTicketNumber] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -32,14 +35,36 @@ export default function ContactPage() {
     message: "",
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const generatedCase = `CASE-2026-${randomNum}`;
-    setTicketNumber(generatedCase);
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      const res = await submitGrievanceAction({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || undefined,
+        category: formData.category,
+        title: `${formData.category}: ${formData.name}`,
+        description: formData.message.trim(),
+        orderId: formData.orderId.trim() || undefined,
+        ticketId: formData.ticketId.trim() || undefined,
+        source: "contact",
+      });
+
+      setSubmitting(false);
+
+      if (res.success && res.complaintNumber) {
+        setTicketNumber(res.complaintNumber);
+        setSubmitted(true);
+      } else {
+        alert(res.error || "Failed to submit case. Please try again.");
+      }
+    } catch {
+      setSubmitting(false);
+      alert("An unexpected error occurred while submitting your support case.");
+    }
   }
 
   const CONTACT_CHANNELS = [
@@ -345,9 +370,18 @@ export default function ContactPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3.5 rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                      disabled={submitting}
+                      className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3.5 rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      <Send size={15} /> Submit Support Case (Generate Tracking ID)
+                      {submitting ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" /> Submitting Support Case...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={15} /> Submit Support Case (Generate Tracking ID)
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

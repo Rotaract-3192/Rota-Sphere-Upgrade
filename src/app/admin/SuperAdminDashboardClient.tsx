@@ -1987,7 +1987,17 @@ export function SuperAdminDashboardClient({
                             </td>
 
                             <td className="px-5 py-3.5 max-w-xs sm:max-w-sm">
+                              {comp.title && (
+                                <p className="text-xs font-bold text-gray-900 dark:text-white mb-0.5">{comp.title}</p>
+                              )}
                               <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{comp.description}</p>
+                              {(comp.order_id || comp.ticket_id || comp.phone) && (
+                                <div className="flex flex-wrap gap-1 mt-1 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                                  {comp.order_id && <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Order: {comp.order_id}</span>}
+                                  {comp.ticket_id && <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Tkt: {comp.ticket_id}</span>}
+                                  {comp.phone && <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Ph: {comp.phone}</span>}
+                                </div>
+                              )}
                               {comp.resolution && (
                                 <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 rounded px-1.5 py-0.5 mt-1 line-clamp-1 border border-emerald-200 dark:border-emerald-800">
                                   <strong>Resolution:</strong> {comp.resolution}
@@ -3722,7 +3732,32 @@ export function SuperAdminDashboardClient({
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">Statutory SLA</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">15-Day Resolution</span>
               </div>
+              {selectedComplaint.phone && (
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Phone / Contact</span>
+                  <span className="font-mono text-gray-800 dark:text-gray-200">{selectedComplaint.phone}</span>
+                </div>
+              )}
+              {selectedComplaint.order_id && (
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Order ID</span>
+                  <span className="font-mono text-gray-800 dark:text-gray-200">{selectedComplaint.order_id}</span>
+                </div>
+              )}
+              {selectedComplaint.ticket_id && (
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Ticket ID / UTR</span>
+                  <span className="font-mono text-gray-800 dark:text-gray-200">{selectedComplaint.ticket_id}</span>
+                </div>
+              )}
             </div>
+
+            {selectedComplaint.title && (
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Subject / Summary</span>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">{selectedComplaint.title}</p>
+              </div>
+            )}
 
             {/* Description Body */}
             <div className="space-y-2">

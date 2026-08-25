@@ -125,6 +125,15 @@ export default async function EventDetailPage({ params }: PageProps) {
             <span className="text-xs font-semibold text-gray-300 flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
               <ShieldCheck size={14} className="text-emerald-400" /> Verified Organizer
             </span>
+            {event.allow_non_rotaract === false ? (
+              <span className="text-xs font-bold text-amber-300 bg-amber-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-500/40 flex items-center gap-1.5 shadow-xs">
+                <ShieldCheck size={14} className="text-amber-400" /> 🛡️ Rotaract &amp; Rotary Exclusive
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-blue-200 bg-blue-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-blue-400/30 flex items-center gap-1.5 shadow-xs">
+                <Globe size={14} className="text-blue-400" /> 🌐 Open to Everyone (Guests Welcome)
+              </span>
+            )}
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-4xl leading-tight">
@@ -140,10 +149,23 @@ export default async function EventDetailPage({ params }: PageProps) {
               <Clock size={18} className="text-amber-400" />
               <span>{formattedTime} IST</span>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin size={18} className="text-emerald-400" />
-              <span>{event.venue_name ? `${event.venue_name}, ${event.city}` : event.city}</span>
-            </div>
+            {event.google_maps_url ? (
+              <a
+                href={event.google_maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 underline underline-offset-4 font-semibold transition-colors"
+                title="View location in Google Maps"
+              >
+                <MapPin size={18} className="text-emerald-400" />
+                <span>{event.venue_name ? `${event.venue_name}, ${event.city}` : event.city} (Maps ↗)</span>
+              </a>
+            ) : (
+              <div className="flex items-center gap-2">
+                <MapPin size={18} className="text-emerald-400" />
+                <span>{event.venue_name ? `${event.venue_name}, ${event.city}` : event.city}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -238,11 +260,39 @@ export default async function EventDetailPage({ params }: PageProps) {
             )}
 
             {/* Venue & Guidelines */}
-            <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Venue &amp; Location Guidelines</h2>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">{event.venue_name || event.city}</p>
-                {event.address && <p className="text-gray-500">{event.address}</p>}
+            <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight">Venue &amp; Location Guidelines</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Physical event address &amp; navigation directions</p>
+                </div>
+                {(event.google_maps_url || event.venue_name) && (
+                  <a
+                    href={
+                      event.google_maps_url ||
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.venue_name || ""}, ${event.address || event.city}`)}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white text-xs font-bold px-4 py-2.5 rounded-full transition-all shadow-sm shrink-0 w-fit"
+                  >
+                    <MapPin size={14} /> Open in Google Maps ↗
+                  </a>
+                )}
+              </div>
+
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#0758fc] flex items-center justify-center shrink-0">
+                    <MapPin size={18} />
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-gray-900 text-base">{event.venue_name || event.city}</p>
+                    {event.address && <p className="text-xs text-gray-600 mt-1">{event.address}</p>}
+                    {event.city && <p className="text-xs text-gray-500 mt-0.5">{event.city}{event.state ? `, ${event.state}` : ""}</p>}
+                  </div>
+                </div>
+
                 {event.terms_and_conditions && (
                   <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600 leading-relaxed">
                     <p className="font-bold text-gray-800 uppercase tracking-wider mb-1">Host Club Guidelines</p>

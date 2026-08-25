@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Gavel,
   ShieldAlert,
@@ -16,7 +16,11 @@ import {
   ChevronUp,
   Send,
   Building,
+  Loader2,
+  Mail,
+  User,
 } from "lucide-react";
+import { submitGrievanceAction, getGrievanceDisputesAction } from "@/app/actions/grievanceActions";
 
 interface DisputeItem {
   id: string;
@@ -81,8 +85,12 @@ export function DisputeDashboardClient() {
   const [disputes, setDisputes] = useState<DisputeItem[]>(INITIAL_DISPUTES);
   const [expandedId, setExpandedId] = useState<string | null>("DIS-2026-001042");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [category, setCategory] = useState("Refund Not Received");
   const [orderId, setOrderId] = useState("");
   const [ticketId, setTicketId] = useState("");
@@ -90,41 +98,127 @@ export function DisputeDashboardClient() {
   const [description, setDescription] = useState("");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
-  function handleCreateDispute(e: React.FormEvent) {
+  // Load database disputes on mount
+  useEffect(() => {
+    async function loadDbDisputes() {
+      try {
+        const res = await getGrievanceDisputesAction();
+        if (res.success && res.data && res.data.length > 0) {
+          const dbDisputes: DisputeItem[] = res.data.map((row: any) => {
+            const rawStatus = (row.status || "open").toLowerCase();
+            const mappedStatus: DisputeItem["status"] =
+              rawStatus === "resolved" ? "resolved" :
+              rawStatus === "under_review" ? "under_review" :
+              rawStatus === "closed" ? "closed" :
+              rawStatus === "awaiting_info" ? "investigating" : "open";
+
+            const dt = row.created_at ? new Date(row.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent";
+
+            return {
+              id: row.complaint_number || row.id?.slice(0, 15) || `DIS-${Date.now()}`,
+              category: row.category || "General Grievance",
+              orderId: row.order_id || undefined,
+              ticketId: row.ticket_id || undefined,
+              title: row.title || `${row.category} Grievance`,
+              description: row.description || "",
+              status: mappedStatus,
+              date: dt,
+              lastUpdated: row.updated_at ? new Date(row.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : dt,
+              level: mappedStatus === "resolved" ? "Level 1: Support" : "Level 3: Platform Review",
+              timeline: [
+                {
+                  step: "Case Registered",
+                  timestamp: dt,
+                  note: `Logged by ${row.user_name || "Complainant"} (${row.user_email || "User"}).`,
+                },
+                ...(row.resolution ? [{
+                  step: "Resolution Provided",
+                  timestamp: row.resolved_at ? new Date(row.resolved_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Resolved",
+                  note: row.resolution,
+                }] : []),
+              ],
+            };
+          });
+
+          // Merge db disputes with initial defaults (avoiding duplicate IDs)
+          setDisputes((prev) => {
+            const existingIds = new Set(dbDisputes.map((d) => d.id));
+            const filteredPrev = prev.filter((p) => !existingIds.has(p.id));
+            return [...dbDisputes, ...filteredPrev];
+          });
+          if (dbDisputes[0]?.id) {
+            setExpandedId(dbDisputes[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load db disputes", err);
+      }
+    }
+    loadDbDisputes();
+  }, []);
+
+  async function handleCreateDispute(e: React.FormEvent) {
     e.preventDefault();
-    if (!title || !description) return;
+    if (!title.trim() || !description.trim() || !email.trim()) return;
 
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const newId = `DIS-2026-00${randomSuffix}`;
-    const newDispute: DisputeItem = {
-      id: newId,
-      category,
-      orderId: orderId || undefined,
-      ticketId: ticketId || undefined,
-      title,
-      description,
-      status: "open",
-      date: "Just now",
-      lastUpdated: "Just now",
-      level: "Level 1: Support",
-      timeline: [
-        {
-          step: "Dispute Submitted",
-          timestamp: "Just now",
-          note: `Case registered under ${category}. Queued for Level 1 support triage.`,
-        },
-      ],
-    };
+    setSubmitting(true);
 
-    setDisputes([newDispute, ...disputes]);
-    setExpandedId(newId);
-    setIsModalOpen(false);
-    setTitle("");
-    setDescription("");
-    setOrderId("");
-    setTicketId("");
-    setSubmittedMessage(`Dispute successfully created with Reference ID: ${newId}`);
-    setTimeout(() => setSubmittedMessage(null), 6000);
+    try {
+      const res = await submitGrievanceAction({
+        name: name.trim() || "Complainant",
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        orderId: orderId.trim() || undefined,
+        ticketId: ticketId.trim() || undefined,
+        source: "dispute",
+      });
+
+      setSubmitting(false);
+
+      if (res.success && res.complaintNumber) {
+        const newId = res.complaintNumber;
+        const newDispute: DisputeItem = {
+          id: newId,
+          category,
+          orderId: orderId || undefined,
+          ticketId: ticketId || undefined,
+          title,
+          description,
+          status: "open",
+          date: "Just now",
+          lastUpdated: "Just now",
+          level: "Level 1: Support",
+          timeline: [
+            {
+              step: "Dispute Submitted",
+              timestamp: "Just now",
+              note: `Case registered under ${category}. Queued for Level 1 support triage and visible in Super Admin Governance Desk.`,
+            },
+          ],
+        };
+
+        setDisputes([newDispute, ...disputes]);
+        setExpandedId(newId);
+        setIsModalOpen(false);
+        setTitle("");
+        setDescription("");
+        setOrderId("");
+        setTicketId("");
+        setName("");
+        setEmail("");
+        setPhone("");
+        setSubmittedMessage(`Dispute successfully created with Reference ID: ${newId}. Our Grievance Desk has received your file.`);
+        setTimeout(() => setSubmittedMessage(null), 8000);
+      } else {
+        alert(res.error || "Failed to submit dispute. Please try again.");
+      }
+    } catch (err) {
+      setSubmitting(false);
+      alert("An unexpected error occurred while filing the dispute.");
+    }
   }
 
   return (
@@ -292,6 +386,41 @@ export function DisputeDashboardClient() {
             </div>
 
             <form onSubmit={handleCreateDispute} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
+                    Your Full Name *
+                  </label>
+                  <div className="relative">
+                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rahul Sharma"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-3 py-2 text-gray-900 dark:text-white font-medium"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
+                    Your Email Address *
+                  </label>
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. rahul@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-3 py-2 text-gray-900 dark:text-white font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
                   Dispute Category *
@@ -310,7 +439,19 @@ export function DisputeDashboardClient() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
+                    Phone (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-gray-900 dark:text-white font-medium"
+                  />
+                </div>
                 <div>
                   <label className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
                     Order ID (Optional)
@@ -329,7 +470,7 @@ export function DisputeDashboardClient() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. TKT-8291 or 12-digit UTR"
+                    placeholder="e.g. TKT-8291 / UTR"
                     value={ticketId}
                     onChange={(e) => setTicketId(e.target.value)}
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-gray-900 dark:text-white font-medium"
@@ -369,15 +510,25 @@ export function DisputeDashboardClient() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-2.5 rounded-xl transition-colors cursor-pointer"
+                  disabled={submitting}
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={submitting}
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  <Send size={14} /> Submit Dispute
+                  {submitting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} /> Submit Dispute
+                    </>
+                  )}
                 </button>
               </div>
             </form>

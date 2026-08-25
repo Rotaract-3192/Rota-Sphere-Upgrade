@@ -11,6 +11,7 @@ import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logAuditAction } from "@/lib/services/auditService";
 import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
+import { broadcastNewEventToAllUsersAsync } from "@/lib/notifications/notificationService";
 import type { EventFormat, EventVisibility, TicketTierType } from "@/types/saas";
 
 export interface CreateEventInput {
@@ -26,6 +27,7 @@ export interface CreateEventInput {
   address?: string;
   city: string;
   state?: string;
+  googleMapsUrl?: string;
   onlineMeetingUrl?: string;
   startDate: string;
   endDate: string;
@@ -35,6 +37,8 @@ export interface CreateEventInput {
   allowWaitlist?: boolean;
   allowTicketTransfer?: boolean;
   allowRefunds?: boolean;
+  allowNonRotaract?: boolean;
+  notifyAllMembers?: boolean;
   termsAndConditions?: string;
   refundPolicy?: string;
   contactEmail?: string;
@@ -51,6 +55,8 @@ export interface CreateEventInput {
     totalCapacity: number;
     salesStart?: string;
     salesEnd?: string;
+    allowNonRotaract?: boolean;
+    allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
     benefits?: string[];
   }>;
   speakers?: Array<{
@@ -135,7 +141,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
       return { success: false, error: "Unauthorized: Organizer access required to create events." };
     }
 
-    // Auto-migrate UPI & user columns if missing
+    // Auto-migrate UPI, user & feature columns if missing
     try {
       await executeSql(`
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
@@ -144,6 +150,10 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS organizer_id VARCHAR(255);
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50);
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS allow_non_rotaract BOOLEAN DEFAULT TRUE;
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allow_non_rotaract BOOLEAN DEFAULT TRUE;
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allowed_audience VARCHAR(50) DEFAULT 'ALL';
       `);
     } catch {}
 
@@ -203,6 +213,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         address,
         city,
         state,
+        google_maps_url,
         online_meeting_url,
         start_date,
         end_date,
@@ -213,6 +224,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         allow_waitlist,
         allow_ticket_transfer,
         allow_refunds,
+        allow_non_rotaract,
         terms_and_conditions,
         refund_policy,
         contact_email,
@@ -235,6 +247,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.address)},
         ${escapeSql(input.city)},
         ${escapeSql(input.state)},
+        ${escapeSql(input.googleMapsUrl)},
         ${escapeSql(input.onlineMeetingUrl)},
         ${escapeSql(input.startDate)},
         ${escapeSql(input.endDate)},
@@ -245,6 +258,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${input.allowWaitlist !== false ? "TRUE" : "FALSE"},
         ${input.allowTicketTransfer !== false ? "TRUE" : "FALSE"},
         ${input.allowRefunds !== false ? "TRUE" : "FALSE"},
+        ${input.allowNonRotaract !== false ? "TRUE" : "FALSE"},
         ${escapeSql(input.termsAndConditions)},
         ${escapeSql(input.refundPolicy)},
         ${escapeSql(input.contactEmail || user.email)},
@@ -268,6 +282,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
     if (input.ticketTiers && input.ticketTiers.length > 0) {
       for (const tier of input.ticketTiers) {
         const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
+        const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
+        const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
+
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
             event_id,
@@ -280,6 +297,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             reserved_count,
             sales_start,
             sales_end,
+            allow_non_rotaract,
+            allowed_audience,
             benefits,
             is_active,
             is_visible
@@ -294,6 +313,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             0,
             ${escapeSql(tier.salesStart || new Date().toISOString())},
             ${escapeSql(tier.salesEnd || input.endDate)},
+            ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
+            ${escapeSql(tierAudience)},
             '${benefitsJson}'::jsonb,
             TRUE,
             TRUE
@@ -301,6 +322,27 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         `;
         await executeSql(tierSql);
       }
+    }
+
+    // 4. Non-blocking Background Email Announcement to all registered members
+    if (input.notifyAllMembers !== false) {
+      const prices = (input.ticketTiers || []).map((t) => Number(t.price));
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      broadcastNewEventToAllUsersAsync({
+        eventId,
+        title: input.title,
+        slug: finalSlug,
+        summary: input.summary,
+        coverImageUrl: coverUrl,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        venueName: input.venueName,
+        address: input.address,
+        city: input.city,
+        googleMapsUrl: input.googleMapsUrl,
+        minPrice,
+        allowNonRotaract: input.allowNonRotaract !== false,
+      });
     }
 
     // 4. Insert Speakers if provided
@@ -511,6 +553,8 @@ export async function updateEventAction(
     if (input.allowWaitlist !== undefined) updates.push(`allow_waitlist = ${input.allowWaitlist ? "TRUE" : "FALSE"}`);
     if (input.allowTicketTransfer !== undefined) updates.push(`allow_ticket_transfer = ${input.allowTicketTransfer ? "TRUE" : "FALSE"}`);
     if (input.allowRefunds !== undefined) updates.push(`allow_refunds = ${input.allowRefunds ? "TRUE" : "FALSE"}`);
+    if (input.allowNonRotaract !== undefined) updates.push(`allow_non_rotaract = ${input.allowNonRotaract ? "TRUE" : "FALSE"}`);
+    if (input.googleMapsUrl !== undefined) updates.push(`google_maps_url = ${escapeSql(input.googleMapsUrl)}`);
     if (input.contactEmail !== undefined) updates.push(`contact_email = ${escapeSql(input.contactEmail)}`);
     if (input.contactPhone !== undefined) updates.push(`contact_phone = ${escapeSql(input.contactPhone)}`);
     if (input.upiId !== undefined) updates.push(`upi_id = ${escapeSql(input.upiId)}`);
@@ -538,6 +582,9 @@ export async function updateEventAction(
       await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
       for (const tier of input.ticketTiers) {
         const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
+        const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
+        const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
+
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
             event_id,
@@ -550,6 +597,8 @@ export async function updateEventAction(
             reserved_count,
             sales_start,
             sales_end,
+            allow_non_rotaract,
+            allowed_audience,
             benefits,
             is_active,
             is_visible
@@ -564,6 +613,8 @@ export async function updateEventAction(
             0,
             ${escapeSql(tier.salesStart || new Date().toISOString())},
             ${escapeSql(tier.salesEnd || input.endDate || new Date().toISOString())},
+            ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
+            ${escapeSql(tierAudience)},
             '${benefitsJson}'::jsonb,
             TRUE,
             TRUE

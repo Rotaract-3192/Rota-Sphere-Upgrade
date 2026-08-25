@@ -103,11 +103,11 @@ export default async function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="max-w-2xl space-y-6">
             <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-white">
-              Discover <span className="text-[#0758fc]">Verified</span> Events &amp; Masterclasses
+              Experience <span className="text-[#0758fc]">Starts Here.</span>
             </h1>
 
             <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-              Service, Leadership, Fellowship &amp; Growth. Seamlessly book tickets for flagship Rotaract conventions across Bengaluru, Tumakuru, Kolar, and beyond.
+              From flagship conventions to leadership sessions, fellowships and unforgettable experiences — find it all in one place.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">

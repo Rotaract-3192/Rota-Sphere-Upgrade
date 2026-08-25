@@ -178,7 +178,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     // 1. Fetch Event and Organization
     const { data: eventRows } = await executeSql(`
-      SELECT e.id, e.title, e.city, e.organization_id, e.status, e.upi_id, e.upi_payee_name, o.custom_platform_fee_percent
+      SELECT e.id, e.title, e.city, e.organization_id, e.status, e.allow_non_rotaract, e.upi_id, e.upi_payee_name, o.custom_platform_fee_percent
       FROM saas_events e
       LEFT JOIN organizations o ON e.organization_id = o.id
       WHERE e.id = ${escapeSql(input.eventId)}
@@ -198,7 +198,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const tierIds = Array.from(new Set(input.attendees.map((a) => a.ticketTierId)));
     const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active
+      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience
       FROM saas_ticket_tiers
       WHERE id IN (${formattedTierIds});
     `);
@@ -208,6 +208,25 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     }
 
     const tierMap = new Map(tiers.map((t: any) => [t.id, t]));
+
+    // Validate Non-Rotaract attendee eligibility
+    for (const att of input.attendees) {
+      const tier = tierMap.get(att.ticketTierId);
+      if (att.memberType === "Non-Rotaract") {
+        if (event.allow_non_rotaract === false) {
+          return {
+            success: false,
+            error: "This event is exclusive to Rotaract & Rotary members. Non-Rotaractor registrations are closed.",
+          };
+        }
+        if (tier && (tier.allow_non_rotaract === false || tier.allowed_audience === "ROTARACT_ONLY")) {
+          return {
+            success: false,
+            error: `Ticket tier "${tier.name}" is restricted to Rotaract & Rotary members only.`,
+          };
+        }
+      }
+    }
 
     const countPerTier: Record<string, number> = {};
     for (const att of input.attendees) {
@@ -229,7 +248,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           error: `Pass tier "${tier.name}" is sold out or does not have ${requestedCount} seats remaining.`,
         };
       }
-      subtotal += Number(tier.price) * requestedCount;
+      subtotal += (Number(tier.price) || 0) * requestedCount;
     }
 
     // 2.5 Duplicate UTR Prevention Check

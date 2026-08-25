@@ -119,15 +119,25 @@ export function CreateEventWizardModal({
   const [upiId, setUpiId] = useState("");
   const [upiPayeeName, setUpiPayeeName] = useState("");
 
-  // Ticket Tiers
+  // Ticket Tiers & Eligibility
   const [capacity, setCapacity] = useState(100);
   const [allowWaitlist, setAllowWaitlist] = useState(true);
   const [allowTransfer, setAllowTransfer] = useState(true);
   const [allowRefunds, setAllowRefunds] = useState(true);
+  const [allowNonRotaract, setAllowNonRotaract] = useState(true);
+  const [notifyAllMembers, setNotifyAllMembers] = useState(true);
   const [ticketTiers, setTicketTiers] = useState<
-    Array<{ name: string; tierType: TicketTierType; price: number; totalCapacity: number; description?: string }>
+    Array<{
+      name: string;
+      tierType: TicketTierType;
+      price: number;
+      totalCapacity: number;
+      description?: string;
+      allowNonRotaract?: boolean;
+      allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
+    }>
   >([
-    { name: "", tierType: "REGULAR", price: 0, totalCapacity: 100, description: "" },
+    { name: "", tierType: "REGULAR", price: 0, totalCapacity: 100, description: "", allowNonRotaract: true, allowedAudience: "ALL" },
   ]);
 
   // Step 4: Venue Details & Google Maps Auto-Fill
@@ -174,9 +184,11 @@ export function CreateEventWizardModal({
       setStateRegion(eventToEdit.state || "");
       setCountry(eventToEdit.country || "");
       setOnlineMeetingUrl(eventToEdit.online_meeting_url || "");
+      if (eventToEdit.google_maps_url) setMapsUrl(eventToEdit.google_maps_url);
       setContactEmail(eventToEdit.contact_email || "");
       setContactPhone(eventToEdit.contact_phone || "");
       setVisibility(eventToEdit.visibility || "PUBLIC");
+      setAllowNonRotaract(eventToEdit.allow_non_rotaract !== false);
       if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
       if (eventToEdit.upi_payee_name) setUpiPayeeName(eventToEdit.upi_payee_name);
       if (eventToEdit.category_id || eventToEdit.category) setCategory(eventToEdit.category || eventToEdit.category_id);
@@ -188,6 +200,8 @@ export function CreateEventWizardModal({
             price: Number(t.price) || 0,
             totalCapacity: t.total_capacity || 100,
             description: t.description || "",
+            allowNonRotaract: t.allow_non_rotaract !== false,
+            allowedAudience: t.allowed_audience || (t.allow_non_rotaract !== false ? "ALL" : "ROTARACT_ONLY"),
           }))
         );
       }
@@ -284,9 +298,9 @@ export function CreateEventWizardModal({
       );
     } else {
       setTicketTiers([
-        { name: "Early Bird Pass", tierType: "EARLY_BIRD", price: 199, totalCapacity: 100, description: "Discounted early access pass" },
-        { name: "General Release Pass", tierType: "REGULAR", price: 499, totalCapacity: 350, description: "Full delegate access" },
-        { name: "VIP Delegate Pass", tierType: "VIP", price: 999, totalCapacity: 50, description: "VIP seating + merchandise kit" },
+        { name: "Early Bird Pass", tierType: "EARLY_BIRD", price: 199, totalCapacity: 100, description: "Discounted early access pass", allowNonRotaract: true, allowedAudience: "ALL" },
+        { name: "General Release Pass", tierType: "REGULAR", price: 499, totalCapacity: 350, description: "Full delegate access", allowNonRotaract: true, allowedAudience: "ALL" },
+        { name: "VIP Delegate Pass", tierType: "VIP", price: 999, totalCapacity: 50, description: "VIP seating + merchandise kit", allowNonRotaract: true, allowedAudience: "ALL" },
       ]);
     }
   }
@@ -295,17 +309,41 @@ export function CreateEventWizardModal({
     const defaultPrice = priceModel === "FREE" ? 0 : 0;
     setTicketTiers([
       ...ticketTiers,
-      { name: "", tierType: "REGULAR", price: defaultPrice, totalCapacity: 100, description: "" },
+      {
+        name: "",
+        tierType: "REGULAR",
+        price: defaultPrice,
+        totalCapacity: 100,
+        description: "",
+        allowNonRotaract: allowNonRotaract,
+        allowedAudience: allowNonRotaract ? "ALL" : "ROTARACT_ONLY",
+      },
     ]);
   }
 
-  function addPresetTier(name: string, tierType: TicketTierType, price: number, totalCapacity: number, description: string) {
+  function addPresetTier(
+    name: string,
+    tierType: TicketTierType,
+    price: number,
+    totalCapacity: number,
+    description: string,
+    allowedAudience: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY" = "ALL"
+  ) {
     if (price > 0 && priceModel === "FREE") {
       setPriceModel("PAID");
     }
+    const tierAllowsNonRotaract = allowedAudience !== "ROTARACT_ONLY";
     setTicketTiers([
       ...ticketTiers,
-      { name, tierType, price: priceModel === "FREE" ? 0 : price, totalCapacity, description },
+      {
+        name,
+        tierType,
+        price: priceModel === "FREE" ? 0 : price,
+        totalCapacity,
+        description,
+        allowNonRotaract: tierAllowsNonRotaract,
+        allowedAudience,
+      },
     ]);
   }
 
@@ -422,6 +460,9 @@ export function CreateEventWizardModal({
         allowWaitlist,
         allowTicketTransfer: allowTransfer,
         allowRefunds,
+        allowNonRotaract,
+        googleMapsUrl: mapsUrl.trim() || undefined,
+        notifyAllMembers,
         contactEmail,
         contactPhone,
         upiId: upiId.trim(),
@@ -911,24 +952,38 @@ export function CreateEventWizardModal({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
-                      onClick={() => addPresetTier("Early Bird Pass", "EARLY_BIRD", 199, 50, "Discounted early access pass")}
+                      onClick={() => addPresetTier("Early Bird Pass", "EARLY_BIRD", 199, 50, "Discounted early access pass", "ALL")}
                       className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold hover:bg-amber-100 transition-colors cursor-pointer"
                     >
                       + Early Bird (₹199)
                     </button>
                     <button
                       type="button"
-                      onClick={() => addPresetTier("General Release Pass", "REGULAR", 499, 200, "Standard delegate pass")}
+                      onClick={() => addPresetTier("General Release Pass", "REGULAR", 499, 200, "Standard delegate pass", "ALL")}
                       className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold hover:bg-blue-100 transition-colors cursor-pointer"
                     >
                       + General Pass (₹499)
                     </button>
                     <button
                       type="button"
-                      onClick={() => addPresetTier("VIP Delegate Pass", "VIP", 999, 25, "VIP seating + merchandise kit")}
+                      onClick={() => addPresetTier("VIP Delegate Pass", "VIP", 999, 25, "VIP seating + merchandise kit", "ALL")}
                       className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-bold hover:bg-purple-100 transition-colors cursor-pointer"
                     >
                       + VIP Pass (₹999)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addPresetTier("Non-Rotaract Guest Pass", "REGULAR", 599, 100, "Pass for general public & non-Rotaract delegates", "NON_ROTARACT_ONLY")}
+                      className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold hover:bg-emerald-100 transition-colors cursor-pointer"
+                    >
+                      + Non-Rotaract Pass (₹599)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addPresetTier("Rotaract Member Exclusive", "REGULAR", 299, 150, "Special pass for chartered Rotaract members", "ROTARACT_ONLY")}
+                      className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold hover:bg-rose-100 transition-colors cursor-pointer"
+                    >
+                      + Rotaract Only (₹299)
                     </button>
                   </div>
                 </div>
@@ -964,7 +1019,7 @@ export function CreateEventWizardModal({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                         {/* Price INR */}
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
@@ -1025,6 +1080,26 @@ export function CreateEventWizardModal({
                             <option value="DONATION">Donation Pass</option>
                           </select>
                         </div>
+
+                        {/* Allowed Audience */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                            Audience Eligibility
+                          </label>
+                          <select
+                            value={tier.allowedAudience || (tier.allowNonRotaract !== false ? "ALL" : "ROTARACT_ONLY")}
+                            onChange={(e) => {
+                              const aud = e.target.value as "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
+                              updateTierField(idx, "allowedAudience", aud);
+                              updateTierField(idx, "allowNonRotaract", aud !== "ROTARACT_ONLY");
+                            }}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] cursor-pointer"
+                          >
+                            <option value="ALL">👥 Open to All (Rotaract &amp; Guests)</option>
+                            <option value="ROTARACT_ONLY">🛡️ Rotaract &amp; Rotary Only</option>
+                            <option value="NON_ROTARACT_ONLY">🌐 Non-Rotaractors &amp; Guests Only</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* Description / Perks */}
@@ -1048,6 +1123,61 @@ export function CreateEventWizardModal({
                 >
                   <Plus size={16} /> Add Custom Ticket Pass Tier
                 </button>
+              </div>
+
+              {/* 👥 ATTENDEE ELIGIBILITY & ROTARACT MEMBERSHIP GATE */}
+              <div className="p-6 bg-gradient-to-br from-blue-50/70 via-slate-50 to-indigo-50/50 border border-blue-200 rounded-3xl space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#0758fc] text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-gray-900">Non-Rotaractor &amp; Guest Attendance Policy</h4>
+                    <p className="text-xs text-gray-500">
+                      Specify whether people outside Rotaract (friends, corporate delegates, non-members) can register and attend this event.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* Option 1: Open to Everyone */}
+                  <button
+                    type="button"
+                    onClick={() => setAllowNonRotaract(true)}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 ${
+                      allowNonRotaract
+                        ? "bg-white border-[#0758fc] ring-2 ring-[#0758fc]/20 shadow-sm"
+                        : "bg-gray-100/70 border-gray-200 text-gray-600 hover:bg-white"
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${allowNonRotaract ? "bg-blue-100 text-[#0758fc]" : "bg-gray-200 text-gray-400"}`}>
+                      <Globe size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-gray-900">🌐 Open to Everyone</p>
+                      <p className="text-[11px] text-gray-500">Non-Rotaractors, public guests, &amp; members welcome</p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Rotaract & Rotary Members Only */}
+                  <button
+                    type="button"
+                    onClick={() => setAllowNonRotaract(false)}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 ${
+                      !allowNonRotaract
+                        ? "bg-white border-amber-500 ring-2 ring-amber-500/20 shadow-sm"
+                        : "bg-gray-100/70 border-gray-200 text-gray-600 hover:bg-white"
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${!allowNonRotaract ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-400"}`}>
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-gray-900">🛡️ Rotaract &amp; Rotary Only</p>
+                      <p className="text-[11px] text-gray-500">Restricted to chartered club members only</p>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               {/* 2. EVENT VISIBILITY */}
@@ -1604,6 +1734,36 @@ export function CreateEventWizardModal({
                   </div>
                 </div>
               </div>
+
+              {/* 🔔 EMAIL BROADCAST ANNOUNCEMENT TOGGLE */}
+              {!isEditMode && (
+                <div className="p-5 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-200/80 rounded-3xl flex items-center justify-between gap-4 mt-2">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-[#0758fc] text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Bell size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">Email Notification Broadcast</h4>
+                      <p className="text-[11px] sm:text-xs text-gray-600">
+                        Automatically send a rich announcement email to all registered portal members in the background upon publishing.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotifyAllMembers(!notifyAllMembers)}
+                    className={`relative w-12 h-7 rounded-full transition-colors shrink-0 cursor-pointer ${
+                      notifyAllMembers ? "bg-[#0758fc]" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                        notifyAllMembers ? "translate-x-5" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

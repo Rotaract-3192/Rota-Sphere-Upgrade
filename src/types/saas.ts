@@ -120,6 +120,8 @@ export interface SaasEvent {
   allow_waitlist: boolean;
   allow_ticket_transfer: boolean;
   allow_refunds: boolean;
+  allow_non_rotaract?: boolean;
+  google_maps_url?: string | null;
   terms_and_conditions: string | null;
   refund_policy: string | null;
   contact_email: string | null;
@@ -154,6 +156,8 @@ export interface SaasTicketTier {
   auto_activate_when_tier_sells_out: string | null;
   is_active: boolean;
   is_visible: boolean;
+  allow_non_rotaract?: boolean;
+  allowed_audience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
   benefits: string[];
   created_at: string;
   updated_at: string;

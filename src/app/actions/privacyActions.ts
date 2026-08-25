@@ -15,6 +15,7 @@
  * Identity is verified via Clerk session before any data disclosure.
  */
 
+import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/getUser";
 import { executeSql } from "@/lib/db/directDb";
 import { writeAuditLog, auditConsent, auditPrivacyRequest, auditDataExport } from "@/lib/audit/auditLog";
@@ -129,31 +130,59 @@ export async function submitPrivacyComplaintAction(input: {
   description: string;
 }): Promise<{ success: boolean; complaintNumber?: string; error?: string }> {
   try {
-    const user = await requireUser();
+    const user = await getCurrentUser();
+    const userId = user?.clerkId || "guest";
+    const userEmail = user?.email || "anonymous@rotasphere.org";
+    const userName = input.userName?.trim() || user?.profile?.full_name || "Valued User";
+    const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const generatedComplaintNumber = `PC-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${randomHex}`;
+
+    try {
+      await executeSql(`
+        CREATE TABLE IF NOT EXISTS privacy_complaints (
+          id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+          complaint_number text UNIQUE,
+          user_id text,
+          user_email text NOT NULL,
+          user_name text NOT NULL,
+          category text NOT NULL,
+          description text NOT NULL,
+          status text NOT NULL DEFAULT 'open',
+          created_at timestamptz DEFAULT now(),
+          updated_at timestamptz DEFAULT now()
+        );
+      `);
+    } catch {}
 
     const { data } = await executeSql(`
-      INSERT INTO privacy_complaints (user_id, user_email, user_name, category, description, status)
+      INSERT INTO privacy_complaints (complaint_number, user_id, user_email, user_name, category, description, status)
       VALUES (
-        '${esc(user.clerkId)}',
-        '${esc(user.email!)}',
-        '${esc(input.userName)}',
+        '${esc(generatedComplaintNumber)}',
+        '${esc(userId)}',
+        '${esc(userEmail)}',
+        '${esc(userName)}',
         '${esc(input.category)}',
         '${esc(input.description)}',
         'open'
       )
-      RETURNING complaint_number;
+      RETURNING complaint_number, id;
     `);
 
-    const complaintNumber = data?.[0]?.complaint_number;
-    await writeAuditLog({
-      actorId: user.clerkId,
-      actorEmail: user.email!,
-      action: "PRIVACY_COMPLAINT_SUBMITTED",
-      category: "PRIVACY_REQUEST",
-      resourceType: "privacy_complaint",
-      resourceId: complaintNumber,
-      result: "SUCCESS",
-    });
+    const complaintNumber = data?.[0]?.complaint_number || generatedComplaintNumber;
+    try {
+      await writeAuditLog({
+        actorId: userId,
+        actorEmail: userEmail,
+        action: "PRIVACY_COMPLAINT_SUBMITTED",
+        category: "PRIVACY_REQUEST",
+        resourceType: "privacy_complaint",
+        resourceId: complaintNumber,
+        result: "SUCCESS",
+      });
+    } catch {}
+
+    revalidatePath("/admin");
+    revalidatePath("/privacy-center");
 
     return { success: true, complaintNumber };
   } catch (err: unknown) {

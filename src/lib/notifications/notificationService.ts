@@ -564,3 +564,211 @@ export function buildStudioBroadcastEmailHtml({
     </html>
   `;
 }
+
+export interface NewEventAnnouncementParams {
+  eventId: string;
+  title: string;
+  slug: string;
+  summary?: string;
+  coverImageUrl?: string;
+  startDate: string;
+  endDate?: string;
+  venueName?: string;
+  address?: string;
+  city?: string;
+  googleMapsUrl?: string;
+  minPrice?: number;
+  hostingClub?: string;
+  allowNonRotaract?: boolean;
+}
+
+/**
+ * Dispatches New Event Announcement emails to all registered portal users.
+ * Runs completely asynchronously in background (non-blocking).
+ */
+export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnouncementParams): Promise<void> {
+  // Use setImmediate / async tick so caller server action is never blocked
+  setImmediate(async () => {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
+      const eventUrl = `${appUrl}/events/${event.slug}`;
+
+      // 1. Fetch all registered user emails
+      const { executeSql } = await import("@/lib/db/directDb");
+      const { data: userRows, error: userErr } = await executeSql(`
+        SELECT DISTINCT email, full_name 
+        FROM rotasphere_profiles 
+        WHERE email IS NOT NULL AND email != ''
+        LIMIT 5000;
+      `);
+
+      let emails: Array<{ email: string; name?: string }> = [];
+
+      if (!userErr && userRows && userRows.length > 0) {
+        emails = userRows.map((r: any) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
+      } else {
+        // Fallback to clerk / profiles query
+        const { data: fallbackProfiles } = await supabaseAdmin
+          .from("rotasphere_profiles")
+          .select("email, full_name")
+          .not("email", "is", null);
+        if (fallbackProfiles && fallbackProfiles.length > 0) {
+          emails = fallbackProfiles.map((r: any) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
+        }
+      }
+
+      // Deduplicate emails
+      const uniqueMap = new Map<string, string>();
+      for (const item of emails) {
+        if (item.email && item.email.includes("@")) {
+          uniqueMap.set(item.email.toLowerCase(), item.name || "Delegate");
+        }
+      }
+
+      if (uniqueMap.size === 0) {
+        logger.info("[New Event Broadcast] No registered user emails found to notify.");
+        return;
+      }
+
+      const formattedDate = new Date(event.startDate).toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const formattedTime = new Date(event.startDate).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const locationStr = [event.venueName, event.city].filter(Boolean).join(", ") || "Bengaluru & District 3192";
+      const mapsLink =
+        event.googleMapsUrl ||
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || event.venueName || event.city || locationStr)}`;
+
+      const priceBadge = event.minPrice === 0 || event.minPrice === undefined ? "FREE ENTRY" : `₹${event.minPrice} ONWARDS`;
+      const eligibilityBadge = event.allowNonRotaract === false ? "🛡️ Rotaract & Rotary Members Only" : "🌐 Open to All (Guests & Non-Rotaractors Welcome)";
+
+      const htmlTemplate = (recipientName: string) => `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#0f172a;margin:0;padding:24px 12px;color:#f8fafc;">
+          <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.2);color:#0f172a;">
+            
+            <!-- Top Header Banner -->
+            <div style="background:#0758fc;padding:20px 28px;text-align:left;">
+              <span style="background:rgba(255,255,255,0.2);color:#ffffff;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:8px;">
+                ✨ NEW EVENT ANNOUNCED
+              </span>
+              <h1 style="color:#ffffff;font-size:22px;font-weight:900;margin:10px 0 0;line-height:1.3;">
+                ${event.title}
+              </h1>
+              ${event.hostingClub ? `<p style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:600;margin:4px 0 0;">Hosted by ${event.hostingClub}</p>` : ""}
+            </div>
+
+            ${
+              event.coverImageUrl
+                ? `<div style="position:relative;width:100%;max-height:260px;overflow:hidden;background:#0f172a;">
+                     <img src="${event.coverImageUrl}" alt="${event.title}" style="width:100%;height:auto;max-height:260px;object-fit:cover;display:block;" />
+                   </div>`
+                : ""
+            }
+
+            <!-- Body -->
+            <div style="padding:28px 28px 20px;">
+              <p style="font-size:15px;color:#334155;margin:0 0 16px;line-height:1.6;">
+                Hello <strong>${recipientName}</strong>, a new event has just been published on RotaSphere!
+              </p>
+
+              ${
+                event.summary
+                  ? `<div style="background:#f8fafc;border-left:4px solid #0758fc;border-radius:0 12px 12px 0;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#475569;line-height:1.6;">
+                       ${event.summary}
+                     </div>`
+                  : ""
+              }
+
+              <!-- Event Details Table -->
+              <table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;width:35%;">📅 Date & Time:</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:700;">${formattedDate} at ${formattedTime} IST</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;">📍 Location:</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:600;">
+                    ${locationStr}
+                    <br/>
+                    <a href="${mapsLink}" target="_blank" style="color:#0758fc;font-size:11px;font-weight:700;text-decoration:none;display:inline-block;margin-top:4px;">
+                      Open in Google Maps ↗
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;">🎟️ Pass Starting:</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#0758fc;font-size:13px;font-weight:800;">${priceBadge}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;color:#64748b;font-size:12px;font-weight:700;">👥 Eligibility:</td>
+                  <td style="padding:12px 16px;color:#0f172a;font-size:12px;font-weight:700;">${eligibilityBadge}</td>
+                </tr>
+              </table>
+
+              <!-- Big Action Button -->
+              <div style="margin:28px 0;text-align:center;">
+                <a href="${eventUrl}" target="_blank" 
+                   style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:16px 36px;border-radius:14px;font-size:15px;font-weight:800;letter-spacing:0.5px;box-shadow:0 6px 20px rgba(7,88,252,0.35);">
+                  Book Your Passes Now →
+                </a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:20px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.5;">
+                You are receiving this update because you are a registered member of RotaSphere · District 3192.<br/>
+                <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">Visit RotaSphere Portal</a> · <a href="${eventUrl}" style="color:#0758fc;text-decoration:none;">View Event Details</a>
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      let sentCount = 0;
+      let failedCount = 0;
+
+      // Send in concurrent batches of 5
+      const entries = Array.from(uniqueMap.entries());
+      const batchSize = 5;
+
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const chunk = entries.slice(i, i + batchSize);
+        await Promise.all(
+          chunk.map(async ([userEmail, userName]) => {
+            const ok = await sendEmail({
+              to: userEmail,
+              subject: `✨ New Event: ${event.title} - Register on RotaSphere`,
+              html: htmlTemplate(userName),
+            });
+            if (ok) sentCount++;
+            else failedCount++;
+          })
+        );
+      }
+
+      logger.info("[New Event Announcement Broadcast Completed]", {
+        eventId: event.eventId,
+        title: event.title,
+        recipientsCount: entries.length,
+        sentCount,
+        failedCount,
+      });
+    } catch (broadcastErr) {
+      logger.error("[New Event Announcement Broadcast Failed]", { error: String(broadcastErr) });
+    }
+  });
+}
+

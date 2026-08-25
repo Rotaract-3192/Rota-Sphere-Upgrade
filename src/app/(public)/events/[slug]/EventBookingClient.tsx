@@ -111,7 +111,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                           className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
                         >
                           <div>
-                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              {tier.allowed_audience === "ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
+                              )}
+                              {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-gray-500">{isSoldOut ? "Sold Out" : `${remaining} seats left`}</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">
@@ -153,7 +161,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                               className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
                             >
                               <div>
-                                <p className="text-xs font-bold text-gray-900">{tier.name}</p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-xs font-bold text-gray-900">{tier.name}</p>
+                                  {tier.allowed_audience === "ROTARACT_ONLY" && (
+                                    <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
+                                  )}
+                                  {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
+                                    <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                                  )}
+                                </div>
                                 <p className="text-[10px] text-gray-500">{remaining} seats left</p>
                               </div>
                               <span className="text-xs font-extrabold text-[#0758fc]">
@@ -178,7 +194,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                           className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
                         >
                           <div>
-                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              {tier.allowed_audience === "ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
+                              )}
+                              {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-gray-500">{remaining} seats left</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">
@@ -206,7 +230,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                           className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
                         >
                           <div>
-                            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              {tier.allowed_audience === "ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
+                              )}
+                              {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
+                                <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-gray-500">{remaining} seats left</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">

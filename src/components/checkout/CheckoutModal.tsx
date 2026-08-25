@@ -1011,49 +1011,72 @@ export function CheckoutModal({
                         </div>
 
                         {/* 3. Rotary Affiliation (3 Distinct Parts: Rotaract / Rotary / Non-Rotaract) */}
-                        <div className="space-y-1.5 pt-1">
-                          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                            <span>Affiliation Category *</span>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-normal">Select your affiliation</span>
-                          </label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
-                              const isSelected = (att.memberType || "Rotaract") === type;
-                              return (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = [...attendees];
-                                    updated[idx].memberType = type;
-                                    if (type === "Non-Rotaract") {
-                                      updated[idx].clubName = "Non-Rotaract Guest";
-                                      updated[idx].zone = "General / Guest";
-                                    } else if (type === "Rotary") {
-                                      updated[idx].clubName = "";
-                                      updated[idx].zone = "Rotary International";
-                                    } else {
-                                      updated[idx].clubName = "";
-                                      updated[idx].zone = "";
-                                    }
-                                    setAttendees(updated);
-                                  }}
-                                  className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center cursor-pointer active:scale-95 ${
-                                    isSelected
-                                      ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
-                                      : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800"
-                                  }`}
-                                >
-                                  {type === "Rotaract"
-                                    ? "● Rotaract"
-                                    : type === "Rotary"
-                                    ? "● Rotary"
-                                    : "● Non-Rotarian"}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        {(() => {
+                          const selectedTier = tiers.find((t) => t.id === att.tierId);
+                          const isNonRotaractAllowed =
+                            event.allow_non_rotaract !== false &&
+                            selectedTier?.allow_non_rotaract !== false &&
+                            selectedTier?.allowed_audience !== "ROTARACT_ONLY";
+
+                          return (
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                  Affiliation Category *
+                                </label>
+                                {!isNonRotaractAllowed && (
+                                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+                                    🛡️ Rotaract &amp; Rotary Exclusive
+                                  </span>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
+                                  const isSelected = (att.memberType || "Rotaract") === type;
+                                  const isDisabled = type === "Non-Rotaract" && !isNonRotaractAllowed;
+
+                                  return (
+                                    <button
+                                      key={type}
+                                      type="button"
+                                      disabled={isDisabled}
+                                      onClick={() => {
+                                        if (isDisabled) return;
+                                        const updated = [...attendees];
+                                        updated[idx].memberType = type;
+                                        if (type === "Non-Rotaract") {
+                                          updated[idx].clubName = "Non-Rotaract Guest";
+                                          updated[idx].zone = "General / Guest";
+                                        } else if (type === "Rotary") {
+                                          updated[idx].clubName = "";
+                                          updated[idx].zone = "Rotary International";
+                                        } else {
+                                          updated[idx].clubName = "";
+                                          updated[idx].zone = "";
+                                        }
+                                        setAttendees(updated);
+                                      }}
+                                      title={isDisabled ? "This event / ticket is restricted to Rotaract & Rotary members" : undefined}
+                                      className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center active:scale-95 ${
+                                        isDisabled
+                                          ? "opacity-40 bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                                          : isSelected
+                                          ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs cursor-pointer"
+                                          : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800 cursor-pointer"
+                                      }`}
+                                    >
+                                      {type === "Rotaract"
+                                        ? "● Rotaract"
+                                        : type === "Rotary"
+                                        ? "● Rotary"
+                                        : "● Non-Rotarian"}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* 4. Club Name & Zone Resolution */}
                         <div className="space-y-2 p-3 bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-200/80 dark:border-gray-700">
