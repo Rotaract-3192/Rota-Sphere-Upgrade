@@ -122,11 +122,13 @@ export default async function DashboardPage() {
   // 4. Fetch tickets for THIS organizer's events only
   const { data: ticketsData } = await executeSql(`
     SELECT t.*,
+      o.status as order_status,
       json_build_object('title', e.title) as saas_events,
       json_build_object('name', tt.name, 'price', tt.price) as saas_ticket_tiers
     FROM saas_tickets t
     INNER JOIN saas_events e ON t.event_id = e.id
     LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
+    LEFT JOIN saas_orders o ON t.order_id = o.id
     WHERE 1=1 ${organizerCondition}
     ORDER BY t.created_at DESC
     LIMIT 200;

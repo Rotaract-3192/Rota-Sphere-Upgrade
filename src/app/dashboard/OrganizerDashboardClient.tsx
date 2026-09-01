@@ -1204,15 +1204,36 @@ export function OrganizerDashboardClient({
                               <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{t.saas_ticket_tiers?.name || "Standard Pass"}</p>
                             </td>
                             <td className="py-3.5 px-6">
-                              <span
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
-                                  t.status === "USED"
-                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                }`}
-                              >
-                                ● {t.status === "USED" ? "CHECKED_IN" : "CONFIRMED"}
-                              </span>
+                              {(() => {
+                                const isRej = t.status === "PAYMENT_REJECTED" || t.status === "REJECTED" || t.order_status === "PAYMENT_REJECTED";
+                                const isPend = t.status === "PENDING_VERIFICATION" || t.status === "PENDING" || t.order_status === "PENDING_VERIFICATION";
+                                const isUsed = t.status === "USED";
+                                const isCanc = t.status === "CANCELLED";
+                                const isRef = t.status === "REFUNDED";
+                                const isTrans = t.status === "TRANSFERRED";
+
+                                return (
+                                  <span
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                      isUsed
+                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                        : isRej
+                                        ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                        : isPend
+                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                        : isCanc
+                                        ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
+                                        : isRef
+                                        ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                        : isTrans
+                                        ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                                        : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                    }`}
+                                  >
+                                    ● {isUsed ? "CHECKED_IN" : isRej ? "REJECTED" : isPend ? "PENDING APPROVAL" : isCanc ? "CANCELLED" : isRef ? "REFUNDED" : isTrans ? "TRANSFERRED" : "CONFIRMED"}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );
@@ -1284,6 +1305,7 @@ export function OrganizerDashboardClient({
                               setActionLoadingId(null);
                               if (res.success) {
                                 setOrders(orders.map((item: any) => (item.id === o.id ? { ...item, status: "PAID" } : item)));
+                                setTickets((prev) => prev.map((t: any) => (t.order_id === o.id ? { ...t, status: "CONFIRMED", order_status: "PAID" } : t)));
                                 showToast("✓ UPI approved! Passes activated.");
                               }
                             }}
@@ -1302,6 +1324,7 @@ export function OrganizerDashboardClient({
                               setActionLoadingId(null);
                               if (res.success) {
                                 setOrders(orders.map((item: any) => item.id === o.id ? { ...item, status: "PAYMENT_REJECTED", payment_rejection_reason: reason } : item));
+                                setTickets((prev) => prev.map((t: any) => (t.order_id === o.id ? { ...t, status: "PAYMENT_REJECTED", order_status: "PAYMENT_REJECTED" } : t)));
                                 showToast("Payment rejected.");
                               }
                             }}
@@ -1399,6 +1422,7 @@ export function OrganizerDashboardClient({
                                         setActionLoadingId(null);
                                         if (res.success) {
                                           setOrders(orders.map((item) => (item.id === o.id ? { ...item, status: "PAID" } : item)));
+                                          setTickets((prev) => prev.map((t: any) => (t.order_id === o.id ? { ...t, status: "CONFIRMED", order_status: "PAID" } : t)));
                                           showToast("UPI payment approved! Passes activated.");
                                         }
                                       }
@@ -1426,6 +1450,7 @@ export function OrganizerDashboardClient({
                                             item.id === o.id ? { ...item, status: "PAYMENT_REJECTED", payment_rejection_reason: reason } : item
                                           )
                                         );
+                                        setTickets((prev) => prev.map((t: any) => (t.order_id === o.id ? { ...t, status: "PAYMENT_REJECTED", order_status: "PAYMENT_REJECTED" } : t)));
                                         showToast("Payment rejected.");
                                       }
                                     }}
@@ -1660,7 +1685,7 @@ export function OrganizerDashboardClient({
                   </div>
                   <div>
                     <span className="text-gray-400 font-semibold block">Confirmed Tickets</span>
-                    <span className="text-emerald-600 font-extrabold text-sm">{tickets.length} Issued</span>
+                    <span className="text-emerald-600 font-extrabold text-sm">{tickets.filter((t: any) => t.status === "CONFIRMED" || t.status === "USED" || t.status === "ISSUED").length} Issued</span>
                   </div>
                 </div>
               </div>
@@ -1958,6 +1983,7 @@ export function OrganizerDashboardClient({
                           item.id === proofModalOrder.id ? { ...item, status: "PAYMENT_REJECTED", payment_rejection_reason: reason } : item
                         )
                       );
+                      setTickets((prev) => prev.map((t: any) => (t.order_id === proofModalOrder.id ? { ...t, status: "PAYMENT_REJECTED", order_status: "PAYMENT_REJECTED" } : t)));
                       setProofModalOrder(null);
                       showToast("Payment rejected.");
                     }
@@ -1975,6 +2001,7 @@ export function OrganizerDashboardClient({
                     setActionLoadingId(null);
                     if (res.success) {
                       setOrders(orders.map((item) => (item.id === proofModalOrder.id ? { ...item, status: "PAID" } : item)));
+                      setTickets((prev) => prev.map((t: any) => (t.order_id === proofModalOrder.id ? { ...t, status: "CONFIRMED", order_status: "PAID" } : t)));
                       setProofModalOrder(null);
                       showToast("UPI payment verified & approved! Delegate passes activated.");
                     }

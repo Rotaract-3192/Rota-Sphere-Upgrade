@@ -90,7 +90,9 @@ export function exportEventAttendeesToExcel(
     const tierName = t.tier_name || t.saas_ticket_tiers?.name || "General Admission";
     const price = t.unit_price || t.saas_ticket_tiers?.price || 0;
     const paymentMode = t.payment_method || (t.upi_transaction_id ? "UPI" : "ONLINE");
-    const paymentStatus = t.order_status || t.status || "CONFIRMED";
+    const isRejected = t.status === "PAYMENT_REJECTED" || t.status === "REJECTED" || t.order_status === "PAYMENT_REJECTED";
+    const isPending = t.status === "PENDING_VERIFICATION" || t.status === "PENDING" || t.order_status === "PENDING_VERIFICATION";
+    const paymentStatus = isRejected ? "REJECTED" : isPending ? "PENDING_APPROVAL" : (t.order_status || t.status || "CONFIRMED");
     const checkInTime = t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned";
     const regDate = t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "";
     const customResp = JSON.stringify(t.custom_answers || t.customAnswers || {});
