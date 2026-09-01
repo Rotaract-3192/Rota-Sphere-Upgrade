@@ -19,6 +19,7 @@ interface EventCardProps {
   startDate: string;
   price: number | null;
   badge?: string | null;
+  organizationName?: string | null;
   variant?: "dark" | "light";
 }
 
@@ -30,6 +31,7 @@ export function EventCard({
   startDate,
   price,
   badge,
+  organizationName,
   variant = "light",
 }: EventCardProps) {
   const [saved, setSaved] = useState(false);
@@ -107,11 +109,19 @@ export function EventCard({
           {title}
         </h3>
 
+        {/* Host Club Name */}
+        {organizationName && (
+          <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 line-clamp-1 flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0758fc]" />
+            <span className="truncate">{organizationName}</span>
+          </p>
+        )}
+
         {/* Location & Details */}
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span className="flex items-center gap-1">
             <MapPin size={13} className="text-[#0758fc]" />
-            <span className="font-medium text-gray-600">{city || "District 3192"}</span>
+            <span className="font-medium text-gray-600 dark:text-gray-400">{city || "District 3192"}</span>
           </span>
           <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#0758fc] group-hover:translate-x-0.5 transition-transform">
             Book Pass <ArrowRight size={12} />

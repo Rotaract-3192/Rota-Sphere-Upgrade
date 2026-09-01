@@ -18,6 +18,7 @@ export interface EventWithPrice {
   hasFreeTickets: boolean;
   sold_count?: number;
   capacity: number;
+  organization_name?: string | null;
 }
 
 export interface EventGridProps {
@@ -52,6 +53,7 @@ export function formatEvents(rawEvents: any[]): EventWithPrice[] {
       hasFreeTickets,
       sold_count: evt.sold_count || 0,
       capacity: evt.capacity || 100,
+      organization_name: evt.organization_name || evt.org_name || evt.club_name || null,
     };
   });
 }
@@ -85,6 +87,7 @@ export function EventGrid(props: EventGridProps) {
           startDate={event.start_date}
           price={event.minPrice}
           badge={event.hasFreeTickets ? "Free Entry" : undefined}
+          organizationName={event.organization_name}
         />
       ))}
     </div>

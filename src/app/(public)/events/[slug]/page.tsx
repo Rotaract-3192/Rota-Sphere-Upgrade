@@ -125,6 +125,11 @@ export default async function EventDetailPage({ params }: PageProps) {
             <span className="text-xs font-semibold text-gray-300 flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
               <ShieldCheck size={14} className="text-emerald-400" /> Verified Organizer
             </span>
+            {((event as any).org_name || (event as any).organization_name) && (
+              <span className="text-xs font-bold text-white flex items-center gap-1.5 bg-[#0758fc]/85 backdrop-blur-md px-3.5 py-1 rounded-full border border-blue-300/30 shadow-xs">
+                🏛️ Hosted by {(event as any).org_name || (event as any).organization_name}
+              </span>
+            )}
             {event.allow_non_rotaract === false ? (
               <span className="text-xs font-bold text-amber-300 bg-amber-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-500/40 flex items-center gap-1.5 shadow-xs">
                 <ShieldCheck size={14} className="text-amber-400" /> 🛡️ Rotaract &amp; Rotary Exclusive

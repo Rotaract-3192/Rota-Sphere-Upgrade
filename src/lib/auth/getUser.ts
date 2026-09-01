@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/db/supabaseAdmin";
+import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { logger } from "@/lib/logger/logger";
 import type { Profile, UserRole } from "@/types/database";
 
@@ -35,50 +36,166 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     const isDesignatedAdmin = isConfiguredAdminEmail(email);
 
-    const { data } = await supabaseAdmin
-      .from("rotasphere_profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    // 1. Fetch Profile via Direct SQL with fallback to Supabase Admin
+    let profile: Profile | null = null;
+    try {
+      const { data: profileRows } = await executeSql(`
+        SELECT id, clerk_id, email, full_name, role, status, image_url, bio, home_club_id, designation, created_at, updated_at
+        FROM rotasphere_profiles
+        WHERE clerk_id = ${escapeSql(userId)} OR id::text = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
+        LIMIT 1;
+      `);
+      if (profileRows && profileRows.length > 0) {
+        const row = profileRows[0];
+        profile = {
+          id: row.id || userId,
+          email: row.email || email,
+          full_name: row.full_name || `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0],
+          role: (VALID_ROLES.includes(row.role as UserRole) ? row.role : "attendee") as UserRole,
+          status: row.status || "ACTIVE",
+          image_url: row.image_url || clerkUser.imageUrl || null,
+          bio: row.bio || "",
+          home_club_id: row.home_club_id || null,
+          designation: row.designation || "Rotaract Member",
+          created_at: row.created_at || new Date().toISOString(),
+          updated_at: row.updated_at || new Date().toISOString(),
+        };
+      }
+    } catch (sqlErr) {
+      logger.warn("Direct SQL profile query failed, trying supabaseAdmin", { error: String(sqlErr) });
+    }
 
-    let profile = data as Profile | null;
+    if (!profile) {
+      try {
+        const { data } = await supabaseAdmin
+          .from("rotasphere_profiles")
+          .select("*")
+          .or(`clerk_id.eq.${userId},id.eq.${userId},email.eq.${email}`)
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          profile = data as Profile;
+        }
+      } catch (sbErr) {
+        logger.warn("supabaseAdmin profile lookup fallback failed", { error: String(sbErr) });
+      }
+    }
+
+    // 2. Check for Club Registration / Organization Membership / Approved Organizer Request
+    let isOrgMember = false;
+    let hasApprovedOrganizerRequest = false;
+    let orgDesignation = "";
+
+    try {
+      const { data: memberRows } = await executeSql(`
+        SELECT om.organization_id, om.role, o.name as org_name
+        FROM organization_members om
+        LEFT JOIN organizations o ON o.id = om.organization_id
+        WHERE om.user_id = ${escapeSql(userId)}
+        LIMIT 1;
+      `);
+      if (memberRows && memberRows.length > 0) {
+        isOrgMember = true;
+        if (memberRows[0].org_name) {
+          orgDesignation = `Member (${memberRows[0].org_name})`;
+        }
+      }
+
+      const { data: reqRows } = await executeSql(`
+        SELECT id, club_name, position, status
+        FROM organizer_access_requests
+        WHERE (user_id = ${escapeSql(userId)} OR user_email ILIKE ${escapeSql(email)})
+          AND status = 'APPROVED'
+        ORDER BY created_at DESC
+        LIMIT 1;
+      `);
+      if (reqRows && reqRows.length > 0) {
+        hasApprovedOrganizerRequest = true;
+        if (reqRows[0].position && reqRows[0].club_name) {
+          orgDesignation = `${reqRows[0].position} (${reqRows[0].club_name})`;
+        }
+      }
+    } catch (checkErr) {
+      logger.warn("Club/Organizer membership check error", { error: String(checkErr) });
+    }
+
+    const rawRole = clerkUser.publicMetadata?.role as string;
+    const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
+
+    // 3. Determine Highest Effective Role
+    let targetRole: UserRole = "attendee";
+    if (isDesignatedAdmin) {
+      targetRole = "super_admin";
+    } else if (profile?.role === "super_admin" || profile?.role === "admin") {
+      targetRole = profile.role;
+    } else if (metadataRole === "super_admin" || metadataRole === "admin") {
+      targetRole = metadataRole;
+    } else if (profile?.role === "organizer" || isOrgMember || hasApprovedOrganizerRequest || metadataRole === "organizer") {
+      targetRole = "organizer";
+    }
 
     if (!profile) {
       const fullName = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0];
-      const rawRole = clerkUser.publicMetadata?.role as string;
-      const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
-      const initialRole: UserRole = isDesignatedAdmin ? "super_admin" : metadataRole;
+      const initialDesignation = isDesignatedAdmin
+        ? "District Super Administrator"
+        : (orgDesignation || (clerkUser.publicMetadata?.designation as string) || "Rotaract Member");
 
-      const newProfile: Profile = {
+      profile = {
         id: userId,
         email,
         full_name: fullName,
-        role: initialRole,
+        role: targetRole,
         status: "ACTIVE",
         image_url: clerkUser.imageUrl ?? null,
         bio: "",
         home_club_id: null,
-        designation: isDesignatedAdmin ? "District Super Administrator" : "Rotaract Member",
+        designation: initialDesignation,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
       try {
-        await supabaseAdmin.from("rotasphere_profiles").upsert(newProfile);
-      } catch (err) {
-        logger.warn("Could not upsert profile on the fly", { error: String(err) });
+        await executeSql(`
+          INSERT INTO rotasphere_profiles (id, clerk_id, email, full_name, role, status, image_url, designation, created_at, updated_at)
+          VALUES (
+            gen_random_uuid(),
+            ${escapeSql(userId)},
+            ${escapeSql(email)},
+            ${escapeSql(fullName)},
+            ${escapeSql(targetRole)},
+            'ACTIVE',
+            ${escapeSql(clerkUser.imageUrl ?? null)},
+            ${escapeSql(initialDesignation)},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (clerk_id) DO UPDATE
+          SET role = ${escapeSql(targetRole)},
+              email = ${escapeSql(email)},
+              full_name = ${escapeSql(fullName)},
+              updated_at = NOW();
+        `);
+      } catch (insertErr) {
+        logger.warn("Could not insert profile via executeSql", { error: String(insertErr) });
       }
-
-      profile = newProfile;
-    } else if (isDesignatedAdmin && profile.role !== "super_admin") {
-      profile.role = "super_admin";
-      try {
-        await supabaseAdmin
-          .from("rotasphere_profiles")
-          .update({ role: "super_admin" })
-          .eq("id", userId);
-      } catch (err) {
-        logger.warn("Could not elevate profile to super_admin", { error: String(err) });
+    } else {
+      // Self-heal profile if elevated role is detected
+      if (ROLE_HIERARCHY[targetRole] > ROLE_HIERARCHY[profile.role]) {
+        profile.role = targetRole;
+        if (orgDesignation && (!profile.designation || profile.designation === "Rotaract Member")) {
+          profile.designation = orgDesignation;
+        }
+        try {
+          await executeSql(`
+            UPDATE rotasphere_profiles
+            SET role = ${escapeSql(targetRole)},
+                designation = ${escapeSql(profile.designation || 'Organizer')},
+                updated_at = NOW()
+            WHERE clerk_id = ${escapeSql(userId)} OR id::text = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)};
+          `);
+        } catch (updateErr) {
+          logger.warn("Could not update profile role in database", { error: String(updateErr) });
+        }
       }
     }
 

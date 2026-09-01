@@ -298,13 +298,44 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
       WHERE id::text = ${escapeSql(requestId)};
     `);
 
-    await executeSql(`
+    const desig = `${req.position || 'Club Officer'} (${req.club_name || 'Rotaract Club'})`;
+
+    // 1. Update existing profile or insert new if missing
+    const updateRes = await executeSql(`
       UPDATE rotasphere_profiles
-      SET role = 'organizer', designation = ${escapeSql(`${req.position} (${req.club_name})`)}, updated_at = NOW()
-      WHERE id = ${escapeSql(req.user_id)};
+      SET role = 'organizer',
+          designation = ${escapeSql(desig)},
+          updated_at = NOW()
+      WHERE clerk_id = ${escapeSql(req.user_id)} OR id::text = ${escapeSql(req.user_id)} OR email ILIKE ${escapeSql(req.user_email)};
     `);
 
-    // Find the matching club organization
+    // If no row existed, insert profile record
+    if (!updateRes.data || updateRes.data.length === 0) {
+      try {
+        await executeSql(`
+          INSERT INTO rotasphere_profiles (id, clerk_id, email, full_name, role, status, designation, created_at, updated_at)
+          VALUES (
+            gen_random_uuid(),
+            ${escapeSql(req.user_id)},
+            ${escapeSql(req.user_email)},
+            ${escapeSql(req.user_name || req.user_email)},
+            'organizer',
+            'ACTIVE',
+            ${escapeSql(desig)},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (clerk_id) DO UPDATE
+          SET role = 'organizer',
+              designation = ${escapeSql(desig)},
+              updated_at = NOW();
+        `);
+      } catch (insertErr) {
+        logger.warn("Could not insert organizer profile fallback", { error: String(insertErr) });
+      }
+    }
+
+    // 2. Find the matching club organization
     let orgId = req.organization_id;
     if (!orgId && req.club_name) {
       const findOrg = await executeSql(`
@@ -324,6 +355,21 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
         VALUES (${escapeSql(orgId)}, ${escapeSql(req.user_id)}, 'ORGANIZER', NOW())
         ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'ORGANIZER';
       `);
+    }
+
+    // 3. Sync to Clerk public metadata
+    try {
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(req.user_id, {
+        publicMetadata: {
+          role: "organizer",
+          designation: desig,
+          club: req.club_name,
+          organizationId: orgId,
+        },
+      });
+    } catch (clerkErr) {
+      logger.warn("Could not update Clerk metadata on organizer approval", { error: String(clerkErr) });
     }
 
     await logAuditAction({
@@ -368,7 +414,7 @@ export async function getUserPendingOrganizerRequestAction(): Promise<{ success:
 
     const res = await executeSql(`
       SELECT * FROM organizer_access_requests
-      WHERE user_id = ${escapeSql(user.clerkId)}
+      WHERE user_id = ${escapeSql(user.clerkId)} OR user_email ILIKE ${escapeSql(user.email)}
       ORDER BY created_at DESC
       LIMIT 1;
     `);

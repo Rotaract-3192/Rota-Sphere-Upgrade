@@ -594,8 +594,18 @@ export async function verifyOrderPaymentAction(params: {
     const ord = orderRows[0];
     const isEventOwner = ord.organizer_id === user.clerkId || ord.created_by_user_id === user.clerkId;
     const isAdmin = hasMinimumRole(user.profile.role, "admin");
+    let isOrgMember = false;
 
-    if (!isEventOwner && !isAdmin) {
+    if (!isEventOwner && !isAdmin && ord.organization_id) {
+      const { data: memberRows } = await executeSql(`
+        SELECT user_id FROM organization_members
+        WHERE organization_id = ${escapeSql(ord.organization_id)} AND user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+      isOrgMember = !!(memberRows && memberRows.length > 0);
+    }
+
+    if (!isEventOwner && !isAdmin && !isOrgMember) {
       return { success: false, error: "Unauthorized: Only event organizers and administrators can verify payments." };
     }
 

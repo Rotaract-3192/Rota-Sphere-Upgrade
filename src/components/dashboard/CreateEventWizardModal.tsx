@@ -35,6 +35,8 @@ import {
   FolderOpen,
   Edit3,
   QrCode,
+  ChevronDown,
+  Building2,
 } from "lucide-react";
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
@@ -614,9 +616,18 @@ export function CreateEventWizardModal({
           <div className="h-[3px] w-full bg-gradient-to-r from-[#0758fc] via-[#054fe0] to-amber-500 rounded-full -mt-4 mb-6 opacity-90" />
 
           {errorMessage && (
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
-              <X size={16} className="text-rose-600" />
-              <span>{errorMessage}</span>
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center justify-between gap-2 animate-in fade-in-50">
+              <div className="flex items-center gap-2">
+                <X size={16} className="text-rose-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-rose-500 hover:text-rose-800 p-1 rounded-lg hover:bg-rose-100/60 transition-colors cursor-pointer shrink-0"
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
 
@@ -1564,7 +1575,7 @@ export function CreateEventWizardModal({
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] cursor-pointer appearance-none shadow-sm"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-6 pr-10 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] cursor-pointer appearance-none shadow-sm font-medium"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -1572,6 +1583,7 @@ export function CreateEventWizardModal({
                         </option>
                       ))}
                     </select>
+                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
 
@@ -1585,10 +1597,13 @@ export function CreateEventWizardModal({
                       type="number"
                       required
                       min={1}
-                      value={capacity}
-                      onChange={(e) => setCapacity(Number(e.target.value))}
-                      placeholder="500"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
+                      value={capacity === 0 ? "" : capacity}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                        setCapacity(isNaN(val) ? 0 : val);
+                      }}
+                      placeholder="e.g. 100"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm font-medium"
                     />
                   </div>
                   <span className="text-[11px] text-gray-500 mt-1.5 px-3 block">

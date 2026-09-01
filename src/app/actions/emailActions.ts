@@ -37,14 +37,24 @@ export async function getBroadcastRecipientsAction(params: {
     return { success: false, error: "Unauthorized: Organizer access required to manage broadcasts.", recipients: [] };
   }
 
-  // If scoping to an event, check ownership or admin role
+  // If scoping to an event, check ownership, admin role, or organization membership
   if (params.eventId) {
     const { data: evts } = await executeSql(`
-      SELECT organizer_id, created_by_user_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+      SELECT organizer_id, created_by_user_id, organization_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
     `);
     const evt = evts?.[0];
     const isOwner = evt && (evt.organizer_id === user.clerkId || evt.created_by_user_id === user.clerkId);
-    if (!isOwner && !hasMinimumRole(user.profile.role, "admin")) {
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+    let isOrgMember = false;
+    if (!isOwner && !isAdmin && evt?.organization_id) {
+      const { data: memberRows } = await executeSql(`
+        SELECT user_id FROM organization_members
+        WHERE organization_id = ${escapeSql(evt.organization_id)} AND user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+      isOrgMember = !!(memberRows && memberRows.length > 0);
+    }
+    if (!isOwner && !isAdmin && !isOrgMember) {
       return { success: false, error: "Unauthorized: You do not have permission to view recipients for this event.", recipients: [] };
     }
   }
@@ -156,14 +166,24 @@ export async function sendBatchEmailChunkAction(params: {
     return { success: false, error: "Unauthorized: Organizer access required.", sentCount: 0, failedCount: 0 };
   }
 
-  // If scoping to an event, check ownership or admin role
+  // If scoping to an event, check ownership, admin role, or organization membership
   if (params.eventId) {
     const { data: evts } = await executeSql(`
-      SELECT organizer_id, created_by_user_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+      SELECT organizer_id, created_by_user_id, organization_id FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
     `);
     const evt = evts?.[0];
     const isOwner = evt && (evt.organizer_id === user.clerkId || evt.created_by_user_id === user.clerkId);
-    if (!isOwner && !hasMinimumRole(user.profile.role, "admin")) {
+    const isAdmin = hasMinimumRole(user.profile.role, "admin");
+    let isOrgMember = false;
+    if (!isOwner && !isAdmin && evt?.organization_id) {
+      const { data: memberRows } = await executeSql(`
+        SELECT user_id FROM organization_members
+        WHERE organization_id = ${escapeSql(evt.organization_id)} AND user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+      isOrgMember = !!(memberRows && memberRows.length > 0);
+    }
+    if (!isOwner && !isAdmin && !isOrgMember) {
       return { success: false, error: "Unauthorized: You do not have permission to send broadcasts for this event.", sentCount: 0, failedCount: 0 };
     }
   }

@@ -109,7 +109,7 @@ async function resolveCategoryId(categoryInput?: string): Promise<string | null>
 /**
  * Validates that an acting user has authorization to mutate or view the specified event.
  */
-async function verifyEventAccess(eventId: string, user: { clerkId: string; profile: { role: any } }): Promise<{ authorized: boolean; event?: any; error?: string }> {
+async function verifyEventAccess(eventId: string, user: { clerkId: string; email?: string; profile: { role: any } }): Promise<{ authorized: boolean; event?: any; error?: string }> {
   const { data: events, error } = await executeSql(`
     SELECT id, organization_id, organizer_id, created_by_user_id, title
     FROM saas_events
@@ -126,7 +126,19 @@ async function verifyEventAccess(eventId: string, user: { clerkId: string; profi
   const isAdmin = hasMinimumRole(user.profile.role, "admin");
 
   if (!isOwner && !isAdmin) {
-    return { authorized: false, error: "Unauthorized: You do not have permission to manage this event." };
+    let isOrgMember = false;
+    if (event.organization_id) {
+      const { data: memberRows } = await executeSql(`
+        SELECT user_id FROM organization_members
+        WHERE organization_id = ${escapeSql(event.organization_id)} AND user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+      isOrgMember = !!(memberRows && memberRows.length > 0);
+    }
+
+    if (!isOrgMember) {
+      return { authorized: false, error: "Unauthorized: You do not have permission to manage this event." };
+    }
   }
 
   return { authorized: true, event };
@@ -136,8 +148,35 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
   try {
     const user = await requireAuth();
 
-    // Verify minimum role requirement
-    if (!hasMinimumRole(user.profile.role, "organizer")) {
+    // Verify minimum role requirement with dynamic self-healing
+    let isAuthorized = hasMinimumRole(user.profile.role, "organizer");
+    if (!isAuthorized) {
+      const { data: approvedReq } = await executeSql(`
+        SELECT id, club_name, position, organization_id FROM organizer_access_requests
+        WHERE (user_id = ${escapeSql(user.clerkId)} OR user_email ILIKE ${escapeSql(user.email)})
+          AND status = 'APPROVED'
+        LIMIT 1;
+      `);
+      const { data: orgMember } = await executeSql(`
+        SELECT organization_id FROM organization_members
+        WHERE user_id = ${escapeSql(user.clerkId)}
+        LIMIT 1;
+      `);
+
+      if ((approvedReq && approvedReq.length > 0) || (orgMember && orgMember.length > 0)) {
+        isAuthorized = true;
+        user.profile.role = "organizer";
+        try {
+          await executeSql(`
+            UPDATE rotasphere_profiles
+            SET role = 'organizer', updated_at = NOW()
+            WHERE clerk_id = ${escapeSql(user.clerkId)} OR id::text = ${escapeSql(user.clerkId)} OR email ILIKE ${escapeSql(user.email)};
+          `);
+        } catch {}
+      }
+    }
+
+    if (!isAuthorized) {
       return { success: false, error: "Unauthorized: Organizer access required to create events." };
     }
 
@@ -181,6 +220,24 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
       `);
       if (memberRows && memberRows.length > 0) {
         organizationId = memberRows[0].organization_id;
+      }
+    }
+
+    if (!organizationId) {
+      const { data: reqRows } = await executeSql(`
+        SELECT organization_id, club_name FROM organizer_access_requests
+        WHERE (user_id = ${escapeSql(user.clerkId)} OR user_email ILIKE ${escapeSql(user.email)})
+        ORDER BY created_at DESC
+        LIMIT 1;
+      `);
+      if (reqRows && reqRows.length > 0) {
+        organizationId = reqRows[0].organization_id;
+        if (!organizationId && reqRows[0].club_name) {
+          const { data: clubOrg } = await executeSql(`
+            SELECT id FROM organizations WHERE name ILIKE ${escapeSql(reqRows[0].club_name.trim())} LIMIT 1;
+          `);
+          organizationId = clubOrg?.[0]?.id;
+        }
       }
     }
 
