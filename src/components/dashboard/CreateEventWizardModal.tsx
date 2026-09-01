@@ -205,6 +205,11 @@ export function CreateEventWizardModal({
           }))
         );
       }
+      if (eventToEdit.org_name || eventToEdit.organization_name || eventToEdit.organizations?.name) {
+        setHostingClub(eventToEdit.org_name || eventToEdit.organization_name || eventToEdit.organizations?.name);
+      } else if (defaultClubName) {
+        setHostingClub(defaultClubName);
+      }
       setLocationDeliveryType(
         eventToEdit.event_type === "ONLINE"
           ? "ONLINE"
@@ -213,7 +218,7 @@ export function CreateEventWizardModal({
           : "IN_PERSON"
       );
     }
-  }, [eventToEdit]);
+  }, [eventToEdit, defaultClubName]);
 
   // Auto-sync overall event capacity with the sum of ticket pass tier seats
   useEffect(() => {
@@ -447,6 +452,8 @@ export function CreateEventWizardModal({
 
       const payload: CreateEventInput = {
         organizationId: defaultOrganizationId,
+        hostingClub: hostingClub.trim() || undefined,
+        clubName: hostingClub.trim() || undefined,
         title,
         slug,
         summary: tagline,

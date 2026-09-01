@@ -56,6 +56,7 @@ export async function seedDistrictClubsInternal(shouldRevalidate = false): Promi
       
       const valuesSql = chunk.map((club) => {
         const slug = generateSlug(club.name);
+        const email = (club.clubEmail && club.clubEmail.split(",")[0].trim()) || club.presidentEmail || "info@rotaract3192.org";
         return `(
           ${escapeSql(club.name)},
           ${escapeSql(slug)},
@@ -63,6 +64,9 @@ export async function seedDistrictClubsInternal(shouldRevalidate = false): Promi
           ${escapeSql(club.clubType)},
           ${escapeSql(club.partnerClub)},
           ${escapeSql(club.clubEmail)},
+          ${escapeSql(email)},
+          'Bengaluru',
+          'India',
           ${escapeSql(club.presidentName || "")},
           ${escapeSql(club.presidentPhone || "")},
           ${escapeSql(club.presidentEmail || "")},
@@ -75,7 +79,7 @@ export async function seedDistrictClubsInternal(shouldRevalidate = false): Promi
 
       const sql = `
         INSERT INTO organizations (
-          name, slug, zone, club_type, partner_club, contact_email,
+          name, slug, zone, club_type, partner_club, contact_email, support_email, city, country,
           president_name, president_phone, president_email,
           status, is_verified, created_at, updated_at
         ) VALUES ${valuesSql}

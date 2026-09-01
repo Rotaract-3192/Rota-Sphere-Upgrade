@@ -179,8 +179,8 @@ export default async function EventDetailPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-          {/* Main Left Column */}
-          <div className="lg:col-span-2 space-y-12">
+          {/* Main Left Column (Order 2 on mobile, Order 1 on desktop) */}
+          <div className="lg:col-span-2 space-y-12 order-2 lg:order-1">
 
             {/* About & Description */}
             <section className="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-4">
@@ -370,8 +370,8 @@ export default async function EventDetailPage({ params }: PageProps) {
             </section>
           </div>
 
-          {/* Right Floating Booking Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Right Floating Booking Sidebar (Order 1 on mobile, Order 2 on desktop) */}
+          <div className="lg:col-span-1 order-1 lg:order-2">
             <EventBookingClient
               event={event}
               tiers={tiers}

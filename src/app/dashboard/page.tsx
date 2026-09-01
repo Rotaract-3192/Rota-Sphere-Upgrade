@@ -50,7 +50,28 @@ export default async function DashboardPage() {
     WHERE m.user_id = '${clerkUserId}'
     LIMIT 1;
   `);
-  const organization = memberData?.[0] || null;
+  let organization = memberData?.[0] || null;
+
+  // If no membership row found, resolve from approved access request
+  if (!organization) {
+    const { resolveClubOrganizationId } = await import("@/app/actions/eventActions");
+    const orgIdFromHelper = await resolveClubOrganizationId({
+      userClerkId: clerkUserId,
+      userEmail: user.email,
+    });
+    if (orgIdFromHelper) {
+      const { data: directOrg } = await executeSql(`SELECT * FROM organizations WHERE id = '${orgIdFromHelper}' LIMIT 1;`);
+      organization = directOrg?.[0] || null;
+      if (organization) {
+        // Auto-heal organization_members
+        await executeSql(`
+          INSERT INTO organization_members (organization_id, user_id, role, created_at, updated_at)
+          VALUES ('${organization.id}', '${clerkUserId}', 'organizer_admin', NOW(), NOW())
+          ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'organizer_admin', updated_at = NOW();
+        `).catch(() => {});
+      }
+    }
+  }
 
   // Fallback: if user is super_admin or has no membership, fetch first org
   const { data: fallbackOrgData } = !organization

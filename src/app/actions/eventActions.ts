@@ -12,10 +12,13 @@ import { logAuditAction } from "@/lib/services/auditService";
 import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
 import { broadcastNewEventToAllUsersAsync } from "@/lib/notifications/notificationService";
+import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 import type { EventFormat, EventVisibility, TicketTierType } from "@/types/saas";
 
 export interface CreateEventInput {
   organizationId?: string;
+  hostingClub?: string;
+  clubName?: string;
   title: string;
   slug?: string;
   summary?: string;
@@ -104,6 +107,132 @@ async function resolveCategoryId(categoryInput?: string): Promise<string | null>
 
   const { data: fallback } = await executeSql(`SELECT id FROM event_categories LIMIT 1;`);
   return fallback?.[0]?.id || null;
+}
+
+/**
+ * Resolves the appropriate organization ID based on explicit club name, user requests, or memberships
+ */
+export async function resolveClubOrganizationId(params: {
+  clubName?: string;
+  userClerkId?: string;
+  userEmail?: string;
+  explicitOrgId?: string;
+}): Promise<string> {
+  const { clubName, userClerkId, userEmail, explicitOrgId } = params;
+
+  // 1. If explicit club name is provided (e.g. chosen in event creation wizard)
+  if (clubName && clubName.trim()) {
+    const trimmed = clubName.trim();
+    const { data: matchedOrg } = await executeSql(`
+      SELECT id FROM organizations 
+      WHERE name ILIKE ${escapeSql(trimmed)} 
+         OR slug ILIKE ${escapeSql(slugify(trimmed))}
+         OR name ILIKE ${escapeSql(`%${trimmed}%`)}
+      LIMIT 1;
+    `);
+    if (matchedOrg && matchedOrg.length > 0) {
+      return matchedOrg[0].id;
+    }
+
+    // Check if it matches a known district club in DISTRICT_3192_CLUBS
+    const knownClub = DISTRICT_3192_CLUBS.find(
+      (c) =>
+        c.name.toLowerCase().includes(trimmed.toLowerCase()) ||
+        trimmed.toLowerCase().includes(c.name.toLowerCase())
+    );
+
+    if (knownClub) {
+      const slug = slugify(knownClub.name.replace(/rotaract club of /i, ""));
+      const email =
+        (knownClub.clubEmail && knownClub.clubEmail.split(",")[0].trim()) ||
+        knownClub.presidentEmail ||
+        "info@rotaract3192.org";
+      const { data: newOrg } = await executeSql(`
+        INSERT INTO organizations (
+          name, slug, zone, club_type, partner_club, contact_email, support_email, city, country,
+          president_name, president_phone, president_email,
+          kyc_status, is_verified, status, created_at, updated_at
+        ) VALUES (
+          ${escapeSql(knownClub.name)},
+          ${escapeSql(slug)},
+          ${escapeSql(knownClub.zone)},
+          ${escapeSql(knownClub.clubType)},
+          ${escapeSql(knownClub.partnerClub)},
+          ${escapeSql(knownClub.clubEmail)},
+          ${escapeSql(email)},
+          'Bengaluru',
+          'India',
+          ${escapeSql(knownClub.presidentName || "")},
+          ${escapeSql(knownClub.presidentPhone || "")},
+          ${escapeSql(knownClub.presidentEmail || "")},
+          'VERIFIED',
+          true,
+          'ACTIVE',
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT DO NOTHING
+        RETURNING id;
+      `);
+      if (newOrg && newOrg.length > 0) {
+        return newOrg[0].id;
+      }
+      const { data: refetched } = await executeSql(`
+        SELECT id FROM organizations WHERE name ILIKE ${escapeSql(knownClub.name)} LIMIT 1;
+      `);
+      if (refetched && refetched.length > 0) {
+        return refetched[0].id;
+      }
+    }
+  }
+
+  // 2. If explicit org ID is provided, check that it's valid
+  if (explicitOrgId) {
+    const { data: validOrg } = await executeSql(`
+      SELECT id FROM organizations WHERE id = ${escapeSql(explicitOrgId)} LIMIT 1;
+    `);
+    if (validOrg && validOrg.length > 0) {
+      return validOrg[0].id;
+    }
+  }
+
+  // 3. Look up user's organization_members
+  if (userClerkId) {
+    const { data: memberRows } = await executeSql(`
+      SELECT om.organization_id 
+      FROM organization_members om
+      WHERE om.user_id = ${escapeSql(userClerkId)}
+      LIMIT 1;
+    `);
+    if (memberRows && memberRows.length > 0) {
+      return memberRows[0].organization_id;
+    }
+  }
+
+  // 4. Look up user's approved organizer_access_requests
+  if (userClerkId || userEmail) {
+    const { data: reqRows } = await executeSql(`
+      SELECT organization_id, club_name FROM organizer_access_requests
+      WHERE (user_id = ${escapeSql(userClerkId || "")} OR user_email ILIKE ${escapeSql(userEmail || "")})
+        AND status = 'APPROVED'
+      ORDER BY created_at DESC
+      LIMIT 1;
+    `);
+    if (reqRows && reqRows.length > 0) {
+      if (reqRows[0].organization_id) {
+        return reqRows[0].organization_id;
+      }
+      if (reqRows[0].club_name) {
+        return await resolveClubOrganizationId({ clubName: reqRows[0].club_name });
+      }
+    }
+  }
+
+  // 5. Default Organization Fallback
+  const { data: defaultOrg } = await executeSql(`
+    SELECT id FROM organizations ORDER BY created_at ASC LIMIT 1;
+  `);
+  return defaultOrg?.[0]?.id || "328ed943-f625-4fec-82a0-0c92dd7ec592";
 }
 
 /**
@@ -210,47 +339,13 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
 
     const categoryId = await resolveCategoryId(input.category);
 
-    // 1. Resolve Organization
-    let organizationId = input.organizationId;
-    if (!organizationId) {
-      const { data: memberRows } = await executeSql(`
-        SELECT organization_id FROM organization_members
-        WHERE user_id = ${escapeSql(user.clerkId)}
-        LIMIT 1;
-      `);
-      if (memberRows && memberRows.length > 0) {
-        organizationId = memberRows[0].organization_id;
-      }
-    }
-
-    if (!organizationId) {
-      const { data: reqRows } = await executeSql(`
-        SELECT organization_id, club_name FROM organizer_access_requests
-        WHERE (user_id = ${escapeSql(user.clerkId)} OR user_email ILIKE ${escapeSql(user.email)})
-        ORDER BY created_at DESC
-        LIMIT 1;
-      `);
-      if (reqRows && reqRows.length > 0) {
-        organizationId = reqRows[0].organization_id;
-        if (!organizationId && reqRows[0].club_name) {
-          const { data: clubOrg } = await executeSql(`
-            SELECT id FROM organizations WHERE name ILIKE ${escapeSql(reqRows[0].club_name.trim())} LIMIT 1;
-          `);
-          organizationId = clubOrg?.[0]?.id;
-        }
-      }
-    }
-
-    if (!organizationId) {
-      const { data: defaultOrg } = await executeSql(`
-        SELECT id FROM organizations
-        ORDER BY created_at ASC
-        LIMIT 1;
-      `);
-      if (defaultOrg && defaultOrg.length > 0) {
-        organizationId = defaultOrg[0].id;
-      }
-    }
+    // 1. Resolve Organization accurately (using explicit hosting club, user request or membership)
+    const organizationId = await resolveClubOrganizationId({
+      clubName: input.hostingClub || input.clubName,
+      explicitOrgId: input.organizationId,
+      userClerkId: user.clerkId,
+      userEmail: user.email,
+    });
 
     // 2. Insert Event
     const insertEventSql = `
@@ -616,6 +711,18 @@ export async function updateEventAction(
     if (input.contactPhone !== undefined) updates.push(`contact_phone = ${escapeSql(input.contactPhone)}`);
     if (input.upiId !== undefined) updates.push(`upi_id = ${escapeSql(input.upiId)}`);
     if (input.upiPayeeName !== undefined) updates.push(`upi_payee_name = ${escapeSql(input.upiPayeeName)}`);
+
+    if (input.hostingClub || input.clubName || input.organizationId) {
+      const orgId = await resolveClubOrganizationId({
+        clubName: input.hostingClub || input.clubName,
+        explicitOrgId: input.organizationId,
+        userClerkId: user.clerkId,
+        userEmail: user.email,
+      });
+      if (orgId) {
+        updates.push(`organization_id = ${escapeSql(orgId)}`);
+      }
+    }
 
     if (input.category) {
       const categoryId = await resolveCategoryId(input.category);

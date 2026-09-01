@@ -335,25 +335,26 @@ export async function approveOrganizerAccessRequestAction(requestId: string): Pr
       }
     }
 
-    // 2. Find the matching club organization
-    let orgId = req.organization_id;
-    if (!orgId && req.club_name) {
-      const findOrg = await executeSql(`
-        SELECT id FROM organizations WHERE name ILIKE ${escapeSql(req.club_name.trim())} LIMIT 1;
-      `);
-      orgId = findOrg.data?.[0]?.id;
-    }
-
-    if (!orgId) {
-      const fallbackOrg = await executeSql(`SELECT id FROM organizations ORDER BY created_at ASC LIMIT 1;`);
-      orgId = fallbackOrg.data?.[0]?.id;
-    }
+    // 2. Find and resolve the matching club organization
+    const { resolveClubOrganizationId } = await import("@/app/actions/eventActions");
+    let orgId = await resolveClubOrganizationId({
+      clubName: req.club_name,
+      explicitOrgId: req.organization_id,
+      userClerkId: req.user_id,
+      userEmail: req.user_email,
+    });
 
     if (orgId) {
       await executeSql(`
-        INSERT INTO organization_members (organization_id, user_id, role, created_at)
-        VALUES (${escapeSql(orgId)}, ${escapeSql(req.user_id)}, 'ORGANIZER', NOW())
-        ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'ORGANIZER';
+        UPDATE organizer_access_requests
+        SET organization_id = ${escapeSql(orgId)}, updated_at = NOW()
+        WHERE id::text = ${escapeSql(requestId)};
+      `);
+
+      await executeSql(`
+        INSERT INTO organization_members (organization_id, user_id, role, created_at, updated_at)
+        VALUES (${escapeSql(orgId)}, ${escapeSql(req.user_id)}, 'organizer_admin', NOW(), NOW())
+        ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'organizer_admin', updated_at = NOW();
       `);
     }
 
