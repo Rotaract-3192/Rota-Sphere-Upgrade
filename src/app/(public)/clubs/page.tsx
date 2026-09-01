@@ -4,8 +4,43 @@ import { getDistrictClubsAction } from "@/app/actions/clubActions";
 import { ClubsDirectoryClient } from "./ClubsDirectoryClient";
 
 export const metadata: Metadata = {
-  title: "Rotaract Clubs Directory | District 3192 | RotaSphere",
-  description: "Official chartered Rotaract clubs directory across District 3192 (Bengaluru, Tumakuru, Kolar, Chikkaballapura).",
+  title: "Rotaract Clubs Directory | District 3192 Network | RotaSphere",
+  description:
+    "Official directory of all 85+ chartered Rotaract clubs across Zones Taranga, Varuna, Samudhra, Sagara, Pravaha, and Arnava in District 3192 (Bengaluru, Tumakuru, Kolar).",
+  keywords: [
+    "Rotaract clubs Bangalore",
+    "District 3192 clubs",
+    "Rotaract Zone Taranga",
+    "Rotaract Zone Varuna",
+    "chartered Rotaract clubs",
+    "Rotary club partners",
+  ],
+  alternates: {
+    canonical: "/clubs",
+  },
+  openGraph: {
+    title: "Rotaract Clubs Directory | District 3192 Network",
+    description:
+      "Explore 85+ chartered Rotaract clubs in District 3192, their zones, flagship projects, and leadership teams.",
+    url: "/clubs",
+    siteName: "RotaSphere District 3192",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/brand-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Rotaract District 3192 Clubs Directory",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rotaract Clubs Directory | District 3192",
+    description: "Explore 85+ chartered clubs across District 3192.",
+    images: ["/brand-logo.png"],
+  },
 };
 
 export const dynamic = "force-dynamic";

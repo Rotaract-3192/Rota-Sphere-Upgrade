@@ -635,17 +635,22 @@ export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnounceme
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: "Asia/Kolkata",
       });
 
       const formattedTime = new Date(event.startDate).toLocaleTimeString("en-IN", {
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Kolkata",
       });
 
       const formattedEndTime = event.endDate && !isNaN(new Date(event.endDate).getTime())
         ? new Date(event.endDate).toLocaleTimeString("en-IN", {
             hour: "2-digit",
             minute: "2-digit",
+            hour12: true,
+            timeZone: "Asia/Kolkata",
           })
         : null;
 

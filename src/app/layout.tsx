@@ -53,13 +53,18 @@ export const metadata: Metadata = {
     "delegate pass",
     "rotaract clubs",
   ],
-  authors: [{ name: "Rotaract District 3192 Council" }],
+  authors: [{ name: "Rotaract District 3192 Council", url: "https://rotaract3192.org" }],
+  creator: "Rotaract District 3192",
+  publisher: "Rotaract District 3192",
+  category: "events",
+  classification: "Event Ticketing & Youth Community Platform",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://events.rotaract3192.org"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
+    locale: "en_IN",
     siteName: "RotaSphere District 3192",
     title: "RotaSphere — Rotaract District 3192 Experience & Ticketing",
     description:
@@ -69,7 +74,7 @@ export const metadata: Metadata = {
         url: "/brand-logo.png",
         width: 1200,
         height: 630,
-        alt: "RotaSphere District 3192",
+        alt: "RotaSphere District 3192 — Official Event & Ticketing Platform",
       },
     ],
   },
@@ -79,11 +84,26 @@ export const metadata: Metadata = {
     description:
       "Discover verified events, passes, and 85 chartered Rotaract clubs across District 3192.",
     images: ["/brand-logo.png"],
+    creator: "@rotaract3192",
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true },
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION || undefined,
+    other: {
+      "msvalidate.01": process.env.NEXT_PUBLIC_BING_VERIFICATION || "",
+    },
   },
   icons: {
     icon: [

@@ -3,8 +3,21 @@ import Link from "next/link";
 import { Sparkles, Shield, Heart, Trophy, ArrowRight } from "lucide-react";
 
 export const metadata = {
-  title: "About Us | RotaSphere District 3192",
-  description: "Official multi-tenant ticketing platform for Rotaract District 3192.",
+  title: "About Us | Rotaract District 3192 | RotaSphere",
+  description:
+    "Learn about RotaSphere — the dedicated ticketing, verification, and event registration platform for Rotaract District 3192 empowering 85+ chartered clubs.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About RotaSphere | Rotaract District 3192",
+    description: "Official event and ticketing infrastructure for Rotaract District 3192.",
+    url: "/about",
+    siteName: "RotaSphere District 3192",
+    locale: "en_IN",
+    type: "website",
+    images: ["/brand-logo.png"],
+  },
 };
 
 export default function AboutPage() {

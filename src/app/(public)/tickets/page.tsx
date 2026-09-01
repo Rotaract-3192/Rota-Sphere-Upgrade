@@ -8,8 +8,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "My Tickets & Passes | RotaSphere SaaS",
-  description: "View and manage your confirmed event tickets, QR code tokens, and transfers.",
+  title: "My Tickets & Passes | RotaSphere District 3192",
+  description: "View and manage your confirmed event tickets, QR code entry passes, and delegate credentials.",
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export default async function MyTicketsPage() {

@@ -17,10 +17,10 @@ export default async function EventOpenGraphImage({
   const { slug } = await params;
 
   const { data } = await executeSql(`
-    SELECT e.title, e.summary, e.category, e.venue_name, e.city, e.start_date, e.cover_url, o.name as org_name
+    SELECT e.title, e.summary, e.category, e.venue_name, e.city, e.start_date, e.cover_image_url, o.name as org_name
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
-    WHERE e.slug = '${slug.replace(/'/g, "''")}'
+    WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
     LIMIT 1;
   `);
 
@@ -37,6 +37,7 @@ export default async function EventOpenGraphImage({
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "Asia/Kolkata",
       });
     } catch {
       formattedDate = String(event.start_date);

@@ -7,6 +7,9 @@ export const metadata = {
   title: "Help Centre & Support Hub | RotaSphere District 3192",
   description:
     "Get instant answers for ticket pass bookings, instant UPI payments, QR gate entry, transfers, cancellations, organizer tools, and DPDP privacy rights.",
+  alternates: {
+    canonical: "/help",
+  },
 };
 
 export default function HelpPage() {

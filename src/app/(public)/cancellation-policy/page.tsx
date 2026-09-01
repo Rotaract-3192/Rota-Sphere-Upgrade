@@ -17,6 +17,9 @@ export const metadata = {
   title: "Cancellation Policy | RotaSphere District 3192",
   description:
     "Official ticket cancellation, delegate pass transfer, and event postponement rules for Rotaract District 3192 events.",
+  alternates: {
+    canonical: "/cancellation-policy",
+  },
 };
 
 export default function CancellationPolicyPage() {

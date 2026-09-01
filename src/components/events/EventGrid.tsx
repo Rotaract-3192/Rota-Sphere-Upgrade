@@ -112,7 +112,7 @@ export async function ServerEventGrid(props: EventGridProps) {
         ) as saas_ticket_tiers
       FROM saas_events e
       LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-      WHERE e.status = 'PUBLISHED'
+      WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
       GROUP BY e.id
       ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC
       LIMIT ${limitCount};

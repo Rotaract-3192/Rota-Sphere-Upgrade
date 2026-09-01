@@ -40,6 +40,7 @@ export function EventCard({
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 
   const priceDisplay = price === null || price === 0 ? "Free Entry" : `₹${price.toLocaleString("en-IN")}`;

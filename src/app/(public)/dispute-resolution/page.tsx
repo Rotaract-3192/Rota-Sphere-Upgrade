@@ -18,6 +18,9 @@ export const metadata = {
   title: "Dispute Resolution & Ombudsman Desk | RotaSphere District 3192",
   description:
     "Multi-tier dispute resolution mechanism, payment trace audit, organizer mediation, and District Ombudsman procedure on RotaSphere.",
+  alternates: {
+    canonical: "/disputes",
+  },
 };
 
 export default function DisputeResolutionPage() {

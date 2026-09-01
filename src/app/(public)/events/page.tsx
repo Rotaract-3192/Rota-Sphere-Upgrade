@@ -4,8 +4,43 @@ import { Search, Sparkles, Filter, MapPin, Users, X, ArrowLeft } from "lucide-re
 import Link from "next/link";
 
 export const metadata = {
-  title: "Explore Events & Passes | RotaSphere SaaS",
-  description: "Discover verified conferences, festivals, TEDx talks, workshops, and concerts across District 3192.",
+  title: "Explore Events & Delegate Passes | RotaSphere District 3192",
+  description:
+    "Discover, search, and book verified conferences, cultural fests, workshops, and sports meets across all 85 chartered clubs in Rotaract District 3192.",
+  keywords: [
+    "Rotaract events",
+    "District 3192 passes",
+    "college fests Bangalore",
+    "youth summits Bangalore",
+    "book event passes",
+    "Rotaract clubs",
+  ],
+  alternates: {
+    canonical: "/events",
+  },
+  openGraph: {
+    title: "Explore Events & Delegate Passes | RotaSphere District 3192",
+    description:
+      "Browse and book delegate passes for flagship conferences, summits, and workshops across District 3192.",
+    url: "/events",
+    siteName: "RotaSphere District 3192",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/brand-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Explore Events — RotaSphere District 3192",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Explore Events & Passes | RotaSphere District 3192",
+    description: "Discover verified Rotaract events and book official delegate passes.",
+    images: ["/brand-logo.png"],
+  },
 };
 
 interface PageProps {
@@ -60,7 +95,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-    WHERE e.status = 'PUBLISHED'
+    WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
   `;
 
   if (category) sql += ` AND (e.category_id = '${escapeSql(category)}' OR e.category = '${escapeSql(category)}')`;

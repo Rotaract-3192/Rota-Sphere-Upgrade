@@ -42,6 +42,14 @@ import {
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
+import {
+  TIMEZONE_OPTIONS,
+  resolveIanaTimezone,
+  formatTimezoneLabel,
+  combineDateAndTimeWithTz,
+  formatDateStringToInput,
+  formatTimeStringToInput,
+} from "@/lib/utils/dateTimeUtils";
 import type { EventFormat, TicketTierType } from "@/types/saas";
 
 interface CreateEventWizardModalProps {
@@ -95,19 +103,8 @@ function formatTimeString(dateVal: Date | string | number | null | undefined): s
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function combineDateAndTime(dateStr: string, timeStr: string): Date | null {
-  if (!dateStr) return null;
-  const time = timeStr && timeStr.trim() ? timeStr.trim() : "10:00";
-  const [yearStr, monthStr, dayStr] = dateStr.split("-");
-  const [hoursStr, minutesStr] = time.split(":");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  const hours = Number(hoursStr) || 0;
-  const minutes = Number(minutesStr) || 0;
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-  const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
-  return isNaN(d.getTime()) ? null : d;
+function combineDateAndTime(dateStr: string, timeStr: string, tzStr?: string): Date | null {
+  return combineDateAndTimeWithTz(dateStr, timeStr, tzStr || "India Standard Time (IST) - UTC+05:30");
 }
 
 function getDefaultEventSchedule() {
@@ -215,21 +212,16 @@ export function CreateEventWizardModal({
       setDescription(eventToEdit.description || "");
       setBannerUrl(eventToEdit.cover_image_url || BANNER_PRESETS[0].url);
       setThumbnailUrl(eventToEdit.logo_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80");
+      const tz = eventToEdit.timezone || "India Standard Time (IST) - UTC+05:30";
+      setTimezone(tz);
       if (eventToEdit.start_date) {
-        const s = new Date(eventToEdit.start_date);
-        if (!isNaN(s.getTime())) {
-          setStartDate(formatDateString(s));
-          setStartTime(formatTimeString(s));
-        }
+        setStartDate(formatDateStringToInput(eventToEdit.start_date, tz));
+        setStartTime(formatTimeStringToInput(eventToEdit.start_date, tz));
       }
       if (eventToEdit.end_date) {
-        const e = new Date(eventToEdit.end_date);
-        if (!isNaN(e.getTime())) {
-          setEndDate(formatDateString(e));
-          setEndTime(formatTimeString(e));
-        }
+        setEndDate(formatDateStringToInput(eventToEdit.end_date, tz));
+        setEndTime(formatTimeStringToInput(eventToEdit.end_date, tz));
       }
-      setTimezone(eventToEdit.timezone || "India Standard Time (IST) - UTC+05:30");
       setCapacity(eventToEdit.capacity || 500);
       setVenueName(eventToEdit.venue_name || "");
       setStreetAddress(eventToEdit.address || "");
@@ -448,24 +440,24 @@ export function CreateEventWizardModal({
 
   function applyDurationPreset(type: "2h" | "4h" | "fullday" | "nextday") {
     if (!startDate) return;
-    const s = combineDateAndTime(startDate, startTime || "10:00");
+    const s = combineDateAndTimeWithTz(startDate, startTime || "10:00", timezone);
     if (!s) return;
 
     if (type === "2h") {
       const e = new Date(s.getTime() + 2 * 3600000);
-      setEndDate(formatDateString(e));
-      setEndTime(formatTimeString(e));
+      setEndDate(formatDateStringToInput(e, timezone));
+      setEndTime(formatTimeStringToInput(e, timezone));
     } else if (type === "4h") {
       const e = new Date(s.getTime() + 4 * 3600000);
-      setEndDate(formatDateString(e));
-      setEndTime(formatTimeString(e));
+      setEndDate(formatDateStringToInput(e, timezone));
+      setEndTime(formatTimeStringToInput(e, timezone));
     } else if (type === "fullday") {
       setStartTime("09:00");
       setEndDate(startDate);
       setEndTime("18:00");
     } else if (type === "nextday") {
       const e = new Date(s.getTime() + 24 * 3600000);
-      setEndDate(formatDateString(e));
+      setEndDate(formatDateStringToInput(e, timezone));
       setEndTime(startTime || "10:00");
     }
     setErrorMessage(null);
@@ -500,7 +492,7 @@ export function CreateEventWizardModal({
         setErrorMessage("Event start time is required");
         return;
       }
-      const sDate = combineDateAndTime(startDate, startTime);
+      const sDate = combineDateAndTimeWithTz(startDate, startTime, timezone);
       if (!sDate) {
         setErrorMessage("Please enter a valid start date and time");
         return;
@@ -513,7 +505,7 @@ export function CreateEventWizardModal({
         setErrorMessage("Event end time is required");
         return;
       }
-      const eDate = combineDateAndTime(endDate, endTime);
+      const eDate = combineDateAndTimeWithTz(endDate, endTime, timezone);
       if (!eDate) {
         setErrorMessage("Please enter a valid end date and time");
         return;
@@ -547,8 +539,8 @@ export function CreateEventWizardModal({
       locationDeliveryType === "ONLINE" ? "ONLINE" : locationDeliveryType === "HYBRID" ? "HYBRID" : "OFFLINE";
 
     try {
-      const sDate = combineDateAndTime(startDate, startTime);
-      const eDate = combineDateAndTime(endDate, endTime);
+      const sDate = combineDateAndTimeWithTz(startDate, startTime, timezone);
+      const eDate = combineDateAndTimeWithTz(endDate, endTime, timezone);
 
       if (!sDate) {
         setErrorMessage("Please enter a valid start date and time");
@@ -1135,8 +1127,8 @@ export function CreateEventWizardModal({
 
               {/* ── 3. REAL-TIME SCHEDULE PREVIEW BANNER ────────────────────── */}
               {(() => {
-                const s = combineDateAndTime(startDate, startTime);
-                const e = combineDateAndTime(endDate, endTime);
+                const s = combineDateAndTimeWithTz(startDate, startTime, timezone);
+                const e = combineDateAndTimeWithTz(endDate, endTime, timezone);
 
                 if (!s) {
                   return (
@@ -1156,15 +1148,17 @@ export function CreateEventWizardModal({
                   );
                 }
 
-                const sDateStr = s.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-                const sTimeStr = s.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                const ianaTz = resolveIanaTimezone(timezone);
+                const tzShort = formatTimezoneLabel(timezone);
+                const sDateStr = s.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: ianaTz });
+                const sTimeStr = s.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: ianaTz });
 
                 let durationText = "";
                 let endFormatted = "";
                 if (e) {
-                  const isSameDay = s.toDateString() === e.toDateString();
-                  const eDateStr = e.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-                  const eTimeStr = e.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                  const isSameDay = s.toLocaleDateString("en-IN", { timeZone: ianaTz }) === e.toLocaleDateString("en-IN", { timeZone: ianaTz });
+                  const eDateStr = e.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: ianaTz });
+                  const eTimeStr = e.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: ianaTz });
                   endFormatted = isSameDay ? eTimeStr : `${eDateStr} at ${eTimeStr}`;
 
                   const diffMs = e.getTime() - s.getTime();
@@ -1201,7 +1195,7 @@ export function CreateEventWizardModal({
                       {endFormatted ? (
                         <> ➔ Ends: <span className="font-bold text-gray-950">{endFormatted}</span></>
                       ) : null}
-                      {" "}<span className="text-gray-500 font-normal">({timezone.split(" - ")[0]})</span>
+                      {" "}<span className="text-gray-500 font-normal">({tzShort})</span>
                     </p>
                   </div>
                 );

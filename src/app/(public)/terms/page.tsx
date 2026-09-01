@@ -20,6 +20,9 @@ export const metadata = {
   title: "Terms of Service | RotaSphere District 3192",
   description:
     "Comprehensive Terms of Service for delegates, host organizers, and gate check-in operators on the RotaSphere platform in accordance with Indian Law.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {

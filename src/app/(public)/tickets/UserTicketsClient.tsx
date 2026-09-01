@@ -141,10 +141,12 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
             day: "numeric",
             month: "short",
             year: "numeric",
+            timeZone: "Asia/Kolkata",
           })} at ${new Date(rawDate).toLocaleTimeString("en-IN", {
             hour: "numeric",
             minute: "2-digit",
             hour12: true,
+            timeZone: "Asia/Kolkata",
           })}`
         : "RY 2026–27";
 
@@ -606,6 +608,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                             day: "numeric",
                             month: "short",
                             year: "numeric",
+                            timeZone: "Asia/Kolkata",
                           })
                           : "Scheduled Date"}
                       </span>

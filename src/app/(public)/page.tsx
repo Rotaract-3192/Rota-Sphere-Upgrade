@@ -19,8 +19,44 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "RotaSphere — District 3192 Rotaract Experience",
-  description: "Discover, register, and experience flagship Rotaract events, conferences, and fellowships across District 3192.",
+  title: "RotaSphere — District 3192 Rotaract Experience & Ticketing",
+  description:
+    "Discover, register, and experience flagship Rotaract events, conferences, workshops, and youth leadership summits across 85 chartered clubs in District 3192.",
+  keywords: [
+    "Rotaract District 3192",
+    "Rotaract Bangalore",
+    "District 3192 events",
+    "youth events Bangalore",
+    "event ticketing",
+    "Rotary International Zone 5",
+    "college fests Bangalore",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "RotaSphere — District 3192 Rotaract Experience & Ticketing",
+    description:
+      "Discover, register, and experience flagship Rotaract events, conferences, and workshops across District 3192.",
+    url: "/",
+    siteName: "RotaSphere District 3192",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/brand-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "RotaSphere District 3192",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RotaSphere — District 3192 Rotaract Platform",
+    description: "Official event ticketing and club discovery platform for Rotaract District 3192.",
+    images: ["/brand-logo.png"],
+  },
 };
 
 export const revalidate = 60;
@@ -30,7 +66,7 @@ async function getPlatformStats() {
   try {
     const [clubs, events, passes] = await Promise.all([
       executeSql(`SELECT COUNT(*) as count FROM organizations WHERE status = 'ACTIVE';`),
-      executeSql(`SELECT COUNT(*) as count FROM saas_events WHERE status = 'PUBLISHED';`),
+      executeSql(`SELECT COUNT(*) as count FROM saas_events WHERE status = 'PUBLISHED' AND deleted_at IS NULL;`),
       executeSql(`SELECT COUNT(*) as count FROM saas_tickets WHERE status = 'CONFIRMED';`),
     ]);
 

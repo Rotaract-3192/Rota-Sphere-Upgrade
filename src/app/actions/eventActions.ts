@@ -895,6 +895,7 @@ export async function trashEventAction(eventId: string): Promise<{ success: bool
 
     revalidatePath("/dashboard");
     revalidatePath("/events");
+    revalidatePath("/");
     revalidatePath("/admin");
     return { success: true };
   } catch (err: any) {
@@ -928,6 +929,8 @@ export async function restoreEventAction(eventId: string): Promise<{ success: bo
 
     revalidatePath("/dashboard");
     revalidatePath("/events");
+    revalidatePath("/");
+    revalidatePath("/admin");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -959,6 +962,8 @@ export async function permanentDeleteEventAction(eventId: string): Promise<{ suc
 
     revalidatePath("/dashboard");
     revalidatePath("/events");
+    revalidatePath("/");
+    revalidatePath("/admin");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };

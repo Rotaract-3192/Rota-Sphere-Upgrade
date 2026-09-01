@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       ) as saas_ticket_tiers
     FROM saas_events e
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-    WHERE (e.deleted_at IS NULL OR e.status != 'TRASHED') ${organizerCondition}
+    WHERE 1=1 ${organizerCondition}
     GROUP BY e.id
     ORDER BY e.created_at DESC;
   `);

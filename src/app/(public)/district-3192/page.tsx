@@ -2,8 +2,21 @@ import Link from "next/link";
 import { Globe, Users, Trophy, Sparkles, MapPin, ArrowRight } from "lucide-react";
 
 export const metadata = {
-  title: "Rotaract District 3192 Portal",
-  description: "Official portal for Rotary International District 3192 member clubs and district leadership.",
+  title: "Rotaract District 3192 Secretariat & Leadership | RotaSphere",
+  description:
+    "Official portal for Rotary International District 3192 member clubs, district council leadership, and youth initiatives across Karnataka.",
+  alternates: {
+    canonical: "/district",
+  },
+  openGraph: {
+    title: "Rotaract District 3192 Secretariat",
+    description: "Official portal for Rotary International District 3192 member clubs and leadership.",
+    url: "/district",
+    siteName: "RotaSphere District 3192",
+    locale: "en_IN",
+    type: "website",
+    images: ["/brand-logo.png"],
+  },
 };
 
 export default function District3192Page() {

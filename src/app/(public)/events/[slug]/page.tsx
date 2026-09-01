@@ -18,6 +18,14 @@ import {
   Globe,
   Mail,
 } from "lucide-react";
+import type { Metadata } from "next";
+import {
+  resolveIanaTimezone,
+  formatTimezoneLabel,
+  formatEventDateDisplay,
+  formatEventTimeDisplay,
+} from "@/lib/utils/dateTimeUtils";
+import { EventJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { EventBookingClient } from "./EventBookingClient";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
@@ -25,16 +33,83 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { data } = await executeSql(`SELECT title, summary, description FROM saas_events WHERE slug = '${slug}' LIMIT 1;`);
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
+  const { data } = await executeSql(`
+    SELECT e.title, e.summary, e.description, e.cover_image_url, e.logo_url, e.city, e.category, e.event_type, e.start_date, o.name as org_name
+    FROM saas_events e
+    LEFT JOIN organizations o ON e.organization_id = o.id
+    WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+    LIMIT 1;
+  `);
   const event = data?.[0];
 
-  if (!event) return { title: "Event Not Found | RotaSphere" };
+  if (!event) {
+    return {
+      title: "Event Not Found | RotaSphere",
+      description: "The requested Rotaract District 3192 event could not be found.",
+    };
+  }
+
+  const hostingClub = event.org_name || "Rotaract District 3192";
+  const eventTitle = `${event.title} | ${hostingClub}`;
+  const eventDescription =
+    event.summary ||
+    event.description?.slice(0, 160) ||
+    `Official event pass and registration for ${event.title} hosted by ${hostingClub} in District 3192.`;
+  const eventImage = event.cover_image_url || `${baseUrl}/brand-logo.png`;
+  const eventUrl = `${baseUrl}/events/${slug}`;
 
   return {
-    title: `${event.title} | RotaSphere SaaS Ticketing`,
-    description: event.summary || event.description?.slice(0, 160),
+    title: eventTitle,
+    description: eventDescription,
+    keywords: [
+      event.title,
+      event.city || "Bengaluru",
+      event.category || "Conference",
+      hostingClub,
+      "Rotaract District 3192",
+      "Rotaract events",
+      "event tickets",
+      "delegate passes",
+    ],
+    alternates: {
+      canonical: eventUrl,
+    },
+    openGraph: {
+      title: eventTitle,
+      description: eventDescription,
+      url: eventUrl,
+      siteName: "RotaSphere District 3192",
+      locale: "en_IN",
+      type: "website",
+      images: [
+        {
+          url: eventImage,
+          width: 1200,
+          height: 630,
+          alt: event.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: eventTitle,
+      description: eventDescription,
+      images: [eventImage],
+      creator: "@rotaract3192",
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
   };
 }
 
@@ -47,7 +122,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     SELECT e.*, o.name as org_name, o.logo_url as org_logo
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
-    WHERE e.slug = '${slug}'
+    WHERE e.slug = '${slug}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
     LIMIT 1;
   `);
 
@@ -88,40 +163,67 @@ export default async function EventDetailPage({ params }: PageProps) {
   `);
   const sponsors = sponsorRows || [];
 
+  const ianaTz = resolveIanaTimezone(event.timezone);
+  const tzLabel = formatTimezoneLabel(event.timezone);
+
   const startDateObj = new Date(event.start_date);
   const endDateObj = event.end_date ? new Date(event.end_date) : null;
-  const isSameDay = endDateObj ? startDateObj.toDateString() === endDateObj.toDateString() : true;
 
   const formattedDate = startDateObj.toLocaleDateString("en-IN", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: ianaTz,
   });
+
+  const isSameDay = endDateObj
+    ? startDateObj.toLocaleDateString("en-IN", { timeZone: ianaTz }) === endDateObj.toLocaleDateString("en-IN", { timeZone: ianaTz })
+    : true;
+
   const formattedEndDate = endDateObj && !isSameDay
     ? endDateObj.toLocaleDateString("en-IN", {
         weekday: "short",
         year: "numeric",
         month: "short",
         day: "numeric",
+        timeZone: ianaTz,
       })
     : null;
 
   const formattedTime = startDateObj.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
+    timeZone: ianaTz,
   });
   const formattedEndTime = endDateObj
     ? endDateObj.toLocaleTimeString("en-IN", {
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
+        timeZone: ianaTz,
       })
     : null;
 
-  const tzLabel = event.timezone ? event.timezone.split(" - ")[0].replace("India Standard Time", "IST").replace("Eastern Standard Time", "EST").replace("Universal Coordinated Time", "UTC").replace("Pacific Standard Time", "PST").replace("Central European Time", "CET") : "IST";
+  const hostingClub = (event as any).org_name || (event as any).organization_name || "Rotaract District 3192";
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
+    <>
+      <EventJsonLd
+        event={event as any}
+        tiers={tiers}
+        speakers={speakers as any}
+        orgName={hostingClub}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Events", url: "/events" },
+          { name: event.title, url: `/events/${event.slug}` },
+        ]}
+      />
+      <main className="min-h-screen bg-gray-50 pb-24">
       {/* ── 1. HERO COVER & EVENT BANNER ───────────────────────────────── */}
       <div className="relative w-full h-[380px] sm:h-[480px] bg-gray-900 overflow-hidden">
         {event.cover_image_url ? (
@@ -221,8 +323,8 @@ export default async function EventDetailPage({ params }: PageProps) {
                   {schedules.map((sch: any) => (
                     <div key={sch.id} className="py-4 flex gap-4 items-start">
                       <div className="bg-gray-100 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-gray-800 text-center min-w-[85px]">
-                        {new Date(sch.start_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                        {sch.end_time ? ` – ${new Date(sch.end_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                        {new Date(sch.start_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: ianaTz })}
+                        {sch.end_time ? ` – ${new Date(sch.end_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: ianaTz })}` : ""}
                       </div>
                       <div className="space-y-1">
                         <h3 className="text-base font-bold text-gray-900">{sch.title}</h3>
@@ -404,5 +506,6 @@ export default async function EventDetailPage({ params }: PageProps) {
         </div>
       </div>
     </main>
+    </>
   );
 }

@@ -22,9 +22,12 @@ import {
 import { LastUpdatedBadge } from "@/components/ui/LastUpdatedBadge";
 
 export const metadata = {
-  title: "Privacy Policy | RotaSphere District 3192",
+  title: "Privacy Policy | DPDP Compliance | RotaSphere District 3192",
   description:
     "Comprehensive Privacy Policy & Notice under India's Digital Personal Data Protection Act, 2023 (DPDP Act) and DPDP Rules 2025 for RotaSphere ticketing platform.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPolicyPage() {

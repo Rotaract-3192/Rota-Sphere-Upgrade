@@ -18,6 +18,9 @@ export const metadata = {
   title: "Refund Policy & Settlement Terms | RotaSphere District 3192",
   description:
     "Comprehensive Refund Policy, banking timelines, automatic refund triggers, failed payment reconciliations, and dispute guidance on RotaSphere.",
+  alternates: {
+    canonical: "/refund-policy",
+  },
 };
 
 export default function RefundPolicyPage() {

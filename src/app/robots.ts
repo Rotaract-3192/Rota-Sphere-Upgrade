@@ -7,15 +7,31 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
+        allow: ["/", "/events", "/events/*", "/clubs", "/gallery", "/about", "/contact", "/district", "/help", "/tickets"],
+        disallow: [
+          "/admin",
+          "/admin/*",
+          "/dashboard",
+          "/dashboard/*",
+          "/api/*",
+          "/check-in/*",
+          "/checkout/*",
+          "/sign-in/*",
+          "/sign-up/*",
+        ],
+      },
+      {
+        userAgent: "Googlebot",
         allow: "/",
         disallow: ["/admin/", "/dashboard/", "/api/"],
       },
       {
-        userAgent: ["ChatGPT-User", "GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended"],
+        userAgent: ["ChatGPT-User", "GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended", "Applebot"],
         allow: ["/", "/events/", "/clubs/", "/gallery/", "/about", "/district"],
         disallow: ["/admin/", "/dashboard/", "/api/"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl,
   };
 }
