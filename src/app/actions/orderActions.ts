@@ -198,7 +198,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const tierIds = Array.from(new Set(input.attendees.map((a) => a.ticketTierId)));
     const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience
+      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end
       FROM saas_ticket_tiers
       WHERE id IN (${formattedTierIds});
     `);
@@ -233,12 +233,34 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       countPerTier[att.ticketTierId] = (countPerTier[att.ticketTierId] || 0) + 1;
     }
 
+    const now = new Date();
     let subtotal = 0;
     for (const [tId, requestedCount] of Object.entries(countPerTier)) {
       const tier = tierMap.get(tId);
       if (!tier || !tier.is_active) {
         return { success: false, error: "One or more selected ticket tiers are no longer active" };
       }
+
+      // Scheduled Time Slab Release Window Check
+      if (tier.sales_start) {
+        const startDt = new Date(tier.sales_start);
+        if (now < startDt) {
+          return {
+            success: false,
+            error: `Sales for "${tier.name}" have not started yet. Opens on ${startDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`,
+          };
+        }
+      }
+      if (tier.sales_end) {
+        const endDt = new Date(tier.sales_end);
+        if (now > endDt) {
+          return {
+            success: false,
+            error: `The sales window for "${tier.name}" closed on ${endDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`,
+          };
+        }
+      }
+
       // Capacity check to prevent overselling
       const sold = Number(tier.sold_count) || 0;
       const capacity = Number(tier.total_capacity) || 0;

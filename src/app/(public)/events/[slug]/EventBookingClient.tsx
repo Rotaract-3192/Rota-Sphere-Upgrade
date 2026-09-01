@@ -21,20 +21,104 @@ interface EventBookingClientProps {
   userName?: string;
 }
 
+interface TierStatusInfo {
+  state: "UPCOMING" | "LIVE" | "CLOSED" | "SOLD_OUT";
+  badgeText: string;
+  badgeClass: string;
+  detailText: string;
+  canBook: boolean;
+}
+
+function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
+  const remaining = Number(tier.total_capacity) - Number(tier.sold_count);
+  if (remaining <= 0) {
+    return {
+      state: "SOLD_OUT",
+      badgeText: "Sold Out",
+      badgeClass: "bg-gray-100 text-gray-500 border-gray-200",
+      detailText: "All seats allocated",
+      canBook: false,
+    };
+  }
+
+  const now = new Date();
+  if (tier.sales_start) {
+    const start = new Date(tier.sales_start);
+    if (now < start) {
+      const diffMs = start.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffHrs / 24);
+      const countdownStr =
+        diffDays > 0 ? `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}` : `Opens in ${Math.max(1, diffHrs)}h`;
+      return {
+        state: "UPCOMING",
+        badgeText: `⏳ ${countdownStr}`,
+        badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+        detailText: `Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
+        canBook: false,
+      };
+    }
+  }
+
+  if (tier.sales_end) {
+    const end = new Date(tier.sales_end);
+    if (now > end) {
+      return {
+        state: "CLOSED",
+        badgeText: "Window Closed",
+        badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+        detailText: `Closed on ${end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+        canBook: false,
+      };
+    } else {
+      const diffMs = end.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffHrs / 24);
+      const remainingTime = diffDays > 0 ? `${diffDays}d left` : `${Math.max(1, diffHrs)}h left`;
+      return {
+        state: "LIVE",
+        badgeText: `🔥 Live (${remainingTime})`,
+        badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+        detailText: `${remaining} seats available`,
+        canBook: true,
+      };
+    }
+  }
+
+  return {
+    state: "LIVE",
+    badgeText: "Available",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    detailText: `${remaining} seats left`,
+    canBook: true,
+  };
+}
+
 export function EventBookingClient({ event, tiers, userEmail, userName }: EventBookingClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name));
-  const generalTiers = tiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
+  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = tiers.filter(
+    (t) =>
+      (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
+      !/early/i.test(t.name) &&
+      t.tier_type !== "EARLY_BIRD"
+  );
   const otherTiers = tiers.filter(
-    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
+    (t) =>
+      !/early/i.test(t.name) &&
+      t.tier_type !== "EARLY_BIRD" &&
+      !/(general|normal|standard|regular)/i.test(t.name) &&
+      t.tier_type !== "REGULAR"
   );
 
   const isEarlyBirdAvailable =
     earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => (t.total_capacity - t.sold_count) > 0);
+    earlyBirdTiers.some((t) => getTierScheduleStatus(t).canBook);
+
+  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t).canBook);
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
@@ -83,15 +167,21 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
               {!isFree && <span className="text-xs font-normal text-gray-500"> / pass onwards</span>}
             </div>
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full">
-            ● Live Booking
+          <span
+            className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
+              hasAnyBookableTier
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-amber-50 text-amber-700 border-amber-200"
+            }`}
+          >
+            {hasAnyBookableTier ? "● Live Booking" : "⏳ Releases Soon"}
           </span>
         </div>
 
         {/* Tiers Preview */}
         <div className="space-y-3">
-          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Available Passes</span>
-          <div className="space-y-2">
+          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Available Passes &amp; Release Slabs</span>
+          <div className="space-y-2.5">
             {tiers.length === 0 ? (
               <p className="text-xs text-gray-500 italic">No tickets announced yet.</p>
             ) : (
@@ -99,20 +189,28 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                 {/* 1. Early Bird Tiers */}
                 {earlyBirdTiers.length > 0 && (
                   <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-block">
-                      🔥 Early Bird Release
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full inline-block">
+                        🔥 Early Bird Release Slab
+                      </span>
+                    </div>
                     {earlyBirdTiers.map((tier) => {
-                      const remaining = tier.total_capacity - tier.sold_count;
-                      const isSoldOut = remaining <= 0;
+                      const status = getTierScheduleStatus(tier);
                       return (
                         <div
                           key={tier.id}
-                          className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between"
+                          className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                            status.canBook
+                              ? "bg-amber-50/30 border-amber-200"
+                              : "bg-gray-50 border-gray-200 opacity-80"
+                          }`}
                         >
-                          <div>
+                          <div className="space-y-0.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${status.badgeClass}`}>
+                                {status.badgeText}
+                              </span>
                               {tier.allowed_audience === "ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
                               )}
@@ -120,7 +218,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500">{isSoldOut ? "Sold Out" : `${remaining} seats left`}</p>
+                            <p className="text-[11px] text-gray-500">{status.detailText}</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
@@ -140,7 +238,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                       className="w-full px-3.5 py-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 transition-colors"
                     >
                       <span className="text-xs font-bold text-gray-900">
-                        General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
+                        General Release Passes {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active Now)"}
                       </span>
                       <span className="text-xs font-extrabold text-[#0758fc] flex items-center gap-1">
                         {showGeneralDropdown ? (
@@ -154,7 +252,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                     {showGeneralDropdown && (
                       <div className="p-2 border-t border-gray-200 space-y-2 bg-white">
                         {generalTiers.map((tier) => {
-                          const remaining = tier.total_capacity - tier.sold_count;
+                          const status = getTierScheduleStatus(tier);
                           return (
                             <div
                               key={tier.id}
@@ -163,6 +261,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                               <div>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <p className="text-xs font-bold text-gray-900">{tier.name}</p>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md border ${status.badgeClass}`}>
+                                    {status.badgeText}
+                                  </span>
                                   {tier.allowed_audience === "ROTARACT_ONLY" && (
                                     <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
                                   )}
@@ -170,7 +271,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                     <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                                   )}
                                 </div>
-                                <p className="text-[10px] text-gray-500">{remaining} seats left</p>
+                                <p className="text-[10px] text-gray-500">{status.detailText}</p>
                               </div>
                               <span className="text-xs font-extrabold text-[#0758fc]">
                                 {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
@@ -187,7 +288,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                 {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
                   <div className="space-y-2">
                     {generalTiers.map((tier) => {
-                      const remaining = tier.total_capacity - tier.sold_count;
+                      const status = getTierScheduleStatus(tier);
                       return (
                         <div
                           key={tier.id}
@@ -196,6 +297,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${status.badgeClass}`}>
+                                {status.badgeText}
+                              </span>
                               {tier.allowed_audience === "ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
                               )}
@@ -203,7 +307,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500">{remaining} seats left</p>
+                            <p className="text-[11px] text-gray-500">{status.detailText}</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}
@@ -219,11 +323,11 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                   <div className="space-y-2 pt-1">
                     {earlyBirdTiers.length > 0 && (
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full inline-block">
-                        ⭐ Special &amp; VIP Passes
+                        ✨ Premium &amp; Special Passes
                       </span>
                     )}
                     {otherTiers.map((tier) => {
-                      const remaining = tier.total_capacity - tier.sold_count;
+                      const status = getTierScheduleStatus(tier);
                       return (
                         <div
                           key={tier.id}
@@ -232,6 +336,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${status.badgeClass}`}>
+                                {status.badgeText}
+                              </span>
                               {tier.allowed_audience === "ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-md">Rotaract Only</span>
                               )}
@@ -239,7 +346,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500">{remaining} seats left</p>
+                            <p className="text-[11px] text-gray-500">{status.detailText}</p>
                           </div>
                           <span className="text-sm font-extrabold text-[#0758fc]">
                             {Number(tier.price) === 0 ? "FREE" : `₹${tier.price}`}

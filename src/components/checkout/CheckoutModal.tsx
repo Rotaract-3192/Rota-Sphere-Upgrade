@@ -60,6 +60,81 @@ interface CheckoutModalProps {
   userName?: string;
 }
 
+interface TierStatusInfo {
+  state: "UPCOMING" | "LIVE" | "CLOSED" | "SOLD_OUT";
+  badgeText: string;
+  badgeClass: string;
+  detailText: string;
+  canBook: boolean;
+}
+
+function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
+  const cap = Number(tier.total_capacity) || 9999;
+  const sold = Number(tier.sold_count) || 0;
+  const remaining = cap - sold;
+  if (remaining <= 0) {
+    return {
+      state: "SOLD_OUT",
+      badgeText: "Sold Out",
+      badgeClass: "bg-gray-100 dark:bg-gray-700 text-gray-500",
+      detailText: "All seats allocated",
+      canBook: false,
+    };
+  }
+
+  const now = new Date();
+  if (tier.sales_start) {
+    const start = new Date(tier.sales_start);
+    if (now < start) {
+      const diffMs = start.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffHrs / 24);
+      const countdownStr =
+        diffDays > 0 ? `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}` : `Opens in ${Math.max(1, diffHrs)}h`;
+      return {
+        state: "UPCOMING",
+        badgeText: `⏳ ${countdownStr}`,
+        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
+        detailText: `Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
+        canBook: false,
+      };
+    }
+  }
+
+  if (tier.sales_end) {
+    const end = new Date(tier.sales_end);
+    if (now > end) {
+      return {
+        state: "CLOSED",
+        badgeText: "Closed",
+        badgeClass: "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800",
+        detailText: `Closed on ${end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+        canBook: false,
+      };
+    } else {
+      const diffMs = end.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffHrs / 24);
+      const remainingTime = diffDays > 0 ? `${diffDays}d left` : `${Math.max(1, diffHrs)}h left`;
+      return {
+        state: "LIVE",
+        badgeText: `🔥 Ends in ${remainingTime}`,
+        badgeClass: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
+        detailText: `${remaining} seats left`,
+        canBook: true,
+      };
+    }
+  }
+
+  return {
+    state: "LIVE",
+    badgeText: "Available",
+    badgeClass: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
+    detailText: `${remaining} seats left`,
+    canBook: true,
+  };
+}
+
 export function CheckoutModal({
   event,
   tiers,
@@ -72,7 +147,10 @@ export function CheckoutModal({
 
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
-    if (tiers.length > 0) {
+    const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
+    if (firstBookable) {
+      initial[firstBookable.id] = 1;
+    } else if (tiers.length > 0) {
       initial[tiers[0].id] = 1;
     }
     return initial;
@@ -91,19 +169,24 @@ export function CheckoutModal({
   }, []);
 
   // Tier Staggering & Categorization (Early Bird -> General Release Dropdown -> VIP)
-  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name));
-  const generalTiers = tiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
+  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = tiers.filter(
+    (t) =>
+      (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
+      !/early/i.test(t.name) &&
+      t.tier_type !== "EARLY_BIRD"
+  );
   const otherTiers = tiers.filter(
-    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
+    (t) =>
+      !/early/i.test(t.name) &&
+      t.tier_type !== "EARLY_BIRD" &&
+      !/(general|normal|standard|regular)/i.test(t.name) &&
+      t.tier_type !== "REGULAR"
   );
 
   const isEarlyBirdAvailable =
     earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => {
-      const cap = t.total_capacity ?? 9999;
-      const sold = t.sold_count ?? 0;
-      return cap - sold > 0;
-    });
+    earlyBirdTiers.some((t) => getTierScheduleStatus(t).canBook);
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
@@ -676,7 +759,7 @@ export function CheckoutModal({
             {/* Tiers List */}
             <div className="space-y-3">
               <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
-                Select Entry Passes
+                Select Entry Passes &amp; Time Slabs
               </span>
               <div className="space-y-3">
                 {/* 1. Early Bird Tiers */}
@@ -688,15 +771,14 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {earlyBirdTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
-                        const remaining = (tier.total_capacity ?? 9999) - (tier.sold_count ?? 0);
-                        const isSoldOut = remaining <= 0;
+                        const status = getTierScheduleStatus(tier);
                         return (
                           <div
                             key={tier.id}
                             className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
                               count > 0
                                 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs"
-                                : isSoldOut
+                                : !status.canBook
                                 ? "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 opacity-75"
                                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                             }`}
@@ -704,16 +786,11 @@ export function CheckoutModal({
                             <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                  {tier.tier_type || "Pass"}
+                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+                                  {status.badgeText}
                                 </span>
-                                {isSoldOut && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-                                    Sold Out
-                                  </span>
-                                )}
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                               <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
@@ -723,7 +800,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, -1)}
-                                disabled={count === 0 || isSoldOut}
+                                disabled={count === 0}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 -
@@ -732,7 +809,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={isSoldOut}
+                                disabled={!status.canBook}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +
@@ -778,6 +855,7 @@ export function CheckoutModal({
                       <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-white dark:bg-gray-900">
                         {generalTiers.map((tier) => {
                           const count = selectedCounts[tier.id] || 0;
+                          const status = getTierScheduleStatus(tier);
                           return (
                             <div
                               key={tier.id}
@@ -786,13 +864,13 @@ export function CheckoutModal({
                               }`}
                             >
                               <div className="space-y-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                    {tier.tier_type || "Pass"}
+                                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+                                    {status.badgeText}
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                                 <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                   {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                                 </p>
@@ -811,7 +889,8 @@ export function CheckoutModal({
                                 <button
                                   type="button"
                                   onClick={() => handleCountChange(tier.id, 1)}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  disabled={!status.canBook}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   +
                                 </button>
@@ -829,6 +908,7 @@ export function CheckoutModal({
                   <div className="space-y-2">
                     {generalTiers.map((tier) => {
                       const count = selectedCounts[tier.id] || 0;
+                      const status = getTierScheduleStatus(tier);
                       return (
                         <div
                           key={tier.id}
@@ -837,13 +917,13 @@ export function CheckoutModal({
                           }`}
                         >
                           <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                {tier.tier_type || "Pass"}
+                              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+                                {status.badgeText}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                             <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                               {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                             </p>
@@ -862,7 +942,8 @@ export function CheckoutModal({
                             <button
                               type="button"
                               onClick={() => handleCountChange(tier.id, 1)}
-                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                              disabled={!status.canBook}
+                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               +
                             </button>
@@ -884,6 +965,7 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {otherTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
+                        const status = getTierScheduleStatus(tier);
                         return (
                           <div
                             key={tier.id}
@@ -892,13 +974,13 @@ export function CheckoutModal({
                             }`}
                           >
                             <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                  {tier.tier_type || "Pass"}
+                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+                                  {status.badgeText}
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{tier.description || "Full delegate entry"}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                               <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
                                 {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
                               </p>
@@ -917,7 +999,8 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                disabled={!status.canBook}
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +
                               </button>

@@ -257,6 +257,12 @@ export function EventMapExplorer({
 
     return () => {
       isMounted = false;
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {}
+        mapInstanceRef.current = null;
+      }
     };
   }, [filteredEvents, selectedEventId, activeCityFilter, isDark]);
 

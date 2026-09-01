@@ -177,9 +177,27 @@ export function CreateEventWizardModal({
       description?: string;
       allowNonRotaract?: boolean;
       allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
+      hasCustomSchedule?: boolean;
+      salesStartDate?: string;
+      salesStartTime?: string;
+      salesEndDate?: string;
+      salesEndTime?: string;
     }>
   >([
-    { name: "", tierType: "REGULAR", price: 0, totalCapacity: 100, description: "", allowNonRotaract: true, allowedAudience: "ALL" },
+    {
+      name: "",
+      tierType: "REGULAR",
+      price: 0,
+      totalCapacity: 100,
+      description: "",
+      allowNonRotaract: true,
+      allowedAudience: "ALL",
+      hasCustomSchedule: false,
+      salesStartDate: "",
+      salesStartTime: "09:00",
+      salesEndDate: "",
+      salesEndTime: "23:59",
+    },
   ]);
 
   // Step 4: Venue Details & Google Maps Auto-Fill
@@ -222,31 +240,37 @@ export function CreateEventWizardModal({
         setEndDate(formatDateStringToInput(eventToEdit.end_date, tz));
         setEndTime(formatTimeStringToInput(eventToEdit.end_date, tz));
       }
-      setCapacity(eventToEdit.capacity || 500);
-      setVenueName(eventToEdit.venue_name || "");
-      setStreetAddress(eventToEdit.address || "");
-      setCity(eventToEdit.city || "");
-      setStateRegion(eventToEdit.state || "");
-      setCountry(eventToEdit.country || "");
-      setOnlineMeetingUrl(eventToEdit.online_meeting_url || "");
-      if (eventToEdit.google_maps_url) setMapsUrl(eventToEdit.google_maps_url);
-      setContactEmail(eventToEdit.contact_email || "");
-      setContactPhone(eventToEdit.contact_phone || "");
-      setVisibility(eventToEdit.visibility || "PUBLIC");
+      if (eventToEdit.capacity) setCapacity(eventToEdit.capacity);
+      if (eventToEdit.venue_name) setVenueName(eventToEdit.venue_name);
+      if (eventToEdit.city) setCity(eventToEdit.city);
+      if (eventToEdit.state) setStateRegion(eventToEdit.state);
+      if (eventToEdit.country) setCountry(eventToEdit.country);
+      if (eventToEdit.address) setStreetAddress(eventToEdit.address);
+      if (eventToEdit.online_meeting_url) setOnlineMeetingUrl(eventToEdit.online_meeting_url);
       if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
       if (eventToEdit.upi_payee_name) setUpiPayeeName(eventToEdit.upi_payee_name);
-      if (eventToEdit.category_id || eventToEdit.category) setCategory(eventToEdit.category || eventToEdit.category_id);
-      if (eventToEdit.saas_ticket_tiers && Array.isArray(eventToEdit.saas_ticket_tiers) && eventToEdit.saas_ticket_tiers.length > 0) {
+      if (eventToEdit.category) setCategory(eventToEdit.category);
+      if (eventToEdit.google_maps_url) setMapsUrl(eventToEdit.google_maps_url);
+
+      if (eventToEdit.saas_ticket_tiers && eventToEdit.saas_ticket_tiers.length > 0) {
         setTicketTiers(
-          eventToEdit.saas_ticket_tiers.map((t: any) => ({
-            name: t.name,
-            tierType: t.tier_type || "REGULAR",
-            price: Number(t.price) || 0,
-            totalCapacity: t.total_capacity || 100,
-            description: t.description || "",
-            allowNonRotaract: t.allow_non_rotaract !== false,
-            allowedAudience: t.allowed_audience || (t.allow_non_rotaract !== false ? "ALL" : "ROTARACT_ONLY"),
-          }))
+          eventToEdit.saas_ticket_tiers.map((t: any) => {
+            const hasCustom = Boolean(t.sales_start || t.sales_end);
+            return {
+              name: t.name,
+              tierType: t.tier_type || "REGULAR",
+              price: Number(t.price) || 0,
+              totalCapacity: t.total_capacity || 100,
+              description: t.description || "",
+              allowNonRotaract: t.allow_non_rotaract !== false,
+              allowedAudience: t.allowed_audience || (t.allow_non_rotaract !== false ? "ALL" : "ROTARACT_ONLY"),
+              hasCustomSchedule: hasCustom,
+              salesStartDate: t.sales_start ? formatDateStringToInput(t.sales_start, tz) : "",
+              salesStartTime: t.sales_start ? formatTimeStringToInput(t.sales_start, tz) : "09:00",
+              salesEndDate: t.sales_end ? formatDateStringToInput(t.sales_end, tz) : "",
+              salesEndTime: t.sales_end ? formatTimeStringToInput(t.sales_end, tz) : "23:59",
+            };
+          })
         );
       }
       if (eventToEdit.org_name || eventToEdit.organization_name || eventToEdit.organizations?.name) {
@@ -346,10 +370,50 @@ export function CreateEventWizardModal({
         prev.map((t) => ({ ...t, price: 0 }))
       );
     } else {
+      const todayStr = new Date().toISOString().split("T")[0];
       setTicketTiers([
-        { name: "Early Bird Pass", tierType: "EARLY_BIRD", price: 199, totalCapacity: 100, description: "Discounted early access pass", allowNonRotaract: true, allowedAudience: "ALL" },
-        { name: "General Release Pass", tierType: "REGULAR", price: 499, totalCapacity: 350, description: "Full delegate access", allowNonRotaract: true, allowedAudience: "ALL" },
-        { name: "VIP Delegate Pass", tierType: "VIP", price: 999, totalCapacity: 50, description: "VIP seating + merchandise kit", allowNonRotaract: true, allowedAudience: "ALL" },
+        {
+          name: "Early Bird Pass",
+          tierType: "EARLY_BIRD",
+          price: 199,
+          totalCapacity: 100,
+          description: "Discounted early access pass",
+          allowNonRotaract: true,
+          allowedAudience: "ALL",
+          hasCustomSchedule: true,
+          salesStartDate: todayStr,
+          salesStartTime: "09:00",
+          salesEndDate: startDate || "",
+          salesEndTime: "23:59",
+        },
+        {
+          name: "General Release Pass",
+          tierType: "REGULAR",
+          price: 499,
+          totalCapacity: 350,
+          description: "Full delegate access",
+          allowNonRotaract: true,
+          allowedAudience: "ALL",
+          hasCustomSchedule: false,
+          salesStartDate: "",
+          salesStartTime: "09:00",
+          salesEndDate: "",
+          salesEndTime: "23:59",
+        },
+        {
+          name: "VIP Delegate Pass",
+          tierType: "VIP",
+          price: 999,
+          totalCapacity: 50,
+          description: "VIP seating + merchandise kit",
+          allowNonRotaract: true,
+          allowedAudience: "ALL",
+          hasCustomSchedule: false,
+          salesStartDate: "",
+          salesStartTime: "09:00",
+          salesEndDate: "",
+          salesEndTime: "23:59",
+        },
       ]);
     }
   }
@@ -366,6 +430,11 @@ export function CreateEventWizardModal({
         description: "",
         allowNonRotaract: true,
         allowedAudience: "ALL",
+        hasCustomSchedule: false,
+        salesStartDate: "",
+        salesStartTime: "09:00",
+        salesEndDate: "",
+        salesEndTime: "23:59",
       },
     ]);
   }
@@ -376,12 +445,14 @@ export function CreateEventWizardModal({
     price: number,
     totalCapacity: number,
     description: string,
-    allowedAudience: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY" = "ALL"
+    allowedAudience: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY" = "ALL",
+    hasCustomSchedule: boolean = tierType === "EARLY_BIRD"
   ) {
     if (price > 0 && priceModel === "FREE") {
       setPriceModel("PAID");
     }
     const tierAllowsNonRotaract = allowedAudience !== "ROTARACT_ONLY";
+    const todayStr = new Date().toISOString().split("T")[0];
     setTicketTiers([
       ...ticketTiers,
       {
@@ -392,6 +463,11 @@ export function CreateEventWizardModal({
         description,
         allowNonRotaract: tierAllowsNonRotaract,
         allowedAudience,
+        hasCustomSchedule,
+        salesStartDate: hasCustomSchedule ? todayStr : "",
+        salesStartTime: "09:00",
+        salesEndDate: hasCustomSchedule ? startDate || "" : "",
+        salesEndTime: "23:59",
       },
     ]);
   }
@@ -399,6 +475,24 @@ export function CreateEventWizardModal({
   function updateTierField(index: number, field: string, value: any) {
     if (field === "price" && Number(value) > 0 && priceModel === "FREE") {
       setPriceModel("PAID");
+    }
+    if (field === "tierType" && value === "EARLY_BIRD") {
+      setTicketTiers((prev) =>
+        prev.map((tier, i) =>
+          i === index
+            ? {
+                ...tier,
+                tierType: "EARLY_BIRD",
+                hasCustomSchedule: true,
+                salesStartDate: tier.salesStartDate || new Date().toISOString().split("T")[0],
+                salesStartTime: tier.salesStartTime || "09:00",
+                salesEndDate: tier.salesEndDate || startDate || "",
+                salesEndTime: tier.salesEndTime || "23:59",
+              }
+            : tier
+        )
+      );
+      return;
     }
     setTicketTiers((prev) =>
       prev.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier))
@@ -561,6 +655,34 @@ export function CreateEventWizardModal({
             )
           : true;
 
+      const formattedTicketTiers = ticketTiers.map((t) => {
+        let salesStartISO: string | undefined = undefined;
+        let salesEndISO: string | undefined = undefined;
+
+        if (t.hasCustomSchedule) {
+          if (t.salesStartDate && t.salesStartTime) {
+            const dt = combineDateAndTimeWithTz(t.salesStartDate, t.salesStartTime, timezone);
+            if (dt) salesStartISO = dt.toISOString();
+          }
+          if (t.salesEndDate && t.salesEndTime) {
+            const dt = combineDateAndTimeWithTz(t.salesEndDate, t.salesEndTime, timezone);
+            if (dt) salesEndISO = dt.toISOString();
+          }
+        }
+
+        return {
+          name: t.name.trim(),
+          description: t.description?.trim(),
+          tierType: t.tierType,
+          price: priceModel === "FREE" ? 0 : Number(t.price) || 0,
+          totalCapacity: Number(t.totalCapacity) || 100,
+          allowNonRotaract: t.allowNonRotaract !== false,
+          allowedAudience: t.allowedAudience || "ALL",
+          salesStart: salesStartISO,
+          salesEnd: salesEndISO,
+        };
+      });
+
       const payload: CreateEventInput = {
         organizationId: defaultOrganizationId,
         hostingClub: hostingClub.trim() || undefined,
@@ -594,7 +716,7 @@ export function CreateEventWizardModal({
         upiPayeeName: upiPayeeName.trim(),
         category,
         tags: finalTags,
-        ticketTiers,
+        ticketTiers: formattedTicketTiers,
       };
 
       if (eventToEdit?.id) {
@@ -1448,6 +1570,180 @@ export function CreateEventWizardModal({
                           placeholder="Perks description (e.g. Includes delegate badge, lunch kit & certificate)"
                           className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc]"
                         />
+                      </div>
+
+                      {/* ⏱️ SCHEDULED TIME-SLAB / TIMED RELEASE CONTROLS */}
+                      <div className="pt-2 border-t border-gray-100 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800 select-none">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(tier.hasCustomSchedule)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                updateTierField(idx, "hasCustomSchedule", checked);
+                                if (checked && !tier.salesStartDate) {
+                                  updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
+                                  updateTierField(idx, "salesStartTime", "09:00");
+                                  updateTierField(idx, "salesEndDate", startDate || "");
+                                  updateTierField(idx, "salesEndTime", "23:59");
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-[#0758fc] focus:ring-[#0758fc] cursor-pointer"
+                            />
+                            <span className="flex items-center gap-1.5">
+                              <Clock size={13} className="text-[#0758fc]" />
+                              <span>Schedule Release Time-Slab {tier.tierType === "EARLY_BIRD" ? "(Early Bird Window)" : "(Timed Release)"}</span>
+                            </span>
+                          </label>
+
+                          {tier.hasCustomSchedule && (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+                              ⏱️ Timed Release Active
+                            </span>
+                          )}
+                        </div>
+
+                        {tier.hasCustomSchedule && (
+                          <div className="p-3.5 bg-blue-50/50 dark:bg-gray-800/60 border border-blue-100 dark:border-gray-700 rounded-2xl space-y-3 animate-in fade-in-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* Open Sales At */}
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold uppercase text-gray-600 dark:text-gray-400">
+                                  Release / Sales Opens On
+                                </label>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <input
+                                    type="date"
+                                    value={tier.salesStartDate || ""}
+                                    onChange={(e) => updateTierField(idx, "salesStartDate", e.target.value)}
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={tier.salesStartTime || "09:00"}
+                                    onChange={(e) => updateTierField(idx, "salesStartTime", e.target.value)}
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Close Sales At */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-[10px] font-bold uppercase text-gray-600 dark:text-gray-400">
+                                    Sales Window Closes On
+                                  </label>
+                                  {tier.salesEndDate ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateTierField(idx, "salesEndDate", "");
+                                        updateTierField(idx, "salesEndTime", "");
+                                      }}
+                                      className="text-[9px] text-[#0758fc] dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                                    >
+                                      Switch to Sold-Out Only
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateTierField(idx, "salesEndDate", startDate || new Date().toISOString().split("T")[0]);
+                                        updateTierField(idx, "salesEndTime", startTime || "23:59");
+                                      }}
+                                      className="text-[9px] text-[#0758fc] dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                                    >
+                                      + Set Specific Date
+                                    </button>
+                                  )}
+                                </div>
+
+                                {tier.salesEndDate ? (
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <input
+                                      type="date"
+                                      value={tier.salesEndDate || ""}
+                                      onChange={(e) => updateTierField(idx, "salesEndDate", e.target.value)}
+                                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={tier.salesEndTime || "23:59"}
+                                      onChange={(e) => updateTierField(idx, "salesEndTime", e.target.value)}
+                                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 font-bold flex items-center justify-between">
+                                    <span>🎟️ Closes automatically once all seats are sold out</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[10px]">
+                              <span className="text-gray-500 dark:text-gray-400 font-bold">Quick Presets:</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
+                                  updateTierField(idx, "salesStartTime", "00:00");
+                                  updateTierField(idx, "salesEndDate", "");
+                                  updateTierField(idx, "salesEndTime", "");
+                                }}
+                                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] rounded-md text-gray-800 dark:text-gray-200 font-bold cursor-pointer transition-colors shadow-2xs"
+                              >
+                                🎟️ Close After Sold Out (No Time Limit)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
+                                  updateTierField(idx, "salesStartTime", "00:00");
+                                  updateTierField(idx, "salesEndDate", startDate || "");
+                                  updateTierField(idx, "salesEndTime", startTime || "09:00");
+                                }}
+                                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] rounded-md text-gray-800 dark:text-gray-200 font-semibold cursor-pointer transition-colors shadow-2xs"
+                              >
+                                Opens Now ➔ Closes at Event Start
+                              </button>
+                              {startDate && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const s = new Date(startDate);
+                                      s.setDate(s.getDate() - 3);
+                                      updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
+                                      updateTierField(idx, "salesStartTime", "09:00");
+                                      updateTierField(idx, "salesEndDate", s.toISOString().split("T")[0]);
+                                      updateTierField(idx, "salesEndTime", "23:59");
+                                    }}
+                                    className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] rounded-md text-gray-800 dark:text-gray-200 font-semibold cursor-pointer transition-colors shadow-2xs"
+                                  >
+                                    Closes 3 Days Before Event
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const s = new Date(startDate);
+                                      s.setDate(s.getDate() - 7);
+                                      updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
+                                      updateTierField(idx, "salesStartTime", "09:00");
+                                      updateTierField(idx, "salesEndDate", s.toISOString().split("T")[0]);
+                                      updateTierField(idx, "salesEndTime", "23:59");
+                                    }}
+                                    className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] rounded-md text-gray-800 dark:text-gray-200 font-semibold cursor-pointer transition-colors shadow-2xs"
+                                  >
+                                    Closes 7 Days Before Event
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
