@@ -37,9 +37,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
   const { data } = await executeSql(`
-    SELECT e.title, e.summary, e.description, e.cover_image_url, e.logo_url, e.city, e.category, e.event_type, e.start_date, o.name as org_name
+    SELECT e.title, e.summary, e.description, e.cover_image_url, e.logo_url, e.city, cat.name as category, e.event_type, e.start_date, o.name as org_name
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
+    LEFT JOIN event_categories cat ON e.category_id = cat.id
     WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
     LIMIT 1;
   `);

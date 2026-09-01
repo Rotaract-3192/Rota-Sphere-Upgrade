@@ -322,7 +322,7 @@ export function EventMapExplorer({
       {/* ── MAP & FILTERED RESULTS SPLIT-SCREEN CONTAINER ──────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 shadow-xl overflow-hidden transition-colors">
         
-        {/* ── LEFT CANVAS: REAL LEAFLET INTERACTIVE MAP (7 COLS ON DESKTOP) ── */}
+        {/* ── LEFT CANVAS: REAL INTERACTIVE MAP (7 COLS ON DESKTOP) ── */}
         <div className="lg:col-span-7 relative bg-slate-900 dark:bg-gray-950 rounded-2xl overflow-hidden min-h-[440px] sm:min-h-[520px] border border-slate-800 dark:border-gray-800 shadow-inner">
           
           {/* Leaflet Map Div Container */}

@@ -17,9 +17,10 @@ export default async function EventOpenGraphImage({
   const { slug } = await params;
 
   const { data } = await executeSql(`
-    SELECT e.title, e.summary, e.category, e.venue_name, e.city, e.start_date, e.cover_image_url, o.name as org_name
+    SELECT e.title, e.summary, cat.name as category, e.venue_name, e.city, e.start_date, e.cover_image_url, o.name as org_name
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
+    LEFT JOIN event_categories cat ON e.category_id = cat.id
     WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
     LIMIT 1;
   `);

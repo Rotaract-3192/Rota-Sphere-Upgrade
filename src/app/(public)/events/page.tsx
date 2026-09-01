@@ -94,11 +94,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
       ) as saas_ticket_tiers
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
+    LEFT JOIN event_categories cat ON e.category_id = cat.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
     WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
   `;
 
-  if (category) sql += ` AND (e.category_id = '${escapeSql(category)}' OR e.category = '${escapeSql(category)}')`;
+  if (category) sql += ` AND (e.category_id::text = '${escapeSql(category)}' OR cat.slug = '${escapeSql(category)}' OR cat.name ILIKE '%${escapeSql(category)}%')`;
   if (city) sql += ` AND e.city ILIKE '%${escapeSql(city)}%'`;
   if (format) sql += ` AND e.event_type = '${escapeSql(format.toUpperCase())}'`;
   if (date) sql += ` AND DATE(e.start_date) = '${escapeSql(date)}'`;
