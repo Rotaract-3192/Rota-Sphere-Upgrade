@@ -89,16 +89,36 @@ export default async function EventDetailPage({ params }: PageProps) {
   const sponsors = sponsorRows || [];
 
   const startDateObj = new Date(event.start_date);
+  const endDateObj = event.end_date ? new Date(event.end_date) : null;
+  const isSameDay = endDateObj ? startDateObj.toDateString() === endDateObj.toDateString() : true;
+
   const formattedDate = startDateObj.toLocaleDateString("en-IN", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  const formattedEndDate = endDateObj && !isSameDay
+    ? endDateObj.toLocaleDateString("en-IN", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+
   const formattedTime = startDateObj.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
   });
+  const formattedEndTime = endDateObj
+    ? endDateObj.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  const tzLabel = event.timezone ? event.timezone.split(" - ")[0].replace("India Standard Time", "IST").replace("Eastern Standard Time", "EST").replace("Universal Coordinated Time", "UTC").replace("Pacific Standard Time", "PST").replace("Central European Time", "CET") : "IST";
 
   return (
     <main className="min-h-screen bg-gray-50 pb-24">
@@ -148,11 +168,11 @@ export default async function EventDetailPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300 font-medium">
             <div className="flex items-center gap-2">
               <Calendar size={18} className="text-[#0758fc]" />
-              <span>{formattedDate}</span>
+              <span>{formattedEndDate ? `${formattedDate} – ${formattedEndDate}` : formattedDate}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock size={18} className="text-amber-400" />
-              <span>{formattedTime} IST</span>
+              <span>{formattedTime}{formattedEndTime ? ` – ${formattedEndTime}` : ""} {tzLabel}</span>
             </div>
             {event.google_maps_url ? (
               <a
@@ -200,8 +220,9 @@ export default async function EventDetailPage({ params }: PageProps) {
                 <div className="divide-y divide-gray-100">
                   {schedules.map((sch: any) => (
                     <div key={sch.id} className="py-4 flex gap-4 items-start">
-                      <div className="bg-gray-100 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-gray-800 text-center min-w-[75px]">
+                      <div className="bg-gray-100 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-gray-800 text-center min-w-[85px]">
                         {new Date(sch.start_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                        {sch.end_time ? ` – ${new Date(sch.end_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ""}
                       </div>
                       <div className="space-y-1">
                         <h3 className="text-base font-bold text-gray-900">{sch.title}</h3>

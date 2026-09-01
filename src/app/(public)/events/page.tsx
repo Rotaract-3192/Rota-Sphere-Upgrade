@@ -18,6 +18,8 @@ interface PageProps {
     category?: string;
     city?: string;
     format?: string;
+    date?: string;
+    type?: string;
   }>;
 }
 
@@ -35,6 +37,8 @@ export default async function EventsPage({ searchParams }: PageProps) {
   const category = params.category || "";
   const city = params.city || "";
   const format = params.format || "";
+  const date = params.date || "";
+  const type = params.type || "";
 
   // Build query with organizations join
   let sql = `
@@ -62,6 +66,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
   if (category) sql += ` AND (e.category_id = '${escapeSql(category)}' OR e.category = '${escapeSql(category)}')`;
   if (city) sql += ` AND e.city ILIKE '%${escapeSql(city)}%'`;
   if (format) sql += ` AND e.event_type = '${escapeSql(format.toUpperCase())}'`;
+  if (date) sql += ` AND DATE(e.start_date) = '${escapeSql(date)}'`;
+  if (type === "free") {
+    sql += ` AND (NOT EXISTS (SELECT 1 FROM saas_ticket_tiers stt WHERE stt.event_id = e.id AND stt.price > 0))`;
+  } else if (type === "paid") {
+    sql += ` AND (EXISTS (SELECT 1 FROM saas_ticket_tiers stt WHERE stt.event_id = e.id AND stt.price > 0))`;
+  }
 
   // Specific Club Filter
   if (clubId && (clubId.startsWith("org-") || clubId.length > 5)) {

@@ -642,6 +642,13 @@ export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnounceme
         minute: "2-digit",
       });
 
+      const formattedEndTime = event.endDate && !isNaN(new Date(event.endDate).getTime())
+        ? new Date(event.endDate).toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : null;
+
       const locationStr = [event.venueName, event.city].filter(Boolean).join(", ") || "Bengaluru & District 3192";
       const mapsLink =
         event.googleMapsUrl ||
@@ -694,7 +701,7 @@ export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnounceme
               <table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;width:35%;">📅 Date & Time:</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:700;">${formattedDate} at ${formattedTime} IST</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:700;">${formattedDate} at ${formattedTime}${formattedEndTime ? ` – ${formattedEndTime}` : ""} IST</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;">📍 Location:</td>

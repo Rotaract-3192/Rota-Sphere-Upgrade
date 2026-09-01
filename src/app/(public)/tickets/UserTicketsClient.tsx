@@ -134,13 +134,18 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       const tierName = tier?.name || "Delegate Pass";
       const ticketCode = ticket.ticket_code || "RS-PASS";
       const venueStr = event?.venue_name ? `${event.venue_name}, ${event.city || ""}` : (event?.city || "Bengaluru, Karnataka");
-      const dateStr = event?.start_time
-        ? new Date(event.start_time).toLocaleDateString("en-IN", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
+      const rawDate = event?.start_date || event?.start_time;
+      const dateStr = rawDate && !isNaN(new Date(rawDate).getTime())
+        ? `${new Date(rawDate).toLocaleDateString("en-IN", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })} at ${new Date(rawDate).toLocaleTimeString("en-IN", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}`
         : "RY 2026–27";
 
       // Generate sharp 500px QR for the badge

@@ -779,7 +779,7 @@ export async function createManualAttendeeAction(
 
     // 1. Fetch Event and Verify Organizer/Admin Rights
     const { data: eventRows } = await executeSql(`
-      SELECT e.id, e.title, e.city, e.venue_name, e.start_time, e.organization_id
+      SELECT e.id, e.title, e.city, e.venue_name, e.start_date, e.organization_id
       FROM saas_events e
       WHERE e.id = ${escapeSql(input.eventId)}
       LIMIT 1;
@@ -938,8 +938,8 @@ export async function createManualAttendeeAction(
     // 7. Send Ticket Email if opted in
     if (input.sendConfirmationEmail !== false && input.email) {
       try {
-        const formattedDate = event.start_time
-          ? new Date(event.start_time).toLocaleDateString("en-IN", {
+        const formattedDate = event.start_date
+          ? new Date(event.start_date).toLocaleDateString("en-IN", {
               weekday: "short",
               month: "short",
               day: "numeric",

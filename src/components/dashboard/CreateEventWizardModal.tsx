@@ -37,6 +37,7 @@ import {
   QrCode,
   ChevronDown,
   Building2,
+  AlertCircle,
 } from "lucide-react";
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
@@ -78,6 +79,49 @@ const CATEGORIES = [
   "Workshops & Masterclasses",
 ];
 
+function formatDateString(dateVal: Date | string | number | null | undefined): string {
+  if (!dateVal) return "";
+  const d = typeof dateVal === "string" || typeof dateVal === "number" ? new Date(dateVal) : dateVal;
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function formatTimeString(dateVal: Date | string | number | null | undefined): string {
+  if (!dateVal) return "";
+  const d = typeof dateVal === "string" || typeof dateVal === "number" ? new Date(dateVal) : dateVal;
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function combineDateAndTime(dateStr: string, timeStr: string): Date | null {
+  if (!dateStr) return null;
+  const time = timeStr && timeStr.trim() ? timeStr.trim() : "10:00";
+  const [yearStr, monthStr, dayStr] = dateStr.split("-");
+  const [hoursStr, minutesStr] = time.split(":");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  const hours = Number(hoursStr) || 0;
+  const minutes = Number(minutesStr) || 0;
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getDefaultEventSchedule() {
+  const start = new Date(Date.now() + 7 * 86400000);
+  start.setHours(10, 0, 0, 0); // 10:00 AM local time 7 days from now
+  const end = new Date(start.getTime() + 4 * 3600000); // 2:00 PM (4 hours later)
+  return {
+    startDate: formatDateString(start),
+    startTime: formatTimeString(start),
+    endDate: formatDateString(end),
+    endTime: formatTimeString(end),
+  };
+}
+
 export function CreateEventWizardModal({ 
   isOpen, 
   onClose, 
@@ -105,12 +149,12 @@ export function CreateEventWizardModal({
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80");
   const [thumbnailFileName, setThumbnailFileName] = useState<string | null>(null);
 
-  // Step 2: Date & Time
-  const now = new Date();
-  const defaultStart = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 16);
-  const defaultEnd = new Date(now.getTime() + 9 * 86400000).toISOString().slice(0, 16);
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [endDate, setEndDate] = useState(defaultEnd);
+  // Step 2: Date & Time (Separated for reliability & intuitive UX)
+  const defaultSchedule = getDefaultEventSchedule();
+  const [startDate, setStartDate] = useState(defaultSchedule.startDate);
+  const [startTime, setStartTime] = useState(defaultSchedule.startTime);
+  const [endDate, setEndDate] = useState(defaultSchedule.endDate);
+  const [endTime, setEndTime] = useState(defaultSchedule.endTime);
   const [timezone, setTimezone] = useState("India Standard Time (IST) - UTC+05:30");
 
   // Step 3: Event Settings
@@ -172,10 +216,18 @@ export function CreateEventWizardModal({
       setBannerUrl(eventToEdit.cover_image_url || BANNER_PRESETS[0].url);
       setThumbnailUrl(eventToEdit.logo_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80");
       if (eventToEdit.start_date) {
-        setStartDate(new Date(eventToEdit.start_date).toISOString().slice(0, 16));
+        const s = new Date(eventToEdit.start_date);
+        if (!isNaN(s.getTime())) {
+          setStartDate(formatDateString(s));
+          setStartTime(formatTimeString(s));
+        }
       }
       if (eventToEdit.end_date) {
-        setEndDate(new Date(eventToEdit.end_date).toISOString().slice(0, 16));
+        const e = new Date(eventToEdit.end_date);
+        if (!isNaN(e.getTime())) {
+          setEndDate(formatDateString(e));
+          setEndTime(formatTimeString(e));
+        }
       }
       setTimezone(eventToEdit.timezone || "India Standard Time (IST) - UTC+05:30");
       setCapacity(eventToEdit.capacity || 500);
@@ -394,6 +446,31 @@ export function CreateEventWizardModal({
     }
   }
 
+  function applyDurationPreset(type: "2h" | "4h" | "fullday" | "nextday") {
+    if (!startDate) return;
+    const s = combineDateAndTime(startDate, startTime || "10:00");
+    if (!s) return;
+
+    if (type === "2h") {
+      const e = new Date(s.getTime() + 2 * 3600000);
+      setEndDate(formatDateString(e));
+      setEndTime(formatTimeString(e));
+    } else if (type === "4h") {
+      const e = new Date(s.getTime() + 4 * 3600000);
+      setEndDate(formatDateString(e));
+      setEndTime(formatTimeString(e));
+    } else if (type === "fullday") {
+      setStartTime("09:00");
+      setEndDate(startDate);
+      setEndTime("18:00");
+    } else if (type === "nextday") {
+      const e = new Date(s.getTime() + 24 * 3600000);
+      setEndDate(formatDateString(e));
+      setEndTime(startTime || "10:00");
+    }
+    setErrorMessage(null);
+  }
+
   function handleAddTag() {
     if (!tagInput.trim()) return;
     const clean = tagInput.trim().toLowerCase().replace(/[^\w-]/g, "");
@@ -414,9 +491,37 @@ export function CreateEventWizardModal({
       setErrorMessage("Please enter an event title");
       return;
     }
-    if (currentStep === 2 && !startDate) {
-      setErrorMessage("Start date and time is required");
-      return;
+    if (currentStep === 2) {
+      if (!startDate) {
+        setErrorMessage("Event start date is required");
+        return;
+      }
+      if (!startTime) {
+        setErrorMessage("Event start time is required");
+        return;
+      }
+      const sDate = combineDateAndTime(startDate, startTime);
+      if (!sDate) {
+        setErrorMessage("Please enter a valid start date and time");
+        return;
+      }
+      if (!endDate) {
+        setErrorMessage("Event end date is required");
+        return;
+      }
+      if (!endTime) {
+        setErrorMessage("Event end time is required");
+        return;
+      }
+      const eDate = combineDateAndTime(endDate, endTime);
+      if (!eDate) {
+        setErrorMessage("Please enter a valid end date and time");
+        return;
+      }
+      if (eDate <= sDate) {
+        setErrorMessage("Event end date and time must be after the start date and time");
+        return;
+      }
     }
     if (currentStep === 4 && locationDeliveryType !== "ONLINE" && !venueName.trim()) {
       setErrorMessage("Please enter the venue name");
@@ -442,6 +547,20 @@ export function CreateEventWizardModal({
       locationDeliveryType === "ONLINE" ? "ONLINE" : locationDeliveryType === "HYBRID" ? "HYBRID" : "OFFLINE";
 
     try {
+      const sDate = combineDateAndTime(startDate, startTime);
+      const eDate = combineDateAndTime(endDate, endTime);
+
+      if (!sDate) {
+        setErrorMessage("Please enter a valid start date and time");
+        setLoading(false);
+        return;
+      }
+      if (!eDate || eDate <= sDate) {
+        setErrorMessage("Event end date and time must be after the start date and time");
+        setLoading(false);
+        return;
+      }
+
       const fullAddress = `${streetAddress}, ${city}, ${stateRegion} ${pincode}, ${country}`;
       const overallAllowNonRotaract =
         ticketTiers.length > 0
@@ -466,8 +585,8 @@ export function CreateEventWizardModal({
         city,
         state: stateRegion,
         onlineMeetingUrl: eventFormat !== "OFFLINE" ? onlineMeetingUrl : undefined,
-        startDate: new Date(startDate).toISOString(),
-        endDate: new Date(endDate).toISOString(),
+        startDate: sDate.toISOString(),
+        endDate: eDate.toISOString(),
         timezone,
         capacity,
         visibility,
@@ -841,54 +960,254 @@ export function CreateEventWizardModal({
                   Date &amp; Time
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                  Define schedule parameters and local timezone settings.
+                  Specify exact start and end dates and times for your event schedule.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#0758fc]">
-                    EVENT START DATE &amp; TIME *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="datetime-local"
-                      required
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        setErrorMessage(null);
-                      }}
-                      className={`w-full bg-gray-50 border rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none transition-all shadow-sm ${
-                        !startDate
-                          ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
-                          : "border-gray-200 focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
-                      }`}
-                    />
-                  </div>
-                  {!startDate && (
-                    <span className="text-[11px] text-rose-500 mt-1.5 px-3 block font-medium">
-                      Start date and time is required
+              {/* ── 1. SEPARATED START & END SCHEDULE CARDS ─────────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1">
+                
+                {/* START CARD */}
+                <div className="bg-blue-50/40 border border-blue-100 rounded-3xl p-5 space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-blue-100/70 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-[#0758fc] text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        <Calendar size={15} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-gray-900">
+                          1. Event Start
+                        </h4>
+                        <p className="text-[11px] text-gray-500">When attendees begin arriving</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-[#0758fc] bg-white border border-blue-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Required
                     </span>
-                  )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
+                        <Calendar size={12} className="text-[#0758fc]" /> Start Date *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={startDate}
+                        onChange={(e) => {
+                          const newStartDate = e.target.value;
+                          setStartDate(newStartDate);
+                          setErrorMessage(null);
+                          if (newStartDate && (!endDate || endDate < newStartDate)) {
+                            setEndDate(newStartDate);
+                          }
+                        }}
+                        className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-900 font-medium outline-none transition-all shadow-xs ${
+                          !startDate
+                            ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
+                            : "border-gray-200 focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
+                        <Clock size={12} className="text-[#0758fc]" /> Start Time *
+                      </label>
+                      <input
+                        type="time"
+                        required
+                        value={startTime}
+                        onChange={(e) => {
+                          setStartTime(e.target.value);
+                          setErrorMessage(null);
+                        }}
+                        className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-900 font-medium outline-none transition-all shadow-xs ${
+                          !startTime
+                            ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
+                            : "border-gray-200 focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
+                        }`}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
-                    EVENT END DATE &amp; TIME *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="datetime-local"
-                      required
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all shadow-sm"
-                    />
+                {/* END CARD */}
+                <div className="bg-gray-50/70 border border-gray-200 rounded-3xl p-5 space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-gray-200/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        <Clock size={15} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-gray-900">
+                          2. Event End
+                        </h4>
+                        <p className="text-[11px] text-gray-500">When the event wraps up</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-gray-600 bg-white border border-gray-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Required
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
+                        <Calendar size={12} className="text-gray-500" /> End Date *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={startDate || undefined}
+                        value={endDate}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          setErrorMessage(null);
+                        }}
+                        className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-900 font-medium outline-none transition-all shadow-xs ${
+                          !endDate
+                            ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
+                            : "border-gray-200 focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
+                        <Clock size={12} className="text-gray-500" /> End Time *
+                      </label>
+                      <input
+                        type="time"
+                        required
+                        value={endTime}
+                        onChange={(e) => {
+                          setEndTime(e.target.value);
+                          setErrorMessage(null);
+                        }}
+                        className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-900 font-medium outline-none transition-all shadow-xs ${
+                          !endTime
+                            ? "border-rose-400 focus:ring-2 focus:ring-rose-400/20"
+                            : "border-gray-200 focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15"
+                        }`}
+                      />
+                    </div>
                   </div>
                 </div>
+
               </div>
 
+              {/* ── 2. QUICK DURATION SHORTCUT BUTTONS ─────────────────────── */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mr-1 flex items-center gap-1">
+                  <Sparkles size={13} className="text-amber-500" /> Quick Duration:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => applyDurationPreset("2h")}
+                  className="bg-gray-50 hover:bg-[#0758fc]/10 hover:text-[#0758fc] hover:border-[#0758fc]/30 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                >
+                  ⚡ +2 Hours
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyDurationPreset("4h")}
+                  className="bg-gray-50 hover:bg-[#0758fc]/10 hover:text-[#0758fc] hover:border-[#0758fc]/30 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                >
+                  ⚡ +4 Hours (Standard)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyDurationPreset("fullday")}
+                  className="bg-gray-50 hover:bg-[#0758fc]/10 hover:text-[#0758fc] hover:border-[#0758fc]/30 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                >
+                  ☀️ Full Day (9:00 AM - 6:00 PM)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyDurationPreset("nextday")}
+                  className="bg-gray-50 hover:bg-[#0758fc]/10 hover:text-[#0758fc] hover:border-[#0758fc]/30 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                >
+                  📅 +1 Day Multi-Day
+                </button>
+              </div>
+
+              {/* ── 3. REAL-TIME SCHEDULE PREVIEW BANNER ────────────────────── */}
+              {(() => {
+                const s = combineDateAndTime(startDate, startTime);
+                const e = combineDateAndTime(endDate, endTime);
+
+                if (!s) {
+                  return (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 flex items-center gap-2">
+                      <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                      <span>Please select a valid start date and time.</span>
+                    </div>
+                  );
+                }
+
+                if (e && e.getTime() <= s.getTime()) {
+                  return (
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
+                      <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                      <span className="font-bold">Event end date &amp; time must be later than the start date &amp; time.</span>
+                    </div>
+                  );
+                }
+
+                const sDateStr = s.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                const sTimeStr = s.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+
+                let durationText = "";
+                let endFormatted = "";
+                if (e) {
+                  const isSameDay = s.toDateString() === e.toDateString();
+                  const eDateStr = e.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                  const eTimeStr = e.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                  endFormatted = isSameDay ? eTimeStr : `${eDateStr} at ${eTimeStr}`;
+
+                  const diffMs = e.getTime() - s.getTime();
+                  if (diffMs > 0) {
+                    const totalMins = Math.floor(diffMs / (1000 * 60));
+                    const days = Math.floor(totalMins / (60 * 24));
+                    const remainingMins = totalMins % (60 * 24);
+                    const hrs = Math.floor(remainingMins / 60);
+                    const mins = remainingMins % 60;
+                    
+                    const parts: string[] = [];
+                    if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+                    if (hrs > 0) parts.push(`${hrs} hr${hrs > 1 ? "s" : ""}`);
+                    if (mins > 0) parts.push(`${mins} min`);
+                    durationText = parts.join(" ") || "0 min";
+                  }
+                }
+
+                return (
+                  <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-xs space-y-1.5 shadow-xs">
+                    <div className="flex items-center justify-between font-extrabold text-[#0758fc]">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={14} />
+                        <span>Schedule Summary</span>
+                      </div>
+                      {durationText && (
+                        <span className="bg-[#0758fc] text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-xs">
+                          ⏱️ {durationText}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-800 font-medium text-xs leading-relaxed">
+                      Starts: <span className="font-bold text-gray-950">{sDateStr} at {sTimeStr}</span>
+                      {endFormatted ? (
+                        <> ➔ Ends: <span className="font-bold text-gray-950">{endFormatted}</span></>
+                      ) : null}
+                      {" "}<span className="text-gray-500 font-normal">({timezone.split(" - ")[0]})</span>
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* ── 4. TIMEZONE SELECTOR ───────────────────────────────────── */}
               <div className="pt-2">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2">
                   TIMEZONE *
@@ -897,7 +1216,7 @@ export function CreateEventWizardModal({
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all cursor-pointer appearance-none shadow-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 outline-none focus:bg-white focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/15 transition-all cursor-pointer appearance-none shadow-sm font-medium"
                   >
                     <option value="India Standard Time (IST) - UTC+05:30">India Standard Time (IST) - UTC+05:30</option>
                     <option value="Eastern Standard Time (EST) - UTC-5">Eastern Standard Time (EST) - UTC-5</option>
@@ -905,6 +1224,7 @@ export function CreateEventWizardModal({
                     <option value="Pacific Standard Time (PST) - UTC-8">Pacific Standard Time (PST) - UTC-8</option>
                     <option value="Central European Time (CET) - UTC+1">Central European Time (CET) - UTC+1</option>
                   </select>
+                  <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
             </div>

@@ -145,12 +145,13 @@ export function OrganizerDashboardClient({
     for (let i = daysCount - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const targetDateStr = d.toDateString();
       const dayLabel = d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 
       const dayOrders = orders.filter((o: any) => {
         if (!o.created_at) return false;
-        return o.created_at.slice(0, 10) === dateStr && o.status === "PAID";
+        const orderDate = new Date(o.created_at);
+        return !isNaN(orderDate.getTime()) && orderDate.toDateString() === targetDateStr && o.status === "PAID";
       });
 
       const dayRevenue = dayOrders.reduce((sum: number, o: any) => sum + (parseFloat(o.total_amount) || 0), 0);

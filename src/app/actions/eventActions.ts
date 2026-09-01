@@ -634,6 +634,51 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
       return { success: false, error: "Cloning event failed" };
     }
 
+    const newEventId = clonedEvent[0].id;
+    const { data: origTiers } = await executeSql(`
+      SELECT * FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};
+    `);
+    if (origTiers && origTiers.length > 0) {
+      for (const t of origTiers) {
+        const benefitsJson = JSON.stringify(t.benefits || []).replace(/'/g, "''");
+        await executeSql(`
+          INSERT INTO saas_ticket_tiers (
+            event_id,
+            name,
+            description,
+            tier_type,
+            price,
+            total_capacity,
+            sold_count,
+            reserved_count,
+            sales_start,
+            sales_end,
+            allow_non_rotaract,
+            allowed_audience,
+            benefits,
+            is_active,
+            is_visible
+          ) VALUES (
+            ${escapeSql(newEventId)},
+            ${escapeSql(t.name)},
+            ${escapeSql(t.description)},
+            ${escapeSql(t.tier_type || "REGULAR")},
+            ${Number(t.price) || 0},
+            ${Number(t.total_capacity) || 100},
+            0,
+            0,
+            NOW(),
+            NOW() + INTERVAL '8 days',
+            ${t.allow_non_rotaract !== false ? "TRUE" : "FALSE"},
+            ${escapeSql(t.allowed_audience || "ALL")},
+            '${benefitsJson}'::jsonb,
+            TRUE,
+            TRUE
+          );
+        `);
+      }
+    }
+
     revalidatePath("/dashboard");
     return { success: true, newEventSlug: clonedEvent[0].slug };
   } catch (err) {

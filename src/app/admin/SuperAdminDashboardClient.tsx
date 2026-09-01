@@ -434,17 +434,19 @@ export function SuperAdminDashboardClient({
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
-      const isoDate = d.toISOString().slice(0, 10);
+      const targetDateStr = d.toDateString();
 
       const dayOrders = orders.filter((o: any) => {
         if (!o.created_at || (o.status !== "PAID" && o.status !== "COMPLETED")) return false;
-        return o.created_at.slice(0, 10) === isoDate;
+        const oDate = new Date(o.created_at);
+        return !isNaN(oDate.getTime()) && oDate.toDateString() === targetDateStr;
       });
 
       const dayGmv = dayOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
       const dayTickets = tickets.filter((t: any) => {
         if (!t.created_at) return false;
-        return t.created_at.slice(0, 10) === isoDate;
+        const tDate = new Date(t.created_at);
+        return !isNaN(tDate.getTime()) && tDate.toDateString() === targetDateStr;
       }).length;
 
       data.push({

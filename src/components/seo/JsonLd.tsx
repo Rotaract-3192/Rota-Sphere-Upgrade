@@ -72,9 +72,12 @@ export function EventJsonLd({ event }: { event: any }) {
     startDate: event.start_date,
     endDate: event.end_date || event.start_date,
     eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: event.is_virtual
-      ? "https://schema.org/OnlineEventAttendanceMode"
-      : "https://schema.org/OfflineEventAttendanceMode",
+    eventAttendanceMode:
+      event.event_type === "ONLINE"
+        ? "https://schema.org/OnlineEventAttendanceMode"
+        : event.event_type === "HYBRID"
+        ? "https://schema.org/MixedEventAttendanceMode"
+        : "https://schema.org/OfflineEventAttendanceMode",
     location: {
       "@type": "Place",
       name: event.venue_name || "District 3192 Venue",
