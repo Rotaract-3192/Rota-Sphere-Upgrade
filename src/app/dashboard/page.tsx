@@ -88,11 +88,18 @@ export default async function DashboardPage() {
           json_build_object(
             'id', t.id,
             'name', t.name,
+            'description', t.description,
+            'tier_type', t.tier_type,
             'price', t.price,
             'total_capacity', t.total_capacity,
             'sold_count', t.sold_count,
             'reserved_count', t.reserved_count,
-            'is_active', t.is_active
+            'sales_start', t.sales_start,
+            'sales_end', t.sales_end,
+            'allow_non_rotaract', t.allow_non_rotaract,
+            'allowed_audience', t.allowed_audience,
+            'is_active', t.is_active,
+            'is_visible', t.is_visible
           )
         ) FILTER (WHERE t.id IS NOT NULL),
         '[]'

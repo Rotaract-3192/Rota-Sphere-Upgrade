@@ -87,6 +87,11 @@ export default async function EventsPage({ searchParams }: PageProps) {
             'id', t.id,
             'name', t.name,
             'price', t.price,
+            'total_capacity', t.total_capacity,
+            'sold_count', t.sold_count,
+            'reserved_count', t.reserved_count,
+            'sales_start', t.sales_start,
+            'sales_end', t.sales_end,
             'is_active', t.is_active
           )
         ) FILTER (WHERE t.id IS NOT NULL),

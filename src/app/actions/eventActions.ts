@@ -916,6 +916,10 @@ export async function updateEventAction(
 
     revalidatePath("/dashboard");
     revalidatePath("/events");
+    if (input.slug) {
+      revalidatePath(`/events/${input.slug}`);
+    }
+    revalidatePath("/");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };

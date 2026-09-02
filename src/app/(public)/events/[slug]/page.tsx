@@ -29,6 +29,9 @@ import { EventJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { EventBookingClient } from "./EventBookingClient";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }

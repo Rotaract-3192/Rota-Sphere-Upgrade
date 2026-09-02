@@ -90,6 +90,9 @@ async function getMapEvents() {
               'id', t.id,
               'name', t.name,
               'price', t.price,
+              'total_capacity', t.total_capacity,
+              'sales_start', t.sales_start,
+              'sales_end', t.sales_end,
               'is_active', t.is_active
             )
           ) FILTER (WHERE t.id IS NOT NULL),
