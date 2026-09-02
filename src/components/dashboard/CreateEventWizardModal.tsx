@@ -1688,8 +1688,10 @@ export function CreateEventWizardModal({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
-                                  updateTierField(idx, "salesStartTime", "00:00");
+                                  updateTierField(idx, "salesStartDate", formatDateStringToInput(new Date(), timezone));
+                                  if (!tier.salesStartTime || tier.salesStartTime === "00:00") {
+                                    updateTierField(idx, "salesStartTime", "09:00");
+                                  }
                                   updateTierField(idx, "salesEndDate", "");
                                   updateTierField(idx, "salesEndTime", "");
                                 }}
@@ -1700,8 +1702,8 @@ export function CreateEventWizardModal({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  updateTierField(idx, "salesStartDate", new Date().toISOString().split("T")[0]);
-                                  updateTierField(idx, "salesStartTime", "00:00");
+                                  updateTierField(idx, "salesStartDate", formatDateStringToInput(new Date(), timezone));
+                                  updateTierField(idx, "salesStartTime", formatTimeStringToInput(new Date(), timezone) || "09:00");
                                   updateTierField(idx, "salesEndDate", startDate || "");
                                   updateTierField(idx, "salesEndTime", startTime || "09:00");
                                 }}

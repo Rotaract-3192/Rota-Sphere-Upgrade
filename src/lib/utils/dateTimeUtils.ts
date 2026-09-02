@@ -132,23 +132,59 @@ export function getTimezoneOffsetMinutes(tzStr?: string | null): number {
 }
 
 /**
- * Combines date string (YYYY-MM-DD) and time string (HH:MM) with specified timezone into a deterministic UTC Date.
+ * Combines date string (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY) and time string (HH:MM) with specified timezone into a deterministic UTC Date.
  */
 export function combineDateAndTimeWithTz(dateStr: string, timeStr: string, tzStr?: string | null): Date | null {
   if (!dateStr) return null;
   const time = timeStr && timeStr.trim() ? timeStr.trim() : "10:00";
-  const [yearStr, monthStr, dayStr] = dateStr.split("-");
-  const [hoursStr, minutesStr] = time.split(":");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  const hours = Number(hoursStr) || 0;
-  const minutes = Number(minutesStr) || 0;
+  
+  // Normalize date separator
+  const cleanDate = dateStr.trim().replace(/\//g, "-").replace(/\./g, "-");
+  const parts = cleanDate.split("-").map((p) => p.trim());
+  
+  if (parts.length !== 3) return null;
+
+  let year: number;
+  let month: number;
+  let day: number;
+
+  if (parts[0].length === 4) {
+    // YYYY-MM-DD
+    year = Number(parts[0]);
+    month = Number(parts[1]);
+    day = Number(parts[2]);
+  } else if (parts[2].length === 4) {
+    // DD-MM-YYYY or MM-DD-YYYY (standard Indian / UK format is DD-MM-YYYY)
+    year = Number(parts[2]);
+    month = Number(parts[1]);
+    day = Number(parts[0]);
+  } else {
+    // Fallback: Check if year is in parts[0] vs parts[2]
+    const p0 = Number(parts[0]);
+    const p2 = Number(parts[2]);
+    if (p0 > 1000) {
+      year = p0;
+      month = Number(parts[1]);
+      day = p2;
+    } else {
+      year = p2 > 1000 ? p2 : 2000 + p2;
+      month = Number(parts[1]);
+      day = p0;
+    }
+  }
+
+  // Parse time
+  const timeParts = time.split(":");
+  let hours = Number(timeParts[0]) || 0;
+  let minutes = Number(timeParts[1]) || 0;
+
+  // Handle potential AM/PM if present
+  if (/pm/i.test(time) && hours < 12) hours += 12;
+  if (/am/i.test(time) && hours === 12) hours = 0;
 
   if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
 
   const offsetMinutes = getTimezoneOffsetMinutes(tzStr);
-  // UTC ms = Date.UTC(year, month - 1, day, hours, minutes) - offsetMinutes * 60,000
   const utcMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0) - offsetMinutes * 60 * 1000;
   const d = new Date(utcMs);
   return isNaN(d.getTime()) ? null : d;
