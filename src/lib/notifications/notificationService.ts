@@ -116,6 +116,7 @@ export async function sendTicketEmailWithQR({
   tickets: Array<{ code: string; qrToken: string; tierName: string }>;
 }): Promise<boolean> {
   const attachments: EmailAttachment[] = [];
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   // Generate QR Code PNG Buffers for each ticket
   for (const t of tickets) {
@@ -141,10 +142,12 @@ export async function sendTicketEmailWithQR({
   }
 
   const ticketCardsHtml = tickets
-    .map(
-      (t) => `
+    .map((t) => {
+      const qrFallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(t.qrToken)}&margin=10&format=png`;
+      const passUrl = `${appUrl}/tickets`;
+      return `
       <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px border-gray-100;padding-bottom:12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:12px;margin-bottom:12px;">
           <div>
             <span style="font-size:11px;font-weight:700;color:#0758fc;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:2px;">OFFICIAL DELEGATE PASS</span>
             <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0;">${t.tierName}</h3>
@@ -152,14 +155,19 @@ export async function sendTicketEmailWithQR({
           <span style="font-family:monospace;font-size:12px;font-weight:700;background:#f1f5f9;color:#334155;padding:4px 8px;border-radius:6px;">${t.code}</span>
         </div>
         <div style="text-align:center;padding:12px 0;">
-          <img src="cid:qr-${t.code}" alt="Ticket QR Code" style="width:180px;height:180px;border-radius:12px;border:1px solid #e2e8f0;display:inline-block;" />
-          <p style="font-size:11px;color:#64748b;margin:8px 0 0;">Scan at entry gate for instant check-in</p>
+          <a href="${passUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${qrFallbackUrl}" alt="Ticket QR Code (${t.code})" width="180" height="180" style="width:180px;height:180px;border-radius:12px;border:1px solid #e2e8f0;display:inline-block;" />
+          </a>
+          <div style="margin-top:12px;">
+            <a href="${passUrl}" target="_blank" style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:8px 18px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(7,88,252,0.25);">
+              📱 Tap to Open Digital QR Pass
+            </a>
+          </div>
+          <p style="font-size:11px;color:#64748b;margin:8px 0 0;">Scan at entry gate or tap button above to open pass in browser</p>
         </div>
-      </div>`
-    )
+      </div>`;
+    })
     .join("");
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
   const html = `
     <!DOCTYPE html>
@@ -496,12 +504,24 @@ export function buildStudioBroadcastEmailHtml({
     </div>`
       : "";
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
+  const broadcastQrUrl = ticketCode
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(ticketCode)}&margin=10&format=png`
+    : "";
+
   const qrSectionHtml =
     includeQrCode && ticketCode
       ? `
     <div style="text-align:center;padding:16px 0;background:#09090b;border:1px solid #27272a;border-radius:14px;margin:20px 0;">
-      <img src="cid:qr-${ticketCode}" alt="Ticket QR Code" style="width:160px;height:160px;border-radius:10px;border:1px solid #3f3f46;display:inline-block;" />
+      <a href="${appUrl}/tickets" target="_blank" style="text-decoration:none;display:inline-block;">
+        <img src="${broadcastQrUrl}" alt="Ticket QR Code (${ticketCode})" width="160" height="160" style="width:160px;height:160px;border-radius:10px;border:1px solid #3f3f46;display:inline-block;" />
+      </a>
       <p style="font-size:11px;color:#a1a1aa;margin:8px 0 0;">Scan at entry gate for fast-track clearance</p>
+      <div style="margin-top:12px;">
+        <a href="${appUrl}/tickets" target="_blank" style="display:inline-block;background:#ff003c;color:#ffffff;text-decoration:none;padding:7px 16px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:0.5px;">
+          📱 Tap to Open Digital QR Pass
+        </a>
+      </div>
     </div>`
       : "";
 

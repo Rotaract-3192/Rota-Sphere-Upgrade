@@ -437,6 +437,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
         const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
 
+        const salesStartVal = tier.salesStart || new Date().toISOString();
+        const salesEndVal = tier.salesEnd || input.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
             event_id,
@@ -463,16 +466,24 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             ${Number(tier.totalCapacity) || 100},
             0,
             0,
-            ${escapeSql(tier.salesStart || new Date().toISOString())},
-            ${escapeSql(tier.salesEnd || input.endDate)},
+            ${escapeSql(salesStartVal)},
+            ${escapeSql(salesEndVal)},
             ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
             ${escapeSql(tierAudience)},
             '${benefitsJson}'::jsonb,
             TRUE,
             TRUE
-          );
+          )
+          RETURNING id;
         `;
-        await executeSql(tierSql);
+        const tierRes = await executeSql(tierSql);
+        logger.info("[Backend Tier Release Clock Created]", {
+          eventId,
+          tierId: tierRes?.data?.[0]?.id,
+          tierName: tier.name,
+          salesStart: salesStartVal,
+          salesEnd: salesEndVal,
+        });
       }
     }
 
@@ -788,48 +799,108 @@ export async function updateEventAction(
 
     // Update Ticket Tiers if provided
     if (input.ticketTiers && input.ticketTiers.length > 0) {
-      await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
+      const { data: existingTiers } = await executeSql(`
+        SELECT id, name, sold_count, reserved_count 
+        FROM saas_ticket_tiers 
+        WHERE event_id = ${escapeSql(eventId)};
+      `);
+
+      const existingTierMap = new Map<string, any>();
+      (existingTiers || []).forEach((t: any) => existingTierMap.set(t.name.trim().toLowerCase(), t));
+      const processedTierIds = new Set<string>();
+
       for (const tier of input.ticketTiers) {
         const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
         const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
         const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
+        const salesStartVal = tier.salesStart || new Date().toISOString();
+        const salesEndVal = tier.salesEnd || input.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        const tierSql = `
-          INSERT INTO saas_ticket_tiers (
-            event_id,
-            name,
-            description,
-            tier_type,
-            price,
-            total_capacity,
-            sold_count,
-            reserved_count,
-            sales_start,
-            sales_end,
-            allow_non_rotaract,
-            allowed_audience,
-            benefits,
-            is_active,
-            is_visible
-          ) VALUES (
-            ${escapeSql(eventId)},
-            ${escapeSql(tier.name)},
-            ${escapeSql(tier.description)},
-            ${escapeSql(tier.tierType || "REGULAR")},
-            ${Number(tier.price) || 0},
-            ${Number(tier.totalCapacity) || 100},
-            0,
-            0,
-            ${escapeSql(tier.salesStart || new Date().toISOString())},
-            ${escapeSql(tier.salesEnd || input.endDate || new Date().toISOString())},
-            ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
-            ${escapeSql(tierAudience)},
-            '${benefitsJson}'::jsonb,
-            TRUE,
-            TRUE
-          );
-        `;
-        await executeSql(tierSql);
+        const match = existingTierMap.get(tier.name.trim().toLowerCase());
+
+        if (match) {
+          processedTierIds.add(match.id);
+          await executeSql(`
+            UPDATE saas_ticket_tiers
+            SET
+              name = ${escapeSql(tier.name)},
+              description = ${escapeSql(tier.description)},
+              tier_type = ${escapeSql(tier.tierType || "REGULAR")},
+              price = ${Number(tier.price) || 0},
+              total_capacity = ${Number(tier.totalCapacity) || 100},
+              sales_start = ${escapeSql(salesStartVal)},
+              sales_end = ${escapeSql(salesEndVal)},
+              allow_non_rotaract = ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
+              allowed_audience = ${escapeSql(tierAudience)},
+              benefits = '${benefitsJson}'::jsonb,
+              is_active = TRUE,
+              is_visible = TRUE,
+              updated_at = NOW()
+            WHERE id = ${escapeSql(match.id)};
+          `);
+          logger.info("[Backend Tier Release Clock Updated]", {
+            eventId,
+            tierId: match.id,
+            tierName: tier.name,
+            salesStart: salesStartVal,
+            salesEnd: salesEndVal,
+          });
+        } else {
+          const insertRes = await executeSql(`
+            INSERT INTO saas_ticket_tiers (
+              event_id,
+              name,
+              description,
+              tier_type,
+              price,
+              total_capacity,
+              sold_count,
+              reserved_count,
+              sales_start,
+              sales_end,
+              allow_non_rotaract,
+              allowed_audience,
+              benefits,
+              is_active,
+              is_visible
+            ) VALUES (
+              ${escapeSql(eventId)},
+              ${escapeSql(tier.name)},
+              ${escapeSql(tier.description)},
+              ${escapeSql(tier.tierType || "REGULAR")},
+              ${Number(tier.price) || 0},
+              ${Number(tier.totalCapacity) || 100},
+              0,
+              0,
+              ${escapeSql(salesStartVal)},
+              ${escapeSql(salesEndVal)},
+              ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
+              ${escapeSql(tierAudience)},
+              '${benefitsJson}'::jsonb,
+              TRUE,
+              TRUE
+            )
+            RETURNING id;
+          `);
+          logger.info("[Backend Tier Release Clock Created]", {
+            eventId,
+            tierId: insertRes?.data?.[0]?.id,
+            tierName: tier.name,
+            salesStart: salesStartVal,
+            salesEnd: salesEndVal,
+          });
+        }
+      }
+
+      // Handle removed tiers: soft-deactivate if sold tickets exist, or delete if 0 sold
+      for (const t of existingTiers || []) {
+        if (!processedTierIds.has(t.id)) {
+          if (Number(t.sold_count) > 0) {
+            await executeSql(`UPDATE saas_ticket_tiers SET is_active = FALSE, is_visible = FALSE WHERE id = ${escapeSql(t.id)};`);
+          } else {
+            await executeSql(`DELETE FROM saas_ticket_tiers WHERE id = ${escapeSql(t.id)};`);
+          }
+        }
       }
     }
 

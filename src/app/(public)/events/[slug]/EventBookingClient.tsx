@@ -8,8 +8,8 @@
  * - Opens CheckoutModal reliably with z-[9999] layer depth.
  */
 
-import { useState } from "react";
-import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
@@ -27,10 +27,37 @@ interface TierStatusInfo {
   badgeClass: string;
   detailText: string;
   canBook: boolean;
+  releaseDate?: Date;
+  diffMs?: number;
 }
 
-function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
-  const remaining = Number(tier.total_capacity) - Number(tier.sold_count);
+function formatCountdown(diffMs: number): string {
+  if (diffMs <= 0) return "Available Now";
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHrs = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHrs / 24);
+
+  if (diffDays > 0) {
+    const remHrs = diffHrs % 24;
+    return remHrs > 0 ? `Opens in ${diffDays}d ${remHrs}h` : `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}`;
+  }
+  if (diffHrs > 0) {
+    const remMins = diffMins % 60;
+    return remMins > 0 ? `Opens in ${diffHrs}h ${remMins}m` : `Opens in ${diffHrs}h`;
+  }
+  if (diffMins > 0) {
+    const remSecs = diffSecs % 60;
+    return `Opens in ${diffMins}m ${remSecs}s`;
+  }
+  return `Opens in ${diffSecs}s`;
+}
+
+function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
+  const cap = Number(tier.total_capacity) || 9999;
+  const sold = Number(tier.sold_count) || 0;
+  const remaining = cap - sold;
+
   if (remaining <= 0) {
     return {
       state: "SOLD_OUT",
@@ -41,28 +68,25 @@ function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
     };
   }
 
-  const now = new Date();
   if (tier.sales_start) {
     const start = new Date(tier.sales_start);
-    if (now < start) {
-      const diffMs = start.getTime() - now.getTime();
-      const diffHrs = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffHrs / 24);
-      const countdownStr =
-        diffDays > 0 ? `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}` : `Opens in ${Math.max(1, diffHrs)}h`;
+    if (currentTime.getTime() < start.getTime()) {
+      const diffMs = start.getTime() - currentTime.getTime();
       return {
         state: "UPCOMING",
-        badgeText: `⏳ ${countdownStr}`,
-        badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
-        detailText: `Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
+        badgeText: `🔒 ${formatCountdown(diffMs)}`,
+        badgeClass: "bg-amber-100 text-amber-900 border-amber-300 font-bold",
+        detailText: `🔒 Locked: Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
         canBook: false,
+        releaseDate: start,
+        diffMs,
       };
     }
   }
 
   if (tier.sales_end) {
     const end = new Date(tier.sales_end);
-    if (now > end) {
+    if (currentTime.getTime() > end.getTime()) {
       return {
         state: "CLOSED",
         badgeText: "Window Closed",
@@ -71,7 +95,7 @@ function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
         canBook: false,
       };
     } else {
-      const diffMs = end.getTime() - now.getTime();
+      const diffMs = end.getTime() - currentTime.getTime();
       const diffHrs = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffHrs / 24);
       const remainingTime = diffDays > 0 ? `${diffDays}d left` : `${Math.max(1, diffHrs)}h left`;
@@ -95,9 +119,18 @@ function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
 }
 
 export function EventBookingClient({ event, tiers, userEmail, userName }: EventBookingClientProps) {
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Live timer tick to ensure real-time status update & countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
   const generalTiers = tiers.filter(
@@ -116,9 +149,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
 
   const isEarlyBirdAvailable =
     earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => getTierScheduleStatus(t).canBook);
+    earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
-  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t).canBook);
+  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+
+  // Find the earliest upcoming release tier if everything is locked
+  const earliestUpcoming = tiers
+    .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
+    .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
+    .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
@@ -171,10 +210,21 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
             className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
               hasAnyBookableTier
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-amber-50 text-amber-700 border-amber-200"
+                : earliestUpcoming
+                ? "bg-amber-100 text-amber-900 border-amber-300 font-bold flex items-center gap-1.5"
+                : "bg-gray-100 text-gray-700 border-gray-200 font-bold"
             }`}
           >
-            {hasAnyBookableTier ? "● Live Booking" : "⏳ Releases Soon"}
+            {hasAnyBookableTier ? (
+              "● Live Booking"
+            ) : earliestUpcoming ? (
+              <>
+                <Lock size={12} className="text-amber-700 shrink-0" />
+                <span>{formatCountdown(earliestUpcoming.status.diffMs || 0)}</span>
+              </>
+            ) : (
+              "🔒 Sales Unavailable"
+            )}
           </span>
         </div>
 
@@ -195,14 +245,14 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                       </span>
                     </div>
                     {earlyBirdTiers.map((tier) => {
-                      const status = getTierScheduleStatus(tier);
+                      const status = getTierScheduleStatus(tier, currentTime);
                       return (
                         <div
                           key={tier.id}
                           className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
                             status.canBook
                               ? "bg-amber-50/30 border-amber-200"
-                              : "bg-gray-50 border-gray-200 opacity-80"
+                              : "bg-gray-50/80 border-dashed border-amber-200/80 opacity-90"
                           }`}
                         >
                           <div className="space-y-0.5">
@@ -252,7 +302,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                     {showGeneralDropdown && (
                       <div className="p-2 border-t border-gray-200 space-y-2 bg-white">
                         {generalTiers.map((tier) => {
-                          const status = getTierScheduleStatus(tier);
+                          const status = getTierScheduleStatus(tier, currentTime);
                           return (
                             <div
                               key={tier.id}
@@ -288,7 +338,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                 {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
                   <div className="space-y-2">
                     {generalTiers.map((tier) => {
-                      const status = getTierScheduleStatus(tier);
+                      const status = getTierScheduleStatus(tier, currentTime);
                       return (
                         <div
                           key={tier.id}
@@ -327,7 +377,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                       </span>
                     )}
                     {otherTiers.map((tier) => {
-                      const status = getTierScheduleStatus(tier);
+                      const status = getTierScheduleStatus(tier, currentTime);
                       return (
                         <div
                           key={tier.id}
@@ -362,13 +412,28 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
         </div>
 
         {/* Action Button */}
-        <button
-          type="button"
-          onClick={handleOpenCheckout}
-          className="w-full bg-[#0758fc] hover:bg-[#054fe0] active:bg-[#0052ff] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
-        >
-          <Ticket size={20} /> Register &amp; Buy Tickets
-        </button>
+        {hasAnyBookableTier ? (
+          <button
+            type="button"
+            onClick={handleOpenCheckout}
+            className="w-full bg-[#0758fc] hover:bg-[#054fe0] active:bg-[#0052ff] text-white font-extrabold text-base py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+          >
+            <Ticket size={20} /> Register &amp; Buy Tickets
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={true}
+            className="w-full bg-amber-50 dark:bg-amber-950/40 border-2 border-dashed border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-extrabold text-sm sm:text-base py-4 rounded-2xl flex items-center justify-center gap-2.5 cursor-not-allowed opacity-90 shadow-xs"
+          >
+            <Lock size={18} className="text-amber-700 dark:text-amber-400 shrink-0" />
+            <span>
+              {earliestUpcoming
+                ? `Sales Open at ${new Date(earliestUpcoming.tier.sales_start).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })} (${formatCountdown(earliestUpcoming.status.diffMs || 0)})`
+                : "Passes Currently Locked"}
+            </span>
+          </button>
+        )}
 
         {/* Utilities: Share & Wishlist */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
@@ -424,14 +489,29 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
           <Heart size={18} className={isSaved ? "fill-rose-600 text-rose-600" : ""} />
         </button>
 
-        <button
-          type="button"
-          onClick={handleOpenCheckout}
-          className="bg-[#0758fc] hover:bg-[#054fe0] active:bg-[#0052ff] text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer touch-manipulation"
-        >
-          <Ticket size={18} />
-          Register &amp; Buy
-        </button>
+        {hasAnyBookableTier ? (
+          <button
+            type="button"
+            onClick={handleOpenCheckout}
+            className="bg-[#0758fc] hover:bg-[#054fe0] active:bg-[#0052ff] text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer touch-manipulation"
+          >
+            <Ticket size={18} />
+            Register &amp; Buy
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={true}
+            className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs px-4 py-3.5 rounded-2xl flex items-center gap-1.5 cursor-not-allowed opacity-90 shadow-xs"
+          >
+            <Lock size={15} className="text-amber-800 shrink-0" />
+            <span>
+              {earliestUpcoming
+                ? `Opens at ${new Date(earliestUpcoming.tier.sales_start).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                : "Locked"}
+            </span>
+          </button>
+        )}
       </motion.div>
 
       {/* Checkout Modal (rendered with z-[9999] high priority) */}

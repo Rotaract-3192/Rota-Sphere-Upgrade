@@ -68,7 +68,39 @@ interface TierStatusInfo {
   canBook: boolean;
 }
 
-function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
+interface TierStatusInfo {
+  state: "UPCOMING" | "LIVE" | "CLOSED" | "SOLD_OUT";
+  badgeText: string;
+  badgeClass: string;
+  detailText: string;
+  canBook: boolean;
+  releaseDate?: Date;
+  diffMs?: number;
+}
+
+function formatCountdown(diffMs: number): string {
+  if (diffMs <= 0) return "Available Now";
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHrs = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHrs / 24);
+
+  if (diffDays > 0) {
+    const remHrs = diffHrs % 24;
+    return remHrs > 0 ? `Opens in ${diffDays}d ${remHrs}h` : `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}`;
+  }
+  if (diffHrs > 0) {
+    const remMins = diffMins % 60;
+    return remMins > 0 ? `Opens in ${diffHrs}h ${remMins}m` : `Opens in ${diffHrs}h`;
+  }
+  if (diffMins > 0) {
+    const remSecs = diffSecs % 60;
+    return `Opens in ${diffMins}m ${remSecs}s`;
+  }
+  return `Opens in ${diffSecs}s`;
+}
+
+function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
   const cap = Number(tier.total_capacity) || 9999;
   const sold = Number(tier.sold_count) || 0;
   const remaining = cap - sold;
@@ -82,28 +114,25 @@ function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
     };
   }
 
-  const now = new Date();
   if (tier.sales_start) {
     const start = new Date(tier.sales_start);
-    if (now < start) {
-      const diffMs = start.getTime() - now.getTime();
-      const diffHrs = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffHrs / 24);
-      const countdownStr =
-        diffDays > 0 ? `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}` : `Opens in ${Math.max(1, diffHrs)}h`;
+    if (currentTime.getTime() < start.getTime()) {
+      const diffMs = start.getTime() - currentTime.getTime();
       return {
         state: "UPCOMING",
-        badgeText: `⏳ ${countdownStr}`,
-        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
-        detailText: `Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
+        badgeText: `🔒 ${formatCountdown(diffMs)}`,
+        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold",
+        detailText: `🔒 Locked: Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
         canBook: false,
+        releaseDate: start,
+        diffMs,
       };
     }
   }
 
   if (tier.sales_end) {
     const end = new Date(tier.sales_end);
-    if (now > end) {
+    if (currentTime.getTime() > end.getTime()) {
       return {
         state: "CLOSED",
         badgeText: "Closed",
@@ -112,7 +141,7 @@ function getTierScheduleStatus(tier: SaasTicketTier): TierStatusInfo {
         canBook: false,
       };
     } else {
-      const diffMs = end.getTime() - now.getTime();
+      const diffMs = end.getTime() - currentTime.getTime();
       const diffHrs = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffHrs / 24);
       const remainingTime = diffDays > 0 ? `${diffDays}d left` : `${Math.max(1, diffHrs)}h left`;
@@ -143,15 +172,22 @@ export function CheckoutModal({
   userEmail,
   userName,
 }: CheckoutModalProps) {
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [checkoutStep, setCheckoutStep] = useState<"SELECT_PASSES" | "UPI_PAYMENT" | "SUCCESS">("SELECT_PASSES");
+
+  // Real-time ticker for auto-unlocking precisely when sales start
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
     if (firstBookable) {
       initial[firstBookable.id] = 1;
-    } else if (tiers.length > 0) {
-      initial[tiers[0].id] = 1;
     }
     return initial;
   });
@@ -186,7 +222,14 @@ export function CheckoutModal({
 
   const isEarlyBirdAvailable =
     earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => getTierScheduleStatus(t).canBook);
+    earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+
+  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+
+  const earliestUpcoming = tiers
+    .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
+    .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
+    .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
@@ -203,7 +246,7 @@ export function CheckoutModal({
     }
   }, [isOpen, event?.id]);
 
-  // Attendees list
+  // Attendees list - only initialize with a bookable tier
   const [attendees, setAttendees] = useState<
     Array<{
       tierId: string;
@@ -217,20 +260,26 @@ export function CheckoutModal({
       zone: string;
       customAnswers?: Record<string, any>;
     }>
-  >([
-    {
-      tierId: tiers[0]?.id || "",
-      name: "",
-      email: "",
-      phone: "",
-      memberType: "Rotaract",
-      clubName: "",
-      customClubName: "",
-      designation: "",
-      zone: "",
-      customAnswers: {},
-    },
-  ]);
+  >(() => {
+    const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
+    if (firstBookable) {
+      return [
+        {
+          tierId: firstBookable.id,
+          name: "",
+          email: "",
+          phone: "",
+          memberType: "Rotaract",
+          clubName: "",
+          customClubName: "",
+          designation: "",
+          zone: "",
+          customAnswers: {},
+        },
+      ];
+    }
+    return [];
+  });
 
   // UPI Payment State
   const [upiQrDataUrl, setUpiQrDataUrl] = useState<string>("");
@@ -298,10 +347,22 @@ export function CheckoutModal({
   if (!isOpen) return null;
 
   function handleCountChange(tierId: string, delta: number) {
+    const targetTier = tiers.find((t) => t.id === tierId);
+    if (!targetTier) return;
+
+    if (delta > 0) {
+      const status = getTierScheduleStatus(targetTier, currentTime);
+      if (!status.canBook) {
+        setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
+        return;
+      }
+    }
+
     const current = selectedCounts[tierId] || 0;
     const next = Math.max(0, Math.min(10, current + delta));
     const newCounts = { ...selectedCounts, [tierId]: next };
     setSelectedCounts(newCounts);
+    setErrorMessage(null);
 
     // Rebuild attendee slots while preserving what user typed
     const newAttendees: Array<{
@@ -380,8 +441,21 @@ export function CheckoutModal({
     }
 
     if (totalTicketCount === 0) {
-      setErrorMessage("Please select at least 1 ticket");
+      setErrorMessage("Please select at least 1 active ticket pass.");
       return;
+    }
+
+    // Verify each selected tier is currently open & bookable
+    for (const [tierId, count] of Object.entries(selectedCounts)) {
+      if (count > 0) {
+        const tier = tiers.find((t) => t.id === tierId);
+        if (!tier) continue;
+        const status = getTierScheduleStatus(tier, currentTime);
+        if (!status.canBook) {
+          setErrorMessage(`"${tier.name}" is locked (${status.detailText}). Please adjust your selection.`);
+          return;
+        }
+      }
     }
 
     for (let i = 0; i < attendees.length; i++) {
@@ -756,6 +830,21 @@ export function CheckoutModal({
               </div>
             )}
 
+            {/* Locked Notice if all passes are upcoming */}
+            {!hasAnyBookableTier && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 rounded-2xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5 shadow-xs">
+                <Lock size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-amber-950 dark:text-amber-100">Ticket Sales Not Yet Open</p>
+                  <p className="mt-0.5 text-[11px] text-amber-850 dark:text-amber-300">
+                    {earliestUpcoming
+                      ? `Pass sales will automatically unlock on ${new Date(earliestUpcoming.tier.sales_start).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${new Date(earliestUpcoming.tier.sales_start).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })} (${formatCountdown(earliestUpcoming.status.diffMs || 0)}). Please wait for the release timer.`
+                      : "Ticket booking is currently locked."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Tiers List */}
             <div className="space-y-3">
               <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
@@ -771,7 +860,7 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {earlyBirdTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier);
+                        const status = getTierScheduleStatus(tier, currentTime);
                         return (
                           <div
                             key={tier.id}
@@ -779,7 +868,7 @@ export function CheckoutModal({
                               count > 0
                                 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs"
                                 : !status.canBook
-                                ? "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 opacity-75"
+                                ? "border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 opacity-75"
                                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
                             }`}
                           >
@@ -855,7 +944,7 @@ export function CheckoutModal({
                       <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-white dark:bg-gray-900">
                         {generalTiers.map((tier) => {
                           const count = selectedCounts[tier.id] || 0;
-                          const status = getTierScheduleStatus(tier);
+                          const status = getTierScheduleStatus(tier, currentTime);
                           return (
                             <div
                               key={tier.id}
@@ -908,7 +997,7 @@ export function CheckoutModal({
                   <div className="space-y-2">
                     {generalTiers.map((tier) => {
                       const count = selectedCounts[tier.id] || 0;
-                      const status = getTierScheduleStatus(tier);
+                      const status = getTierScheduleStatus(tier, currentTime);
                       return (
                         <div
                           key={tier.id}
@@ -965,7 +1054,7 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {otherTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier);
+                        const status = getTierScheduleStatus(tier, currentTime);
                         return (
                           <div
                             key={tier.id}
@@ -1093,7 +1182,7 @@ export function CheckoutModal({
                           />
                         </div>
 
-                        {/* 3. Rotary Affiliation (3 Distinct Parts: Rotaract / Rotary / Non-Rotaract) */}
+                        {/* 3. Rotary Affiliation */}
                         {(() => {
                           const selectedTier = tiers.find((t) => t.id === att.tierId);
                           const isNonRotaractAllowed =
@@ -1198,7 +1287,6 @@ export function CheckoutModal({
                               />
                             </div>
                           ) : (
-                            /* Searchable Rotaract Club Selector */
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -1235,7 +1323,7 @@ export function CheckoutModal({
                           )}
                         </div>
 
-                        {/* 5. Designation / Role (NORMAL TEXT INPUT COLUMN — NOT A DROPDOWN) */}
+                        {/* 5. Designation / Role */}
                         <div className="space-y-1">
                           <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
@@ -1254,9 +1342,6 @@ export function CheckoutModal({
                             }}
                             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
                           />
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                            Type any club or district portfolio (e.g. Sergeant-at-Arms, President, DRR, Secretary, Director, Member, Guest)
-                          </p>
                         </div>
 
                         {/* 6. Event Custom Registration Questions */}
@@ -1309,8 +1394,6 @@ export function CheckoutModal({
               </div>
             )}
 
-
-
             {/* Price Breakdown */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2 text-xs">
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
@@ -1345,12 +1428,14 @@ export function CheckoutModal({
             <div className="pt-2">
               <button
                 type="button"
-                disabled={loading || totalTicketCount === 0}
+                disabled={loading || totalTicketCount === 0 || !hasAnyBookableTier}
                 onClick={handleProceedToPayment}
                 className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                ) : !hasAnyBookableTier ? (
+                  <>Passes Locked Until Release Time</>
                 ) : isFreeOrder ? (
                   <>Confirm Free Registration <ArrowRight size={16} /></>
                 ) : (

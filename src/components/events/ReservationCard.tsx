@@ -10,10 +10,10 @@
  * Architecture §32: Shows all available ticket tiers with capacity indicators.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { Clock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, AlertCircle, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import type { TicketTier, EventStatus } from "@/types/database";
 
 interface ReservationCardProps {
@@ -42,6 +42,59 @@ function getMinPrice(tiers: TicketTier[]): string {
   return min === 0 ? "Free" : `₹${min.toLocaleString("en-IN")}`;
 }
 
+function formatCountdown(diffMs: number): string {
+  if (diffMs <= 0) return "Available Now";
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHrs = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHrs / 24);
+
+  if (diffDays > 0) {
+    const remHrs = diffHrs % 24;
+    return remHrs > 0 ? `Opens in ${diffDays}d ${remHrs}h` : `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}`;
+  }
+  if (diffHrs > 0) {
+    const remMins = diffMins % 60;
+    return remMins > 0 ? `Opens in ${diffHrs}h ${remMins}m` : `Opens in ${diffHrs}h`;
+  }
+  if (diffMins > 0) {
+    const remSecs = diffSecs % 60;
+    return `Opens in ${diffMins}m ${remSecs}s`;
+  }
+  return `Opens in ${diffSecs}s`;
+}
+
+function getTierScheduleStatus(tier: TicketTier, currentTime: Date = new Date()) {
+  const available = tier.capacity - tier.sold_count - tier.reserved_count;
+  if (available <= 0) {
+    return { canBook: false, text: "Sold out", isSoldOut: true, isUpcoming: false, diffMs: 0 };
+  }
+
+  if (tier.sales_start) {
+    const start = new Date(tier.sales_start);
+    if (currentTime.getTime() < start.getTime()) {
+      const diffMs = start.getTime() - currentTime.getTime();
+      return {
+        canBook: false,
+        text: `🔒 Releases ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })} (${formatCountdown(diffMs)})`,
+        isSoldOut: false,
+        isUpcoming: true,
+        diffMs,
+        releaseDate: start,
+      };
+    }
+  }
+
+  if (tier.sales_end) {
+    const end = new Date(tier.sales_end);
+    if (currentTime.getTime() > end.getTime()) {
+      return { canBook: false, text: "Sales closed", isSoldOut: false, isUpcoming: false, diffMs: 0 };
+    }
+  }
+
+  return { canBook: true, text: "", isSoldOut: false, isUpcoming: false, diffMs: 0 };
+}
+
 function useSafeUser() {
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -54,8 +107,16 @@ function useSafeUser() {
 export function ReservationCard({ event, tiers }: ReservationCardProps) {
   const router = useRouter();
   const { isSignedIn } = useSafeUser();
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const publicTiers = tiers.filter((t) => t.enabled && t.visibility === "PUBLIC");
   const isRegistrationOpen = event.status === "REGISTRATION_OPEN" && !event.registrations_disabled;
@@ -69,17 +130,19 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
 
   const isEarlyBirdAvailable =
     earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => (t.capacity - t.sold_count - t.reserved_count) > 0);
+    earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+
+  const hasAnyBookableTier = publicTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
   const renderTierCard = (tier: TicketTier) => {
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
     const qty = quantities[tier.id] ?? 0;
-    const isSoldOut = available <= 0;
+    const status = getTierScheduleStatus(tier, currentTime);
 
     return (
-      <div key={tier.id} className="border border-gray-200 rounded-2xl p-4 bg-white space-y-2">
+      <div key={tier.id} className={`border rounded-2xl p-4 transition-all space-y-2 ${status.canBook ? "border-gray-200 bg-white" : "border-gray-200 bg-gray-50/80 opacity-80"}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900">{tier.name}</p>
@@ -87,13 +150,18 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
             {tier.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{tier.description}</p>
             )}
-            {available < 20 && !isSoldOut && (
+            {status.isUpcoming && (
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mt-1 flex items-center gap-1">
+                <Lock size={12} /> {status.text}
+              </p>
+            )}
+            {status.isSoldOut && <p className="text-xs font-bold text-rose-600 mt-1">Sold out</p>}
+            {status.canBook && available < 20 && (
               <p className="text-xs font-bold text-amber-600 mt-1">Only {available} left</p>
             )}
-            {isSoldOut && <p className="text-xs font-bold text-rose-600 mt-1">Sold out</p>}
           </div>
 
-          {!isSoldOut && (
+          {status.canBook && (
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 type="button"
@@ -245,10 +313,16 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
       {isRegistrationOpen ? (
         <button
           onClick={handleReserve}
-          disabled={totalTickets === 0 || loading}
+          disabled={totalTickets === 0 || loading || !hasAnyBookableTier}
           className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
         >
-          {loading ? "Processing…" : totalTickets === 0 ? "Select Tickets Above" : "Book Passes Now"}
+          {loading
+            ? "Processing…"
+            : !hasAnyBookableTier
+            ? "Passes Locked Until Release Time"
+            : totalTickets === 0
+            ? "Select Tickets Above"
+            : "Book Passes Now"}
         </button>
       ) : isClosed ? (
         <div className="text-center py-2">
