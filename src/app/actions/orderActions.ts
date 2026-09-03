@@ -120,6 +120,13 @@ async function ensureUpiColumns() {
       ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS zone VARCHAR(100);
     `);
   } catch (_) { /* ignore if constraint already updated */ }
+
+  try {
+    // Add missing columns to saas_ticket_tiers
+    await executeSql(`
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+    `);
+  } catch (_) { /* ignore if already exists */ }
 }
 
 export async function getEventCustomQuestionsAction(eventId: string) {
@@ -139,7 +146,7 @@ export async function getEventCustomQuestionsAction(eventId: string) {
 export async function getEventTiersAction(eventId: string) {
   try {
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, tier_type, description
+      SELECT id, name, price, total_capacity, sold_count, tier_type, description, max_per_order
       FROM saas_ticket_tiers
       WHERE event_id = ${escapeSql(eventId)}
       ORDER BY price ASC, name ASC;
@@ -198,7 +205,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const tierIds = Array.from(new Set(input.attendees.map((a) => a.ticketTierId)));
     const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end
+      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end, max_per_order
       FROM saas_ticket_tiers
       WHERE id IN (${formattedTierIds});
     `);
@@ -239,6 +246,38 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       const tier = tierMap.get(tId);
       if (!tier || !tier.is_active) {
         return { success: false, error: "One or more selected ticket tiers are no longer active" };
+      }
+
+      // Single-ticket / per-order quantity restriction check
+      const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
+      if (requestedCount > maxAllowed) {
+        return {
+          success: false,
+          error:
+            maxAllowed === 1
+              ? `You can only purchase 1 ticket for "${tier.name}". Please select only 1 ticket.`
+              : `You can only purchase a maximum of ${maxAllowed} tickets for "${tier.name}".`,
+        };
+      }
+
+      // If tier is restricted to 1 ticket per attendee, prevent duplicate hoarding across previous orders
+      if (maxAllowed === 1) {
+        const { data: existingUserTickets } = await executeSql(`
+          SELECT id FROM saas_tickets
+          WHERE ticket_tier_id = ${escapeSql(tId)}
+            AND (
+              owner_user_id = ${escapeSql(customerUserId)} 
+              OR attendee_email ILIKE ${escapeSql(customerEmail)}
+            )
+            AND status NOT IN ('CANCELLED', 'REFUNDED', 'PAYMENT_REJECTED')
+          LIMIT 1;
+        `);
+        if (existingUserTickets && existingUserTickets.length > 0) {
+          return {
+            success: false,
+            error: `You have already registered or hold a ticket for "${tier.name}". This pass tier is strictly limited to 1 ticket per attendee.`,
+          };
+        }
       }
 
       // Scheduled Time Slab Release Window Check

@@ -182,6 +182,7 @@ export function CreateEventWizardModal({
       salesStartTime?: string;
       salesEndDate?: string;
       salesEndTime?: string;
+      maxPerOrder?: number;
     }>
   >([
     {
@@ -197,6 +198,7 @@ export function CreateEventWizardModal({
       salesStartTime: "09:00",
       salesEndDate: "",
       salesEndTime: "23:59",
+      maxPerOrder: 10,
     },
   ]);
 
@@ -269,6 +271,7 @@ export function CreateEventWizardModal({
               salesStartTime: t.sales_start ? formatTimeStringToInput(t.sales_start, tz) : "09:00",
               salesEndDate: t.sales_end ? formatDateStringToInput(t.sales_end, tz) : "",
               salesEndTime: t.sales_end ? formatTimeStringToInput(t.sales_end, tz) : "23:59",
+              maxPerOrder: t.max_per_order ? Number(t.max_per_order) : 10,
             };
           })
         );
@@ -435,6 +438,7 @@ export function CreateEventWizardModal({
         salesStartTime: "09:00",
         salesEndDate: "",
         salesEndTime: "23:59",
+        maxPerOrder: 10,
       },
     ]);
   }
@@ -446,7 +450,8 @@ export function CreateEventWizardModal({
     totalCapacity: number,
     description: string,
     allowedAudience: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY" = "ALL",
-    hasCustomSchedule: boolean = tierType === "EARLY_BIRD"
+    hasCustomSchedule: boolean = tierType === "EARLY_BIRD",
+    maxPerOrder: number = 10
   ) {
     if (price > 0 && priceModel === "FREE") {
       setPriceModel("PAID");
@@ -468,6 +473,7 @@ export function CreateEventWizardModal({
         salesStartTime: "09:00",
         salesEndDate: hasCustomSchedule ? startDate || "" : "",
         salesEndTime: "23:59",
+        maxPerOrder,
       },
     ]);
   }
@@ -680,6 +686,7 @@ export function CreateEventWizardModal({
           allowedAudience: t.allowedAudience || "ALL",
           salesStart: salesStartISO,
           salesEnd: salesEndISO,
+          maxPerOrder: t.maxPerOrder ? Number(t.maxPerOrder) : 10,
         };
       });
 
@@ -1570,6 +1577,40 @@ export function CreateEventWizardModal({
                           placeholder="Perks description (e.g. Includes delegate badge, lunch kit & certificate)"
                           className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc]"
                         />
+                      </div>
+
+                      {/* 🎟️ PURCHASE LIMIT CONTROL (Single Ticket vs Multi-Pass) */}
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 border border-gray-200">
+                          <div>
+                            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800 select-none">
+                              <input
+                                type="checkbox"
+                                checked={tier.maxPerOrder === 1}
+                                onChange={(e) => {
+                                  updateTierField(idx, "maxPerOrder", e.target.checked ? 1 : 10);
+                                }}
+                                className="w-4 h-4 rounded text-[#0758fc] focus:ring-[#0758fc] cursor-pointer"
+                              />
+                              <span className="flex items-center gap-1.5">
+                                <Ticket size={13} className="text-[#0758fc]" />
+                                <span>Limit to 1 ticket per attendee / order</span>
+                              </span>
+                            </label>
+                            <p className="text-[11px] text-gray-500 ml-6 mt-0.5">
+                              Buyers can only purchase 1 ticket of this tier (prevents bulk hoarding for limited passes).
+                            </p>
+                          </div>
+                          {tier.maxPerOrder === 1 ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                              🔒 Max 1 Ticket
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-gray-400 shrink-0">
+                              Standard (Up to 10)
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* ⏱️ SCHEDULED TIME-SLAB / TIMED RELEASE CONTROLS */}

@@ -267,6 +267,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                               {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                               )}
+                              {Number(tier.max_per_order) === 1 && (
+                                <span className="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md">🔒 Limit 1 per order</span>
+                              )}
                             </div>
                             <p className="text-[11px] text-gray-500">{status.detailText}</p>
                           </div>
@@ -320,6 +323,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                                   {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
                                     <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
                                   )}
+                                  {Number(tier.max_per_order) === 1 && (
+                                    <span className="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md">🔒 Limit 1</span>
+                                  )}
                                 </div>
                                 <p className="text-[10px] text-gray-500">{status.detailText}</p>
                               </div>
@@ -355,6 +361,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                               )}
                               {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                              )}
+                              {Number(tier.max_per_order) === 1 && (
+                                <span className="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md">🔒 Limit 1 per order</span>
                               )}
                             </div>
                             <p className="text-[11px] text-gray-500">{status.detailText}</p>
@@ -394,6 +403,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
                               )}
                               {tier.allowed_audience === "NON_ROTARACT_ONLY" && (
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md">Guest Pass</span>
+                              )}
+                              {Number(tier.max_per_order) === 1 && (
+                                <span className="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md">🔒 Limit 1 per order</span>
                               )}
                             </div>
                             <p className="text-[11px] text-gray-500">{status.detailText}</p>

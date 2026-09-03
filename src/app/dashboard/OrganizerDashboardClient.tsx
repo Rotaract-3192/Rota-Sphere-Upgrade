@@ -1035,7 +1035,16 @@ export function OrganizerDashboardClient({
                         const avail = t.total_capacity - t.sold_count;
                         return (
                           <tr key={t.id}>
-                            <td className="py-3.5 font-bold text-gray-900">{t.name}</td>
+                            <td className="py-3.5 font-bold text-gray-900">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span>{t.name}</span>
+                                {Number(t.max_per_order) === 1 && (
+                                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                    🔒 Limit 1
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="py-3.5 text-gray-500">{e.title}</td>
                             <td className="py-3.5 font-bold text-[#0758fc]">{Number(t.price) === 0 ? "FREE" : `₹${t.price}`}</td>
                             <td className="py-3.5">{t.total_capacity}</td>

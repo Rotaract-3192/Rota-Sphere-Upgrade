@@ -359,7 +359,16 @@ export function CheckoutModal({
     }
 
     const current = selectedCounts[tierId] || 0;
-    const next = Math.max(0, Math.min(10, current + delta));
+    const maxAllowed = targetTier.max_per_order ? Number(targetTier.max_per_order) : 10;
+    if (delta > 0 && current >= maxAllowed) {
+      setErrorMessage(
+        maxAllowed === 1
+          ? `"${targetTier.name}" is strictly limited to 1 ticket per booking.`
+          : `You can only select up to ${maxAllowed} tickets for "${targetTier.name}".`
+      );
+      return;
+    }
+    const next = Math.max(0, Math.min(maxAllowed, current + delta));
     const newCounts = { ...selectedCounts, [tierId]: next };
     setSelectedCounts(newCounts);
     setErrorMessage(null);
@@ -453,6 +462,15 @@ export function CheckoutModal({
         const status = getTierScheduleStatus(tier, currentTime);
         if (!status.canBook) {
           setErrorMessage(`"${tier.name}" is locked (${status.detailText}). Please adjust your selection.`);
+          return;
+        }
+        const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
+        if (count > maxAllowed) {
+          setErrorMessage(
+            maxAllowed === 1
+              ? `"${tier.name}" is strictly limited to 1 ticket only.`
+              : `You can only select up to ${maxAllowed} tickets for "${tier.name}".`
+          );
           return;
         }
       }
@@ -1027,6 +1045,11 @@ export function CheckoutModal({
                                   <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
                                     {status.badgeText}
                                   </span>
+                                  {Number(tier.max_per_order) === 1 && (
+                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                      🔒 Limit 1
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                                 <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
@@ -1047,7 +1070,7 @@ export function CheckoutModal({
                                 <button
                                   type="button"
                                   onClick={() => handleCountChange(tier.id, 1)}
-                                  disabled={!status.canBook}
+                                  disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
                                   className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   +
@@ -1080,6 +1103,11 @@ export function CheckoutModal({
                               <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
                                 {status.badgeText}
                               </span>
+                              {Number(tier.max_per_order) === 1 && (
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                  🔒 Limit 1
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                             <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
@@ -1100,7 +1128,7 @@ export function CheckoutModal({
                             <button
                               type="button"
                               onClick={() => handleCountChange(tier.id, 1)}
-                              disabled={!status.canBook}
+                              disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
                               className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               +
@@ -1137,6 +1165,11 @@ export function CheckoutModal({
                                 <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
                                   {status.badgeText}
                                 </span>
+                                {Number(tier.max_per_order) === 1 && (
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                    🔒 Limit 1
+                                  </span>
+                                )}
                               </div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                               <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
@@ -1157,7 +1190,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook}
+                                disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +

@@ -61,6 +61,7 @@ export interface CreateEventInput {
     allowNonRotaract?: boolean;
     allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
     benefits?: string[];
+    maxPerOrder?: number;
   }>;
   speakers?: Array<{
     name: string;
@@ -322,6 +323,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allow_non_rotaract BOOLEAN DEFAULT TRUE;
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allowed_audience VARCHAR(50) DEFAULT 'ALL';
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
       `);
     } catch {}
 
@@ -450,6 +452,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             total_capacity,
             sold_count,
             reserved_count,
+            max_per_order,
             sales_start,
             sales_end,
             allow_non_rotaract,
@@ -466,6 +469,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             ${Number(tier.totalCapacity) || 100},
             0,
             0,
+            ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
             ${escapeSql(salesStartVal)},
             ${escapeSql(salesEndVal)},
             ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
@@ -662,6 +666,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             total_capacity,
             sold_count,
             reserved_count,
+            max_per_order,
             sales_start,
             sales_end,
             allow_non_rotaract,
@@ -678,6 +683,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             ${Number(t.total_capacity) || 100},
             0,
             0,
+            ${t.max_per_order ? Number(t.max_per_order) : 10},
             NOW(),
             NOW() + INTERVAL '8 days',
             ${t.allow_non_rotaract !== false ? "TRUE" : "FALSE"},
@@ -828,6 +834,7 @@ export async function updateEventAction(
               tier_type = ${escapeSql(tier.tierType || "REGULAR")},
               price = ${Number(tier.price) || 0},
               total_capacity = ${Number(tier.totalCapacity) || 100},
+              max_per_order = ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
               sales_start = ${escapeSql(salesStartVal)},
               sales_end = ${escapeSql(salesEndVal)},
               allow_non_rotaract = ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
@@ -856,6 +863,7 @@ export async function updateEventAction(
               total_capacity,
               sold_count,
               reserved_count,
+              max_per_order,
               sales_start,
               sales_end,
               allow_non_rotaract,
@@ -872,6 +880,7 @@ export async function updateEventAction(
               ${Number(tier.totalCapacity) || 100},
               0,
               0,
+              ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
               ${escapeSql(salesStartVal)},
               ${escapeSql(salesEndVal)},
               ${tierAllowNonRotaract ? "TRUE" : "FALSE"},

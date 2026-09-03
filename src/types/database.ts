@@ -234,6 +234,7 @@ export interface TicketTier {
   reserved_count: number;
   minimum_quantity: number;
   maximum_quantity: number;
+  max_per_order?: number;
   sales_start: string | null;
   sales_end: string | null;
   visibility: TicketVisibility;

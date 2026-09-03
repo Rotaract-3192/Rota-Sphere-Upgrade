@@ -140,12 +140,20 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
     const qty = quantities[tier.id] ?? 0;
     const status = getTierScheduleStatus(tier, currentTime);
+    const maxAllowed = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 10);
 
     return (
       <div key={tier.id} className={`border rounded-2xl p-4 transition-all space-y-2 ${status.canBook ? "border-gray-200 bg-white" : "border-gray-200 bg-gray-50/80 opacity-80"}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+              {maxAllowed === 1 && (
+                <span className="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-md">
+                  🔒 Limit 1
+                </span>
+              )}
+            </div>
             <p className="text-xs font-mono font-semibold text-[#0758fc]">{formatPrice(tier.price)}</p>
             {tier.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{tier.description}</p>
@@ -175,7 +183,7 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
               <button
                 type="button"
                 onClick={() => setQty(tier.id, qty + 1)}
-                disabled={qty >= Math.min(available, 10)}
+                disabled={qty >= Math.min(available, maxAllowed)}
                 className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 +
@@ -198,7 +206,8 @@ export function ReservationCard({ event, tiers }: ReservationCardProps) {
   function setQty(tierId: string, val: number) {
     const tier = publicTiers.find((t) => t.id === tierId)!;
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
-    const clamped = Math.max(0, Math.min(val, available, tier.maximum_quantity));
+    const maxLimit = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 10);
+    const clamped = Math.max(0, Math.min(val, available, maxLimit));
     setQuantities((q) => ({ ...q, [tierId]: clamped }));
   }
 
