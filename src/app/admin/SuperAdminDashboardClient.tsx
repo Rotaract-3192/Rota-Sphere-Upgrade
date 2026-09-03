@@ -1734,6 +1734,21 @@ export function SuperAdminDashboardClient({
                                     </button>
                                   )}
                                 </div>
+                              ) : (ord.payment_proof_url || ord.upi_receipt_url || ord.upi_screenshot_url) ? (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-extrabold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                    <Camera size={11} /> Screenshot Proof
+                                  </span>
+                                  {isPending && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setProofModalOrder(ord)}
+                                      className="text-[11px] text-[#0758fc] dark:text-blue-400 font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                                    >
+                                      <Camera size={12} /> View Payment Photo Proof
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-[11px] text-gray-400 italic">Free Order / No UTR</span>
                               )}
@@ -3619,7 +3634,7 @@ export function SuperAdminDashboardClient({
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Entered UTR ID</span>
                 <span className="font-mono font-bold text-gray-900 dark:text-white block truncate bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded-md">
-                  {proofModalOrder.upi_transaction_id || "N/A"}
+                  {proofModalOrder.upi_transaction_id || "Optional (Not Provided)"}
                 </span>
               </div>
               <div>

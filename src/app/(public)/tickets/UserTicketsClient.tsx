@@ -99,24 +99,25 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
   async function handleUtrSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!utrTicket || !utrInput.trim()) return;
+    if (!utrTicket || (!utrInput.trim() && !utrProofUrl)) return;
 
     setUtrLoading(true);
     setUtrMessage(null);
 
-    const res = await resubmitUpiTransactionAction(utrTicket.id, utrInput.trim(), utrProofUrl || undefined);
+    const res = await resubmitUpiTransactionAction(utrTicket.id, utrInput.trim() || undefined, utrProofUrl || undefined);
     setUtrLoading(false);
 
     if (res.success) {
-      setUtrMessage("UTR reference updated successfully! Verification in progress.");
+      setUtrMessage("Payment proof updated successfully! Verification in progress.");
       setTimeout(() => {
         setUtrModalOpen(false);
         setUtrMessage(null);
         setUtrInput("");
+        setUtrProofUrl("");
         window.location.reload();
       }, 1500);
     } else {
-      setUtrMessage(res.error || "Failed to update UTR reference");
+      setUtrMessage(res.error || "Failed to update payment proof");
     }
   }
 
@@ -1044,7 +1045,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0758fc]">
                   PAYMENT VERIFICATION
                 </span>
-                <h3 className="text-xl font-black text-gray-900">Update UPI UTR Reference</h3>
+                <h3 className="text-xl font-black text-gray-900">Update Payment Proof</h3>
                 <p className="text-xs text-gray-500 font-mono">Pass: {utrTicket.ticket_code}</p>
               </div>
               <button
@@ -1068,33 +1069,20 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
             )}
 
             <form onSubmit={handleUtrSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                  12-Digit UPI Transaction / UTR Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={32}
-                  placeholder="e.g. 421893821034"
-                  value={utrInput}
-                  onChange={(e) => setUtrInput(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#0758fc]"
-                />
-              </div>
-
               {/* Payment Screenshot Proof Upload */}
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Camera size={14} className="text-[#0758fc]" />
-                    Upload Payment Receipt Screenshot (Optional)
+                    Upload Payment Receipt Screenshot
                   </span>
-                  <span className="text-[10px] text-gray-400 font-normal">GPay / PhonePe / Paytm</span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
+                    Instant Verification
+                  </span>
                 </label>
 
                 {utrProofUrl ? (
-                  <div className="p-2.5 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                  <div className="p-2.5 bg-gray-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3 shadow-xs">
                     <div className="flex items-center gap-3 min-w-0">
                       <img src={utrProofUrl} alt="Receipt Preview" className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" />
                       <div className="min-w-0">
@@ -1143,10 +1131,39 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 )}
               </div>
 
+              {/* Visual "OR" Divider */}
+              <div className="relative flex items-center justify-center py-0.5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <span className="relative bg-white px-3 text-[10px] font-black uppercase tracking-wider text-gray-400 rounded-full">
+                  OR ENTER UTR NUMBER
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    12-Digit UPI Reference / UTR Number
+                  </label>
+                  <span className="text-[10px] font-bold text-gray-400">
+                    {utrProofUrl ? "Optional (Screenshot attached)" : "Optional if screenshot uploaded"}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={32}
+                  placeholder="e.g. 421893821034 (Optional)"
+                  value={utrInput}
+                  onChange={(e) => setUtrInput(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#0758fc]"
+                />
+              </div>
+
               <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/80 flex items-start gap-2.5 text-xs text-blue-900">
                 <AlertCircle size={16} className="text-blue-600 shrink-0 mt-0.5" />
                 <p className="leading-relaxed text-[11px]">
-                  Submitting your updated 12-digit UTR ID and screenshot will send your transaction back to the host organizer for immediate verification.
+                  Submitting your payment screenshot or 12-digit UTR ID will send your transaction back to the host organizer for immediate verification.
                 </p>
               </div>
 
@@ -1160,10 +1177,10 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={utrLoading || !utrInput.trim()}
+                  disabled={utrLoading || (!utrInput.trim() && !utrProofUrl)}
                   className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-3 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {utrLoading ? <Loader2 size={14} className="animate-spin" /> : "Submit UTR"}
+                  {utrLoading ? <Loader2 size={14} className="animate-spin" /> : "Submit Payment Proof"}
                 </button>
               </div>
             </form>

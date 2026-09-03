@@ -329,11 +329,13 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     const isFree = feeCalculation.totalPayable === 0;
 
-    // Validate UTR if paid
-    if (!isFree && !input.upiTransactionId?.trim()) {
+    // Validate payment proof if paid (either screenshot OR UTR reference is required)
+    const hasUtr = Boolean(input.upiTransactionId?.trim());
+    const hasScreenshot = Boolean(input.paymentProofUrl);
+    if (!isFree && !hasUtr && !hasScreenshot) {
       return {
         success: false,
-        error: "Please enter your 12-digit UPI Transaction / UTR Reference ID after payment.",
+        error: "Please provide either a payment receipt screenshot or your 12-digit UPI UTR reference to confirm your booking.",
       };
     }
 

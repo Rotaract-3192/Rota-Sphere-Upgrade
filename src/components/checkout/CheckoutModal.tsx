@@ -483,6 +483,10 @@ export function CheckoutModal({
   }
 
   async function handleSubmitOrder(utrNumber: string) {
+    if (!isFreeOrder && !paymentProofUrl && !utrNumber.trim()) {
+      setErrorMessage("Please attach your payment screenshot or enter your UTR number to confirm.");
+      return;
+    }
     setLoading(true);
     setErrorMessage(null);
 
@@ -714,56 +718,49 @@ export function CheckoutModal({
               </div>
             </div>
 
-            {/* Step 2: UTR Reference Form & Payment Screenshot Upload */}
+            {/* Step 2: Payment Confirmation (Screenshot or UTR Reference) */}
             <div className="space-y-4 p-5 bg-blue-50/60 dark:bg-gray-800/80 border border-blue-200/80 dark:border-gray-700 rounded-3xl">
               <div className="space-y-1">
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5 w-full">
-                  <Clock size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
-                  Enter 12-Digit UPI Reference / UTR Number *
-                </label>
-                <p className="text-xs text-gray-600 dark:text-gray-300 w-full block leading-relaxed">
-                  After completing the payment in GPay/PhonePe/Paytm, paste your 12-digit UTR/Txn Reference number below.
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <CheckCircle2 size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
+                    Confirm Payment Proof
+                  </span>
+                  <span className="text-[10px] font-extrabold text-[#0758fc] dark:text-blue-400 bg-blue-100/70 dark:bg-blue-950/70 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                    Screenshot or UTR
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Upload your payment screenshot to confirm instantly, or enter your 12-digit UPI UTR number below.
                 </p>
               </div>
 
-              <input
-                type="text"
-                required
-                maxLength={32}
-                placeholder="e.g. 421893821034 or UPI/421893..."
-                value={upiTransactionId}
-                onChange={(e) => {
-                  setUpiTransactionId(e.target.value);
-                  setErrorMessage(null);
-                }}
-                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
-              />
-
-              {/* Prominent Payment Screenshot Attachment Field */}
-              <div className="pt-3 space-y-2 border-t border-blue-200 dark:border-gray-700">
+              {/* Option 1: Payment Screenshot Attachment */}
+              <div className="space-y-2">
                 <label className="block text-xs font-extrabold text-gray-900 dark:text-white flex items-center justify-between w-full">
                   <span className="flex items-center gap-1.5">
                     <Camera size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
-                    Attach Payment Screenshot Proof (Recommended)
+                    Attach Payment Screenshot Proof
                   </span>
                   <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full font-extrabold">
-                    GPay / PhonePe / Paytm
+                    Instant Verification
                   </span>
                 </label>
 
                 {paymentProofUrl ? (
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shadow-xs w-full">
+                  <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-between gap-3 shadow-xs w-full">
                     <div className="flex items-center gap-3 min-w-0">
                       <img src={paymentProofUrl} alt="Receipt Preview" className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0" />
                       <div className="min-w-0">
                         <span className="text-xs font-bold text-gray-900 dark:text-white block truncate">Payment Screenshot Attached</span>
-                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold block">✓ Ready for Instant Verification</span>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold block">✓ Ready to Confirm (UTR is optional)</span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPaymentProofUrl("")}
                       className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors shrink-0 cursor-pointer"
+                      title="Remove Screenshot"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -785,11 +782,13 @@ export function CheckoutModal({
                           try {
                             const compressed = await compressImageFile(file);
                             setPaymentProofUrl(compressed);
+                            setErrorMessage(null);
                           } catch {
                             const reader = new FileReader();
                             reader.onload = () => {
                               if (typeof reader.result === "string") {
                                 setPaymentProofUrl(reader.result);
+                                setErrorMessage(null);
                               }
                             };
                             reader.readAsDataURL(file);
@@ -798,6 +797,65 @@ export function CheckoutModal({
                       }}
                     />
                   </label>
+                )}
+              </div>
+
+              {/* Visual "OR" Divider */}
+              <div className="relative flex items-center justify-center py-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-blue-200/80 dark:border-gray-700" />
+                </div>
+                <span className="relative bg-blue-50 dark:bg-gray-800 px-3 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 rounded-full">
+                  OR ENTER UTR NUMBER
+                </span>
+              </div>
+
+              {/* Option 2: 12-Digit UTR Reference Input (Optional) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <Clock size={14} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
+                    12-Digit UPI Reference / UTR Number
+                  </label>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                    {paymentProofUrl ? "Optional (Screenshot attached)" : "Optional if screenshot uploaded"}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={32}
+                  placeholder="e.g. 421893821034 (Optional)"
+                  value={upiTransactionId}
+                  onChange={(e) => {
+                    setUpiTransactionId(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
+                />
+              </div>
+
+              {/* Proof Status Badge */}
+              <div className="pt-1">
+                {paymentProofUrl && upiTransactionId.trim() ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-2">
+                    <CheckCircle2 size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>Screenshot & UTR attached — ready for fast verification!</span>
+                  </div>
+                ) : paymentProofUrl ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-2">
+                    <CheckCircle2 size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>Screenshot attached — UTR number is optional. Ready to confirm!</span>
+                  </div>
+                ) : upiTransactionId.trim() ? (
+                  <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-[11px] font-bold flex items-center gap-2">
+                    <CheckCircle2 size={14} className="shrink-0 text-[#0758fc] dark:text-blue-400" />
+                    <span>UTR reference entered — ready to submit for verification.</span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[11px] font-semibold flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Attach your payment screenshot OR enter your UTR number to confirm.</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -812,12 +870,23 @@ export function CheckoutModal({
                 <ArrowLeft size={14} /> Back to Pass Selection
               </button>
 
-              <SlideToPayButton
-                onSuccess={() => handleSubmitOrder(upiTransactionId)}
-                label={loading ? "Submitting..." : "Slide to Submit Ticket for Approval"}
-                disabled={loading || !upiTransactionId.trim()}
-                loading={loading}
-              />
+              {(() => {
+                const canSubmit = isFreeOrder || Boolean(paymentProofUrl || upiTransactionId.trim());
+                return (
+                  <SlideToPayButton
+                    onSuccess={() => handleSubmitOrder(upiTransactionId)}
+                    label={
+                      loading
+                        ? "Submitting..."
+                        : !canSubmit
+                        ? "Upload Screenshot or Enter UTR to Confirm"
+                        : "Slide to Submit Ticket for Approval"
+                    }
+                    disabled={loading || !canSubmit}
+                    loading={loading}
+                  />
+                );
+              })()}
             </div>
           </div>
         ) : (

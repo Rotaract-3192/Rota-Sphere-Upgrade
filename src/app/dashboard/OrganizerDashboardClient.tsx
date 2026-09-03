@@ -1392,6 +1392,21 @@ export function OrganizerDashboardClient({
                                     </button>
                                   )}
                                 </div>
+                              ) : (o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url) ? (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-extrabold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                    <Camera size={11} /> Screenshot Proof
+                                  </span>
+                                  {isPending && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setProofModalOrder(o)}
+                                      className="text-[11px] text-[#0758fc] dark:text-blue-400 font-bold hover:underline flex items-center gap-1 block cursor-pointer"
+                                    >
+                                      View Screenshot Proof
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-gray-400 dark:text-gray-500 italic text-[11px]">Free / N/A</span>
                               )}
@@ -1777,6 +1792,10 @@ export function OrganizerDashboardClient({
                               <span className="font-mono font-bold text-xs bg-gray-100 border border-gray-200 px-2 py-1 rounded-lg text-gray-900">
                                 {o.upi_transaction_id}
                               </span>
+                            ) : (o.payment_proof_url || o.upi_receipt_url || o.upi_screenshot_url) ? (
+                              <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg inline-flex items-center gap-1">
+                                <Camera size={11} /> Screenshot Proof
+                              </span>
                             ) : (
                               <span className="text-gray-400 italic">Free / Direct</span>
                             )}
@@ -1935,7 +1954,7 @@ export function OrganizerDashboardClient({
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Entered UTR ID</span>
                 <span className="font-mono font-bold text-gray-900 block truncate bg-white border border-gray-200 px-1.5 py-0.5 rounded-md">
-                  {proofModalOrder.upi_transaction_id || "N/A"}
+                  {proofModalOrder.upi_transaction_id || "Optional (Not Provided)"}
                 </span>
               </div>
               <div>

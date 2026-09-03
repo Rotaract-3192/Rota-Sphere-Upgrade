@@ -218,13 +218,17 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
   }
 }
 
-export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumber: string, paymentProofUrl?: string) {
+export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumber?: string, paymentProofUrl?: string) {
   try {
     const user = await requireAuth();
 
-    const cleanUtr = newUtrNumber.trim();
-    if (!cleanUtr || cleanUtr.length < 6) {
-      return { success: false, error: "Please enter a valid 12-digit UTR reference ID" };
+    const cleanUtr = newUtrNumber?.trim() || "";
+    if (!cleanUtr && !paymentProofUrl) {
+      return { success: false, error: "Please provide either a payment screenshot or a valid UTR reference." };
+    }
+
+    if (cleanUtr && cleanUtr.length < 6) {
+      return { success: false, error: "Please enter a valid 12-digit UTR reference ID." };
     }
 
     const { data: ticketRows } = await executeSql(`
@@ -248,29 +252,32 @@ export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumbe
       return { success: false, error: "Unauthorized: You do not own this ticket." };
     }
 
-    // Check for duplicate UTR across other active/pending orders
-    const { data: existingUtr } = await executeSql(`
-      SELECT o.id, o.order_number FROM saas_orders o
-      WHERE LOWER(TRIM(o.upi_transaction_id)) = ${escapeSql(cleanUtr.toLowerCase())}
-        AND o.id != ${escapeSql(ticket.order_id || "")}
-        AND o.status IN ('PENDING_VERIFICATION', 'PAID')
-      LIMIT 1;
-    `);
+    // Check for duplicate UTR across other active/pending orders only if UTR is provided
+    if (cleanUtr) {
+      const { data: existingUtr } = await executeSql(`
+        SELECT o.id, o.order_number FROM saas_orders o
+        WHERE LOWER(TRIM(o.upi_transaction_id)) = ${escapeSql(cleanUtr.toLowerCase())}
+          AND o.id != ${escapeSql(ticket.order_id || "")}
+          AND o.status IN ('PENDING_VERIFICATION', 'PAID')
+        LIMIT 1;
+      `);
 
-    if (existingUtr && existingUtr.length > 0) {
-      return {
-        success: false,
-        error: `Duplicate UTR Detected: The UTR reference "${cleanUtr}" has already been submitted for order #${existingUtr[0].order_number}. Duplicate UTR numbers cannot be used.`,
-      };
+      if (existingUtr && existingUtr.length > 0) {
+        return {
+          success: false,
+          error: `Duplicate UTR Detected: The UTR reference "${cleanUtr}" has already been submitted for order #${existingUtr[0].order_number}. Duplicate UTR numbers cannot be used.`,
+        };
+      }
     }
 
     const proofSql = paymentProofUrl ? escapeSql(paymentProofUrl) : "NULL";
+    const utrSql = cleanUtr ? escapeSql(cleanUtr) : "NULL";
 
     // Update order UTR reference & screenshot proof and reset status to PENDING_VERIFICATION
     if (ticket.order_id) {
       await executeSql(`
         UPDATE saas_orders
-        SET upi_transaction_id = ${escapeSql(cleanUtr)},
+        SET upi_transaction_id = COALESCE(${utrSql}, upi_transaction_id),
             upi_receipt_url = COALESCE(${proofSql}, upi_receipt_url),
             payment_proof_url = COALESCE(${proofSql}, payment_proof_url),
             status = 'PENDING_VERIFICATION',
@@ -295,7 +302,7 @@ export async function resubmitUpiTransactionAction(ticketId: string, newUtrNumbe
       action: "UPI_TRANSACTION_RESUBMITTED",
       entityType: "TICKET",
       entityId: ticketId,
-      newState: { newUtrNumber: cleanUtr, status: "PENDING_VERIFICATION" },
+      newState: { newUtrNumber: cleanUtr || undefined, hasScreenshot: Boolean(paymentProofUrl), status: "PENDING_VERIFICATION" },
     });
 
     revalidatePath("/tickets");
