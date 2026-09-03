@@ -281,6 +281,8 @@ export function CreateEventWizardModal({
       if (eventToEdit.google_maps_url) setMapsUrl(eventToEdit.google_maps_url);
 
       if (eventToEdit.saas_ticket_tiers && eventToEdit.saas_ticket_tiers.length > 0) {
+        const hasPaidTier = eventToEdit.saas_ticket_tiers.some((t: any) => Number(t.price) > 0);
+        setPriceModel(hasPaidTier ? "PAID" : "FREE");
         setTicketTiers(
           eventToEdit.saas_ticket_tiers.map((t: any) => {
             const hasCustom = Boolean(t.sales_start || t.sales_end);
@@ -302,6 +304,8 @@ export function CreateEventWizardModal({
             };
           })
         );
+      } else {
+        setPriceModel("FREE");
       }
       if (eventToEdit.org_name || eventToEdit.organization_name || eventToEdit.organizations?.name) {
         setHostingClub(eventToEdit.org_name || eventToEdit.organization_name || eventToEdit.organizations?.name);
@@ -400,56 +404,63 @@ export function CreateEventWizardModal({
         prev.map((t) => ({ ...t, price: 0 }))
       );
     } else {
-      const todayStr = new Date().toISOString().split("T")[0];
-      setTicketTiers([
-        {
-          name: "Early Bird Pass",
-          tierType: "EARLY_BIRD",
-          price: 199,
-          totalCapacity: 100,
-          description: "Discounted early access pass",
-          allowNonRotaract: true,
-          allowedAudience: "ALL",
-          hasCustomSchedule: true,
-          salesStartDate: todayStr,
-          salesStartTime: "09:00",
-          salesEndDate: startDate || "",
-          salesEndTime: "23:59",
-        },
-        {
-          name: "General Release Pass",
-          tierType: "REGULAR",
-          price: 499,
-          totalCapacity: 350,
-          description: "Full delegate access",
-          allowNonRotaract: true,
-          allowedAudience: "ALL",
-          hasCustomSchedule: false,
-          salesStartDate: "",
-          salesStartTime: "09:00",
-          salesEndDate: "",
-          salesEndTime: "23:59",
-        },
-        {
-          name: "VIP Delegate Pass",
-          tierType: "VIP",
-          price: 999,
-          totalCapacity: 50,
-          description: "VIP seating + merchandise kit",
-          allowNonRotaract: true,
-          allowedAudience: "ALL",
-          hasCustomSchedule: false,
-          salesStartDate: "",
-          salesStartTime: "09:00",
-          salesEndDate: "",
-          salesEndTime: "23:59",
-        },
-      ]);
+      // Switching to PAID: Preserve existing tiers, do NOT wipe user configuration!
+      setTicketTiers((prev) => {
+        if (!prev || prev.length === 0) {
+          const todayStr = new Date().toISOString().split("T")[0];
+          return [
+            {
+              name: "Early Bird Pass",
+              tierType: "EARLY_BIRD",
+              price: 199,
+              totalCapacity: 100,
+              description: "Discounted early access pass",
+              allowNonRotaract: true,
+              allowedAudience: "ALL",
+              hasCustomSchedule: true,
+              salesStartDate: todayStr,
+              salesStartTime: "09:00",
+              salesEndDate: startDate || "",
+              salesEndTime: "23:59",
+              maxPerOrder: 1,
+            },
+            {
+              name: "General Release Pass",
+              tierType: "REGULAR",
+              price: 499,
+              totalCapacity: 350,
+              description: "Full delegate access",
+              allowNonRotaract: true,
+              allowedAudience: "ALL",
+              hasCustomSchedule: false,
+              salesStartDate: "",
+              salesStartTime: "09:00",
+              salesEndDate: "",
+              salesEndTime: "23:59",
+              maxPerOrder: 10,
+            },
+          ];
+        }
+
+        // Keep every single tier with its existing ID, capacity, schedule, name!
+        // If price is 0, give it a default paid price (e.g. 199 for early bird, 499 for regular)
+        return prev.map((t) => {
+          const currentP = Number(t.price) || 0;
+          let newP = currentP;
+          if (newP <= 0) {
+            newP = t.tierType === "EARLY_BIRD" || /early/i.test(t.name) ? 199 : 499;
+          }
+          return {
+            ...t,
+            price: newP,
+          };
+        });
+      });
     }
   }
 
   function addNewTier() {
-    const defaultPrice = priceModel === "FREE" ? 0 : 0;
+    const defaultPrice = priceModel === "FREE" ? 0 : 199;
     setTicketTiers([
       ...ticketTiers,
       {
@@ -480,7 +491,7 @@ export function CreateEventWizardModal({
     hasCustomSchedule: boolean = tierType === "EARLY_BIRD",
     maxPerOrder: number = 10
   ) {
-    if (price > 0 && priceModel === "FREE") {
+    if (price > 0) {
       setPriceModel("PAID");
     }
     const tierAllowsNonRotaract = allowedAudience !== "ROTARACT_ONLY";
@@ -490,7 +501,7 @@ export function CreateEventWizardModal({
       {
         name,
         tierType,
-        price: priceModel === "FREE" ? 0 : price,
+        price: price, // Use the actual preset price!
         totalCapacity,
         description,
         allowNonRotaract: tierAllowsNonRotaract,
@@ -709,6 +720,9 @@ export function CreateEventWizardModal({
             )
           : true;
 
+      const effectivePriceModel =
+        priceModel === "PAID" || ticketTiers.some((t) => Number(t.price) > 0) ? "PAID" : "FREE";
+
       const formattedTicketTiers = ticketTiers.map((t) => {
         let salesStartISO: string | undefined = undefined;
         let salesEndISO: string | undefined = undefined;
@@ -724,12 +738,17 @@ export function CreateEventWizardModal({
           }
         }
 
+        let tierFinalPrice = 0;
+        if (effectivePriceModel === "PAID") {
+          tierFinalPrice = Number(t.price) > 0 ? Number(t.price) : 199;
+        }
+
         return {
           id: t.id,
           name: t.name.trim(),
           description: t.description?.trim(),
           tierType: t.tierType,
-          price: priceModel === "FREE" ? 0 : Number(t.price) || 0,
+          price: tierFinalPrice,
           totalCapacity: Number(t.totalCapacity) || 100,
           allowNonRotaract: t.allowNonRotaract !== false,
           allowedAudience: t.allowedAudience || "ALL",
@@ -1546,19 +1565,26 @@ export function CreateEventWizardModal({
                               type="number"
                               min="0"
                               step="1"
-                              disabled={priceModel === "FREE"}
                               value={priceModel === "FREE" ? 0 : tier.price}
-                              onChange={(e) => updateTierField(idx, "price", parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0;
+                                if (newPrice > 0 && priceModel === "FREE") {
+                                  setPriceModel("PAID");
+                                }
+                                updateTierField(idx, "price", newPrice);
+                              }}
                               placeholder="0 for Free"
                               className={`w-full border rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none transition-all ${
                                 priceModel === "FREE"
-                                  ? "bg-gray-100/80 border-gray-200 text-gray-400 cursor-not-allowed"
+                                  ? "bg-gray-100/80 border-gray-200 text-gray-600 focus:bg-white focus:border-[#0758fc]"
                                   : "bg-gray-50 border-gray-200 focus:bg-white focus:border-[#0758fc]"
                               }`}
                             />
                           </div>
-                          {priceModel === "FREE" && (
+                          {priceModel === "FREE" ? (
                             <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Free Event (₹0)</span>
+                          ) : (
+                            <span className="text-[10px] text-[#0758fc] font-bold mt-1 block">Paid Pass (₹{tier.price})</span>
                           )}
                         </div>
 
