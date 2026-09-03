@@ -38,13 +38,14 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const cleanSlug = (slug || "").trim().toLowerCase().replace(/'/g, "''");
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
   const { data } = await executeSql(`
     SELECT e.title, e.summary, e.description, e.cover_image_url, e.logo_url, e.city, cat.name as category, e.event_type, e.start_date, o.name as org_name
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
     LEFT JOIN event_categories cat ON e.category_id = cat.id
-    WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+    WHERE LOWER(e.slug) = '${cleanSlug}' AND e.deleted_at IS NULL
     LIMIT 1;
   `);
   const event = data?.[0];
@@ -57,12 +58,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const hostingClub = event.org_name || "Rotaract District 3192";
-  const eventTitle = `${event.title} | ${hostingClub}`;
+  const eventTitle = `${event.title.trim()} | ${hostingClub}`;
   const eventDescription =
-    event.summary ||
-    event.description?.slice(0, 160) ||
-    `Official event pass and registration for ${event.title} hosted by ${hostingClub} in District 3192.`;
-  const eventImage = event.cover_image_url || `${baseUrl}/brand-logo.png`;
+    event.summary?.trim() ||
+    (event.description ? event.description.replace(/<[^>]*>/g, "").slice(0, 160).trim() : null) ||
+    `Official event pass and registration for ${event.title.trim()} hosted by ${hostingClub} in District 3192.`;
+
+  // Construct absolute, crawler-compatible image URL (NO data: URIs!)
+  // Scrapers like WhatsApp, Telegram, Twitterbot, and Facebook strictly require http/https URLs.
+  let ogImageUrl = `${baseUrl}/api/events/${cleanSlug}/image`;
+  if (event.cover_image_url && (event.cover_image_url.startsWith("http://") || event.cover_image_url.startsWith("https://"))) {
+    ogImageUrl = event.cover_image_url;
+  }
+  const dynamicOgImage = `${baseUrl}/events/${cleanSlug}/opengraph-image`;
   const eventUrl = `${baseUrl}/events/${slug}`;
 
   return {
@@ -90,10 +98,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "website",
       images: [
         {
-          url: eventImage,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: event.title,
+        },
+        {
+          url: dynamicOgImage,
+          width: 1200,
+          height: 630,
+          alt: `${event.title} - Official Pass Registration`,
         },
       ],
     },
@@ -101,7 +115,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title: eventTitle,
       description: eventDescription,
-      images: [eventImage],
+      images: [ogImageUrl],
       creator: "@rotaract3192",
     },
     robots: {
@@ -119,6 +133,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function EventDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const cleanSlug = (slug || "").trim().toLowerCase().replace(/'/g, "''");
   const user = await getCurrentUser();
 
   // Fetch Event
@@ -126,7 +141,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     SELECT e.*, o.name as org_name, o.logo_url as org_logo
     FROM saas_events e
     LEFT JOIN organizations o ON e.organization_id = o.id
-    WHERE e.slug = '${slug}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+    WHERE LOWER(e.slug) = '${cleanSlug}' AND e.deleted_at IS NULL
     LIMIT 1;
   `);
 

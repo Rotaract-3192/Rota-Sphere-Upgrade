@@ -15,17 +15,23 @@ export default async function EventOpenGraphImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const cleanSlug = (slug || "").trim().toLowerCase().replace(/'/g, "''");
 
-  const { data } = await executeSql(`
-    SELECT e.title, e.summary, cat.name as category, e.venue_name, e.city, e.start_date, e.cover_image_url, o.name as org_name
-    FROM saas_events e
-    LEFT JOIN organizations o ON e.organization_id = o.id
-    LEFT JOIN event_categories cat ON e.category_id = cat.id
-    WHERE e.slug = '${slug.replace(/'/g, "''")}' AND e.status = 'PUBLISHED' AND e.deleted_at IS NULL
-    LIMIT 1;
-  `);
+  let event: any = null;
+  try {
+    const { data } = await executeSql(`
+      SELECT e.title, e.summary, cat.name as category, e.venue_name, e.city, e.start_date, e.cover_image_url, o.name as org_name
+      FROM saas_events e
+      LEFT JOIN organizations o ON e.organization_id = o.id
+      LEFT JOIN event_categories cat ON e.category_id = cat.id
+      WHERE LOWER(e.slug) = '${cleanSlug}' AND e.deleted_at IS NULL
+      LIMIT 1;
+    `);
+    event = data?.[0];
+  } catch (err) {
+    console.error("[OG Image SQL Error]:", err);
+  }
 
-  const event = data?.[0];
   const title = event?.title || "Rotaract District 3192 Flagship Event";
   const orgName = event?.org_name || "Rotaract District 3192";
   const category = (event?.category || "CONFERENCE").toUpperCase();
@@ -59,8 +65,25 @@ export default async function EventOpenGraphImage({
           color: "white",
           fontFamily: "sans-serif",
           position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Optional Ambient Cover Backdrop */}
+        {event?.cover_image_url && (
+          <img
+            src={event.cover_image_url}
+            alt=""
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: 0.18,
+            }}
+          />
+        )}
         {/* Glow blur in background */}
         <div
           style={{

@@ -215,7 +215,13 @@ export function EventJsonLd({ event, tiers = [], speakers = [], orgName }: Event
               addressCountry: "IN",
             },
           },
-    image: [event.cover_image_url || `${baseUrl}/brand-logo.png`],
+    image: [
+      event.cover_image_url?.startsWith("http")
+        ? event.cover_image_url
+        : event.cover_image_url?.startsWith("data:")
+        ? `${baseUrl}/api/events/${event.slug}/image`
+        : `${baseUrl}/brand-logo.png`,
+    ],
     organizer: {
       "@type": "Organization",
       name: hostingOrgName,
