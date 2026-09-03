@@ -122,9 +122,14 @@ async function ensureUpiColumns() {
   } catch (_) { /* ignore if constraint already updated */ }
 
   try {
-    // Add missing columns to saas_ticket_tiers
+    // Add missing columns and capacity guardrail constraint to saas_ticket_tiers
     await executeSql(`
       ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+      ALTER TABLE saas_ticket_tiers 
+        DROP CONSTRAINT IF EXISTS check_capacity_not_exceeded;
+      ALTER TABLE saas_ticket_tiers 
+        ADD CONSTRAINT check_capacity_not_exceeded 
+        CHECK (total_capacity <= 0 OR sold_count <= total_capacity);
     `);
   } catch (_) { /* ignore if already exists */ }
 }
@@ -269,6 +274,7 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
 }
 
 export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
+  const reservedTiers: { tierId: string; count: number }[] = [];
   try {
     await ensureUpiColumns();
 
@@ -496,7 +502,55 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const paymentGateway = isFree ? "FREE" : "UPI_QR";
     const targetUpiId = event.upi_id || "rotaractdistrict3192@okaxis";
 
-    // 5. Insert Order
+    // 5. Atomic Inventory Reservation (Concurrency & Overselling Guardrail)
+    // Uses PostgreSQL row-level locks so that even if multiple attendees submit at the exact same millisecond,
+    // total tickets sold will NEVER exceed total_capacity (e.g. 14 tickets).
+    for (const [tId, requestedCount] of Object.entries(countPerTier)) {
+      const tier = tierMap.get(tId);
+      const { data: reserveRes, error: reserveErr } = await executeSql(`
+        UPDATE saas_ticket_tiers
+        SET sold_count = sold_count + ${requestedCount}
+        WHERE id = ${escapeSql(tId)}
+          AND (total_capacity <= 0 OR sold_count + ${requestedCount} <= total_capacity)
+        RETURNING id, name, sold_count, total_capacity, auto_activate_when_tier_sells_out;
+      `);
+
+      if (reserveErr || !reserveRes || reserveRes.length === 0) {
+        // High-concurrency collision: another user secured the last ticket a fraction of a millisecond earlier!
+        // Immediately rollback any tiers already incremented for this order
+        for (const rev of reservedTiers) {
+          await executeSql(`
+            UPDATE saas_ticket_tiers
+            SET sold_count = GREATEST(0, sold_count - ${rev.count})
+            WHERE id = ${escapeSql(rev.tierId)};
+          `);
+        }
+        return {
+          success: false,
+          error: `Ticket Sold Out: Pass tier "${tier?.name || "Selected Pass"}" has just reached maximum capacity (${tier?.total_capacity || 0} seats). Another attendee booked the last available ticket.`,
+        };
+      }
+
+      reservedTiers.push({ tierId: tId, count: requestedCount });
+
+      // Auto-cascade tier activation if this tier just hit maximum capacity
+      const updatedRow = reserveRes[0];
+      if (
+        updatedRow.total_capacity > 0 &&
+        Number(updatedRow.sold_count) >= Number(updatedRow.total_capacity) &&
+        updatedRow.auto_activate_when_tier_sells_out
+      ) {
+        try {
+          await executeSql(`
+            UPDATE saas_ticket_tiers
+            SET is_active = true
+            WHERE id = ${escapeSql(updatedRow.auto_activate_when_tier_sells_out)};
+          `);
+        } catch (_) {}
+      }
+    }
+
+    // 6. Insert Order
     const insertOrderSql = `
       INSERT INTO saas_orders (
         order_number,
@@ -552,13 +606,21 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     const { data: orderCreated, error: orderError } = await executeSql(insertOrderSql);
     if (!orderCreated || orderCreated.length === 0) {
+      // Rollback reserved inventory on failed order
+      for (const rev of reservedTiers) {
+        await executeSql(`
+          UPDATE saas_ticket_tiers
+          SET sold_count = GREATEST(0, sold_count - ${rev.count})
+          WHERE id = ${escapeSql(rev.tierId)};
+        `);
+      }
       logger.error("Order INSERT returned no rows", { sql: insertOrderSql, error: orderError });
       return { success: false, error: `Failed to create order record${orderError ? `: ${orderError}` : ""}` };
     }
 
     const orderId = orderCreated[0].id;
 
-    // 6. Generate Tickets
+    // 7. Generate Tickets
     const generatedTickets = [];
     for (let i = 0; i < input.attendees.length; i++) {
       const attendee = input.attendees[i];
@@ -619,16 +681,9 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       if (ticketRes && ticketRes.length > 0) {
         generatedTickets.push(ticketRes[0]);
       }
-
-      // Update sold count
-      await executeSql(`
-        UPDATE saas_ticket_tiers
-        SET sold_count = sold_count + 1
-        WHERE id = ${escapeSql(attendee.ticketTierId)};
-      `);
     }
 
-    // 7. Audit Log
+    // 8. Audit Log
     await logAuditAction({
       actorId: customerUserId,
       actorRole: user?.profile?.role || "attendee",
@@ -646,7 +701,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       },
     });
 
-    // 8. Send Ticket Email with QR attachment for confirmed free passes, or Booking Received email for paid UPI orders
+    // 9. Send Ticket Email with QR attachment for confirmed free passes, or Booking Received email for paid UPI orders
     if (isFree && customerEmail) {
       sendTicketEmailWithQR({
         to: customerEmail,
@@ -691,6 +746,16 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       tickets: generatedTickets,
     };
   } catch (err: any) {
+    // Release any reserved inventory if an unexpected runtime failure occurred
+    for (const rev of reservedTiers) {
+      try {
+        await executeSql(`
+          UPDATE saas_ticket_tiers
+          SET sold_count = GREATEST(0, sold_count - ${rev.count})
+          WHERE id = ${escapeSql(rev.tierId)};
+        `);
+      } catch (_) {}
+    }
     logger.error("createCheckoutOrderAction failed", { error: String(err) });
     return { success: false, error: err?.message || "Checkout failed" };
   }
@@ -985,6 +1050,22 @@ export async function createManualAttendeeAction(
       return { success: false, error: "Selected ticket tier was not found." };
     }
 
+    // Atomically reserve seat capacity
+    const { data: reserveRes, error: reserveErr } = await executeSql(`
+      UPDATE saas_ticket_tiers
+      SET sold_count = sold_count + 1
+      WHERE id = ${escapeSql(tier.id)}
+        AND (total_capacity <= 0 OR sold_count + 1 <= total_capacity)
+      RETURNING id, sold_count, total_capacity;
+    `);
+
+    if (reserveErr || !reserveRes || reserveRes.length === 0) {
+      return {
+        success: false,
+        error: `Cannot issue manual ticket: Pass tier "${tier.name}" has reached maximum capacity (${tier.total_capacity}).`,
+      };
+    }
+
     // 3. Resolve Zone & Club
     const { clubName, zone } = resolveClubAndZone({
       clubName: input.clubName,
@@ -1103,14 +1184,7 @@ export async function createManualAttendeeAction(
 
     await executeSql(insertTicketSql);
 
-    // 6. Update sold count on tier
-    await executeSql(`
-      UPDATE saas_ticket_tiers
-      SET sold_count = sold_count + 1
-      WHERE id = ${escapeSql(tier.id)};
-    `);
-
-    // 7. Send Ticket Email if opted in
+    // 6. Send Ticket Email if opted in
     if (input.sendConfirmationEmail !== false && input.email) {
       try {
         const formattedDate = event.start_date
