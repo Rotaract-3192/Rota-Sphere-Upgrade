@@ -51,6 +51,7 @@ export interface CreateEventInput {
   category?: string;
   tags?: string[];
   ticketTiers: Array<{
+    id?: string;
     name: string;
     description?: string;
     tierType: TicketTierType;
@@ -805,6 +806,10 @@ export async function updateEventAction(
 
     // Update Ticket Tiers if provided
     if (input.ticketTiers && input.ticketTiers.length > 0) {
+      try {
+        await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+      } catch (_) {}
+
       const { data: existingTiers } = await executeSql(`
         SELECT id, name, sold_count, reserved_count 
         FROM saas_ticket_tiers 
@@ -822,7 +827,9 @@ export async function updateEventAction(
         const salesStartVal = tier.salesStart || new Date().toISOString();
         const salesEndVal = tier.salesEnd || input.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        const match = existingTierMap.get(tier.name.trim().toLowerCase());
+        const match =
+          (tier.id ? (existingTiers || []).find((t: any) => t.id === tier.id) : null) ||
+          existingTierMap.get(tier.name.trim().toLowerCase());
 
         if (match) {
           processedTierIds.add(match.id);

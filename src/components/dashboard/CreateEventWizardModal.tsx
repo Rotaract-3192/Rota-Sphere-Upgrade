@@ -170,6 +170,7 @@ export function CreateEventWizardModal({
   const [notifyAllMembers, setNotifyAllMembers] = useState(true);
   const [ticketTiers, setTicketTiers] = useState<
     Array<{
+      id?: string;
       name: string;
       tierType: TicketTierType;
       price: number;
@@ -259,6 +260,7 @@ export function CreateEventWizardModal({
           eventToEdit.saas_ticket_tiers.map((t: any) => {
             const hasCustom = Boolean(t.sales_start || t.sales_end);
             return {
+              id: t.id,
               name: t.name,
               tierType: t.tier_type || "REGULAR",
               price: Number(t.price) || 0,
@@ -677,6 +679,7 @@ export function CreateEventWizardModal({
         }
 
         return {
+          id: t.id,
           name: t.name.trim(),
           description: t.description?.trim(),
           tierType: t.tierType,

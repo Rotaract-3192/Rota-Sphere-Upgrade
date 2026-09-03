@@ -136,6 +136,10 @@ export default async function EventDetailPage({ params }: PageProps) {
   }
 
   // Fetch Tiers
+  try {
+    await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+  } catch (_) {}
+
   const { data: tierRows } = await executeSql(`
     SELECT * FROM saas_ticket_tiers
     WHERE event_id = '${event.id}' AND is_active = true AND is_visible = true

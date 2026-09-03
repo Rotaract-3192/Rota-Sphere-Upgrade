@@ -260,23 +260,24 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
         };
       }
 
-      // If tier is restricted to 1 ticket per attendee, prevent duplicate hoarding across previous orders
+      // If tier is restricted to 1 ticket per attendee, prevent duplicate hoarding for the same attendee email
       if (maxAllowed === 1) {
-        const { data: existingUserTickets } = await executeSql(`
-          SELECT id FROM saas_tickets
-          WHERE ticket_tier_id = ${escapeSql(tId)}
-            AND (
-              owner_user_id = ${escapeSql(customerUserId)} 
-              OR attendee_email ILIKE ${escapeSql(customerEmail)}
-            )
-            AND status NOT IN ('CANCELLED', 'REFUNDED', 'PAYMENT_REJECTED')
-          LIMIT 1;
-        `);
-        if (existingUserTickets && existingUserTickets.length > 0) {
-          return {
-            success: false,
-            error: `You have already registered or hold a ticket for "${tier.name}". This pass tier is strictly limited to 1 ticket per attendee.`,
-          };
+        for (const att of input.attendees) {
+          if (att.ticketTierId === tId && att.email?.trim()) {
+            const { data: existingUserTickets } = await executeSql(`
+              SELECT id FROM saas_tickets
+              WHERE ticket_tier_id = ${escapeSql(tId)}
+                AND attendee_email ILIKE ${escapeSql(att.email.trim())}
+                AND status NOT IN ('CANCELLED', 'REFUNDED', 'PAYMENT_REJECTED')
+              LIMIT 1;
+            `);
+            if (existingUserTickets && existingUserTickets.length > 0) {
+              return {
+                success: false,
+                error: `Attendee with email "${att.email.trim()}" already holds an active ticket for "${tier.name}". This pass is limited to 1 ticket per attendee.`,
+              };
+            }
+          }
         }
       }
 

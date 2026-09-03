@@ -192,6 +192,24 @@ export function CheckoutModal({
     return initial;
   });
 
+  // Clamp any pre-selected quantities to tier max_per_order limits
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCounts((prev) => {
+        let changed = false;
+        const updated = { ...prev };
+        tiers.forEach((t) => {
+          const max = t.max_per_order ? Number(t.max_per_order) : 10;
+          if (updated[t.id] && updated[t.id] > max) {
+            updated[t.id] = max;
+            changed = true;
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }
+  }, [isOpen, tiers]);
+
   const [couponCode, setCouponCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [couponApplied, setCouponApplied] = useState(false);
@@ -965,6 +983,11 @@ export function CheckoutModal({
                                 <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
                                   {status.badgeText}
                                 </span>
+                                {Number(tier.max_per_order) === 1 && (
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                    🔒 Limit 1
+                                  </span>
+                                )}
                               </div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
                               <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
@@ -985,7 +1008,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook}
+                                disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +

@@ -80,6 +80,11 @@ export default async function DashboardPage() {
   const resolvedOrg = organization || fallbackOrgData?.[0] || null;
   const orgId = resolvedOrg?.id;
 
+  // Ensure max_per_order column exists on saas_ticket_tiers
+  try {
+    await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+  } catch (_) {}
+
   // 2. Fetch THIS organizer's events (strictly scoped to creator/organizer unless super_admin)
   const { data: eventsData } = await executeSql(`
     SELECT e.*,
@@ -99,7 +104,8 @@ export default async function DashboardPage() {
             'allow_non_rotaract', t.allow_non_rotaract,
             'allowed_audience', t.allowed_audience,
             'is_active', t.is_active,
-            'is_visible', t.is_visible
+            'is_visible', t.is_visible,
+            'max_per_order', COALESCE(t.max_per_order, 10)
           )
         ) FILTER (WHERE t.id IS NOT NULL),
         '[]'
