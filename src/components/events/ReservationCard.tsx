@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Clock, AlertCircle, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import type { TicketTier, EventStatus } from "@/types/database";
+import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
 
 interface ReservationCardProps {
   event: {
@@ -26,6 +27,7 @@ interface ReservationCardProps {
     enable_waitlist: boolean;
   };
   tiers: TicketTier[];
+  initialServerTime?: string;
 }
 
 function formatPrice(price: string): string {
@@ -104,19 +106,13 @@ function useSafeUser() {
   }
 }
 
-export function ReservationCard({ event, tiers }: ReservationCardProps) {
+export function ReservationCard({ event, tiers, initialServerTime }: ReservationCardProps) {
   const router = useRouter();
   const { isSignedIn } = useSafeUser();
-  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+  // Tamper-proof, server-synchronized monotonic time
+  const currentTime = useServerSyncedTime(initialServerTime);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const publicTiers = tiers.filter((t) => t.enabled && t.visibility === "PUBLIC");
   const isRegistrationOpen = event.status === "REGISTRATION_OPEN" && !event.registrations_disabled;

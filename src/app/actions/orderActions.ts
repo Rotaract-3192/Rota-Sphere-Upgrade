@@ -157,6 +157,117 @@ export async function getEventTiersAction(eventId: string) {
   }
 }
 
+export interface ValidateTiersInput {
+  eventId: string;
+  selectedCounts: Record<string, number>;
+}
+
+/**
+ * Backend atomic server-time confirmation.
+ * Directly queries PostgreSQL with NOW() to prevent phone/client clock tampering.
+ */
+export async function validateTicketTiersAvailabilityAction(input: ValidateTiersInput): Promise<{
+  valid: boolean;
+  error?: string;
+  serverTime: string;
+}> {
+  try {
+    const tierEntries = Object.entries(input.selectedCounts).filter(([_, count]) => count > 0);
+    if (tierEntries.length === 0) {
+      return { valid: true, serverTime: new Date().toISOString() };
+    }
+
+    const tierIds = tierEntries.map(([id]) => id);
+    const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
+    const { data: tiers, error } = await executeSql(`
+      SELECT 
+        id, 
+        name, 
+        price, 
+        total_capacity, 
+        sold_count, 
+        sales_start, 
+        sales_end, 
+        is_active,
+        max_per_order,
+        NOW() as server_now,
+        (sales_start IS NOT NULL AND NOW() < sales_start) as is_too_early,
+        (sales_end IS NOT NULL AND NOW() > sales_end) as is_too_late
+      FROM saas_ticket_tiers
+      WHERE id IN (${formattedTierIds}) AND event_id = ${escapeSql(input.eventId)};
+    `);
+
+    if (error || !tiers || tiers.length === 0) {
+      return {
+        valid: false,
+        error: "Unable to verify ticket tier availability with server. Please refresh.",
+        serverTime: new Date().toISOString(),
+      };
+    }
+
+    const serverNowStr = tiers[0]?.server_now ? new Date(tiers[0].server_now).toISOString() : new Date().toISOString();
+
+    for (const tier of tiers) {
+      if (!tier.is_active) {
+        return {
+          valid: false,
+          error: `Pass tier "${tier.name}" is currently inactive.`,
+          serverTime: serverNowStr,
+        };
+      }
+
+      if (tier.is_too_early) {
+        const startDt = new Date(tier.sales_start);
+        return {
+          valid: false,
+          error: `🔒 Security Verification Failed: Sales for "${tier.name}" have not started yet according to atomic server time. Opens on ${startDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}. Device clock modifications are strictly rejected.`,
+          serverTime: serverNowStr,
+        };
+      }
+
+      if (tier.is_too_late) {
+        const endDt = new Date(tier.sales_end);
+        return {
+          valid: false,
+          error: `🔒 Security Verification Failed: The booking window for "${tier.name}" expired on ${endDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} according to atomic server time.`,
+          serverTime: serverNowStr,
+        };
+      }
+
+      const count = input.selectedCounts[tier.id] || 0;
+      const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
+      if (count > maxAllowed) {
+        return {
+          valid: false,
+          error: `"${tier.name}" is limited to ${maxAllowed} ticket(s) per booking.`,
+          serverTime: serverNowStr,
+        };
+      }
+
+      const sold = Number(tier.sold_count) || 0;
+      const capacity = Number(tier.total_capacity) || 0;
+      if (capacity > 0 && sold + count > capacity) {
+        return {
+          valid: false,
+          error: `Pass tier "${tier.name}" has only ${Math.max(0, capacity - sold)} seats remaining.`,
+          serverTime: serverNowStr,
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      serverTime: serverNowStr,
+    };
+  } catch (err: any) {
+    return {
+      valid: false,
+      error: err?.message || "Server verification error. Please try again.",
+      serverTime: new Date().toISOString(),
+    };
+  }
+}
+
 export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
   try {
     await ensureUpiColumns();
@@ -205,7 +316,11 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const tierIds = Array.from(new Set(input.attendees.map((a) => a.ticketTierId)));
     const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end, max_per_order
+      SELECT 
+        id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end, max_per_order,
+        NOW() as server_now,
+        (sales_start IS NOT NULL AND NOW() < sales_start) as is_too_early,
+        (sales_end IS NOT NULL AND NOW() > sales_end) as is_too_late
       FROM saas_ticket_tiers
       WHERE id IN (${formattedTierIds});
     `);
@@ -281,24 +396,20 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
         }
       }
 
-      // Scheduled Time Slab Release Window Check
-      if (tier.sales_start) {
+      // Scheduled Time Slab Release Window Check with Atomic Database NOW()
+      if (tier.is_too_early || (tier.sales_start && now < new Date(tier.sales_start))) {
         const startDt = new Date(tier.sales_start);
-        if (now < startDt) {
-          return {
-            success: false,
-            error: `Sales for "${tier.name}" have not started yet. Opens on ${startDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`,
-          };
-        }
+        return {
+          success: false,
+          error: `🔒 Security Check Failed: Booking for "${tier.name}" has not opened yet according to atomic server time. Opens on ${startDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}. Device clock changes are strictly rejected.`,
+        };
       }
-      if (tier.sales_end) {
+      if (tier.is_too_late || (tier.sales_end && now > new Date(tier.sales_end))) {
         const endDt = new Date(tier.sales_end);
-        if (now > endDt) {
-          return {
-            success: false,
-            error: `The sales window for "${tier.name}" closed on ${endDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`,
-          };
-        }
+        return {
+          success: false,
+          error: `🔒 Security Check Failed: The booking window for "${tier.name}" officially expired on ${endDt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`,
+        };
       }
 
       // Capacity check to prevent overselling

@@ -39,9 +39,10 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
-import { createCheckoutOrderAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
+import { createCheckoutOrderAction, getEventCustomQuestionsAction, validateTicketTiersAvailabilityAction } from "@/app/actions/orderActions";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
+import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
 import { SearchableClubSelect } from "@/components/ui/SearchableClubSelect";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
@@ -58,6 +59,7 @@ interface CheckoutModalProps {
   onClose: () => void;
   userEmail?: string;
   userName?: string;
+  initialServerTime?: string;
 }
 
 interface TierStatusInfo {
@@ -171,17 +173,11 @@ export function CheckoutModal({
   onClose,
   userEmail,
   userName,
+  initialServerTime,
 }: CheckoutModalProps) {
-  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+  // Tamper-proof, server-synchronized monotonic time
+  const currentTime = useServerSyncedTime(initialServerTime);
   const [checkoutStep, setCheckoutStep] = useState<"SELECT_PASSES" | "UPI_PAYMENT" | "SUCCESS">("SELECT_PASSES");
-
-  // Real-time ticker for auto-unlocking precisely when sales start
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
@@ -461,7 +457,7 @@ export function CheckoutModal({
     }
   }
 
-  function handleProceedToPayment() {
+  async function handleProceedToPayment() {
     if (!userEmail) {
       setErrorMessage("Please sign in to your account before purchasing tickets.");
       return;
@@ -508,6 +504,30 @@ export function CheckoutModal({
     }
 
     setErrorMessage(null);
+    setLoading(true);
+
+    // Call Atomic Backend Confirmation Gate before ever showing payment QR or processing
+    try {
+      const serverCheck = await validateTicketTiersAvailabilityAction({
+        eventId: event.id,
+        selectedCounts,
+      });
+
+      if (!serverCheck.valid) {
+        setLoading(false);
+        setErrorMessage(
+          serverCheck.error ||
+            "Ticket sales are locked on the server. True atomic server time has not reached the opening window."
+        );
+        return;
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setErrorMessage(err?.message || "Failed to confirm ticket release window with server.");
+      return;
+    }
+
+    setLoading(false);
 
     if (isFreeOrder) {
       // If free, submit immediately

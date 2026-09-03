@@ -13,12 +13,14 @@ import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronU
 import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
+import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
 
 interface EventBookingClientProps {
   event: SaasEvent;
   tiers: SaasTicketTier[];
   userEmail?: string;
   userName?: string;
+  initialServerTime?: string;
 }
 
 interface TierStatusInfo {
@@ -118,19 +120,12 @@ function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Dat
   };
 }
 
-export function EventBookingClient({ event, tiers, userEmail, userName }: EventBookingClientProps) {
-  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+export function EventBookingClient({ event, tiers, userEmail, userName, initialServerTime }: EventBookingClientProps) {
+  // Tamper-proof, server-synchronized monotonic time
+  const currentTime = useServerSyncedTime(initialServerTime);
   const [modalOpen, setModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Live timer tick to ensure real-time status update & countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
   const generalTiers = tiers.filter(
@@ -534,6 +529,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName }: EventB
         onClose={() => setModalOpen(false)}
         userEmail={userEmail}
         userName={userName}
+        initialServerTime={initialServerTime}
       />
     </>
   );

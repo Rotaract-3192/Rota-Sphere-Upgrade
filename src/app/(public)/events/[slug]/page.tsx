@@ -508,6 +508,7 @@ export default async function EventDetailPage({ params }: PageProps) {
               tiers={tiers}
               userEmail={user?.email}
               userName={user?.profile?.full_name}
+              initialServerTime={new Date().toISOString()}
             />
           </div>
 
