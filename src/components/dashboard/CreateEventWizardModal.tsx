@@ -77,13 +77,19 @@ const ROTARACT_CLUBS = Array.from(
 ).sort((a, b) => (a === "Rotaract District 3192 Council" ? -1 : b === "Rotaract District 3192 Council" ? 1 : a.localeCompare(b)));
 
 const CATEGORIES = [
+  "Community & Social Service",
   "Community Service",
   "Professional Development",
+  "Conferences",
   "Conferences & Summits",
+  "TEDx & Keynote Talks",
   "Youth Leadership & TEDx",
+  "College & Youth Festivals",
+  "Concerts & Cultural Nights",
   "Cultural & Arts Festival",
+  "Sports & Tournaments",
   "Sports & Athletics",
-  "Impact & Social Service",
+  "Networking & Meetups",
   "Workshops & Masterclasses",
 ];
 
@@ -251,8 +257,27 @@ export function CreateEventWizardModal({
       if (eventToEdit.address) setStreetAddress(eventToEdit.address);
       if (eventToEdit.online_meeting_url) setOnlineMeetingUrl(eventToEdit.online_meeting_url);
       if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
-      if (eventToEdit.upi_payee_name) setUpiPayeeName(eventToEdit.upi_payee_name);
-      if (eventToEdit.category) setCategory(eventToEdit.category);
+      if (eventToEdit.category_name) {
+        setCategory(eventToEdit.category_name);
+      } else if (eventToEdit.category) {
+        setCategory(eventToEdit.category);
+      }
+      if (eventToEdit.contact_email) {
+        setContactEmail(eventToEdit.contact_email);
+      }
+      if (eventToEdit.contact_phone) {
+        setContactPhone(eventToEdit.contact_phone);
+      }
+      if (Array.isArray(eventToEdit.tags)) {
+        setTags(eventToEdit.tags.filter(Boolean));
+      } else if (typeof eventToEdit.tags === "string" && eventToEdit.tags.trim()) {
+        try {
+          const parsed = JSON.parse(eventToEdit.tags);
+          setTags(Array.isArray(parsed) ? parsed : [eventToEdit.tags]);
+        } catch {
+          setTags(eventToEdit.tags.split(",").map((s: string) => s.trim()).filter(Boolean));
+        }
+      }
       if (eventToEdit.google_maps_url) setMapsUrl(eventToEdit.google_maps_url);
 
       if (eventToEdit.saas_ticket_tiers && eventToEdit.saas_ticket_tiers.length > 0) {
@@ -565,13 +590,24 @@ export function CreateEventWizardModal({
     setErrorMessage(null);
   }
 
-  function handleAddTag() {
-    if (!tagInput.trim()) return;
-    const clean = tagInput.trim().toLowerCase().replace(/[^\w-]/g, "");
-    if (clean && !tags.includes(clean)) {
-      setTags([...tags, clean]);
+  function handleAddTag(manualTag?: string) {
+    const raw = manualTag !== undefined ? manualTag : tagInput;
+    if (!raw.trim()) return;
+    const pieces = raw
+      .split(/[, ]+/)
+      .map((p) => p.trim().toLowerCase().replace(/[^a-z0-9-]/g, ""))
+      .filter((p) => p.length > 0);
+
+    const next = [...tags];
+    for (const piece of pieces) {
+      if (!next.includes(piece)) {
+        next.push(piece);
+      }
     }
-    setTagInput("");
+    setTags(next);
+    if (manualTag === undefined) {
+      setTagInput("");
+    }
   }
 
   function handleRemoveTag(t: string) {
@@ -635,7 +671,17 @@ export function CreateEventWizardModal({
     setLoading(true);
     setErrorMessage(null);
 
-    const finalTags = tags;
+    let finalTags = [...tags];
+    if (tagInput.trim()) {
+      const extra = tagInput
+        .split(/[, ]+/)
+        .map((p) => p.trim().toLowerCase().replace(/[^a-z0-9-]/g, ""))
+        .filter((p) => p.length > 0 && !finalTags.includes(p));
+      finalTags = [...finalTags, ...extra];
+    }
+    if (finalTags.length === 0) {
+      finalTags = ["rotaract", "district3192"];
+    }
 
     const eventFormat: EventFormat =
       locationDeliveryType === "ONLINE" ? "ONLINE" : locationDeliveryType === "HYBRID" ? "HYBRID" : "OFFLINE";
@@ -2276,30 +2322,58 @@ export function CreateEventWizardModal({
               </div>
 
               <div className="pt-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-wider mb-2 text-[#0758fc]">
-                  SEARCH TAGS &amp; TOPICS *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#0758fc]">
+                    SEARCH TAGS &amp; TOPICS {tags.length > 0 && <span className="text-gray-400 font-normal">({tags.length} added)</span>}
+                  </label>
+                </div>
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === "Enter" || e.key === ",") {
                         e.preventDefault();
                         handleAddTag();
                       }
                     }}
-                    placeholder="Type a tag (e.g. react, marketing, rock) and press Enter"
+                    placeholder="Type a tag (e.g. react, marketing, rock) and press Enter or comma"
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-6 py-3.5 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:bg-white focus:border-[#0758fc] shadow-sm"
                   />
                   <button
                     type="button"
-                    onClick={handleAddTag}
+                    onClick={() => handleAddTag()}
                     className="w-11 h-11 rounded-full bg-[#0758fc] hover:bg-[#054fe0] text-white flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer"
+                    title="Add tag"
                   >
                     <Plus size={20} />
                   </button>
+                </div>
+
+                {/* Quick Suggestion Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+                  <span className="text-[11px] font-bold text-gray-400">Suggestions:</span>
+                  {[
+                    "rotaract",
+                    "district3192",
+                    "community",
+                    "leadership",
+                    "fellowship",
+                    "cultural",
+                    "conference",
+                    "sports",
+                  ].map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => handleAddTag(sugg)}
+                      disabled={tags.includes(sugg)}
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer border disabled:opacity-40 disabled:cursor-not-allowed bg-gray-50 text-gray-600 border-gray-200 hover:bg-[#0758fc]/10 hover:text-[#0758fc] hover:border-[#0758fc]/30"
+                    >
+                      +{sugg}
+                    </button>
+                  ))}
                 </div>
 
                 {tags.length > 0 ? (
@@ -2321,9 +2395,10 @@ export function CreateEventWizardModal({
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-2 px-2 space-y-1">
-                    <p className="text-[11px] text-gray-500 italic">No tags added yet. Enter at least one tag.</p>
-                    <p className="text-[11px] text-rose-600 font-medium">At least one tag is required</p>
+                  <div className="mt-2 px-2">
+                    <p className="text-[11px] text-gray-500 italic">
+                      No tags added yet. Choose from suggestions above or type custom topics to help attendees find your event.
+                    </p>
                   </div>
                 )}
               </div>

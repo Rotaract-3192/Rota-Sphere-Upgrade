@@ -80,14 +80,18 @@ export default async function DashboardPage() {
   const resolvedOrg = organization || fallbackOrgData?.[0] || null;
   const orgId = resolvedOrg?.id;
 
-  // Ensure max_per_order column exists on saas_ticket_tiers
+  // Ensure max_per_order and tags columns exist
   try {
-    await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+    await executeSql(`
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+      ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+    `);
   } catch (_) {}
 
   // 2. Fetch THIS organizer's events (strictly scoped to creator/organizer unless super_admin)
   const { data: eventsData } = await executeSql(`
     SELECT e.*,
+      c.name as category_name,
       COALESCE(
         json_agg(
           json_build_object(
@@ -111,9 +115,10 @@ export default async function DashboardPage() {
         '[]'
       ) as saas_ticket_tiers
     FROM saas_events e
+    LEFT JOIN event_categories c ON e.category_id = c.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
     WHERE 1=1 ${organizerCondition}
-    GROUP BY e.id
+    GROUP BY e.id, c.name
     ORDER BY e.created_at DESC;
   `);
   const events = eventsData || [];

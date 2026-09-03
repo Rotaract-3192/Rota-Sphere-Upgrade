@@ -97,14 +97,27 @@ async function resolveCategoryId(categoryInput?: string): Promise<string | null>
     return inputStr;
   }
 
-  const { data } = await executeSql(`
+  const { data: exact } = await executeSql(`
     SELECT id FROM event_categories 
     WHERE name ILIKE ${escapeSql(inputStr)} OR slug ILIKE ${escapeSql(slugify(inputStr))}
     LIMIT 1;
   `);
 
-  if (data && data.length > 0) {
-    return data[0].id;
+  if (exact && exact.length > 0) {
+    return exact[0].id;
+  }
+
+  // Partial keyword matching (e.g. "Community Service" -> "Community & Social Service")
+  const words = inputStr.split(/[\s,&/]+/).filter((w) => w.length >= 4);
+  for (const word of words) {
+    const { data: partial } = await executeSql(`
+      SELECT id FROM event_categories
+      WHERE name ILIKE ${escapeSql(`%${word}%`)}
+      LIMIT 1;
+    `);
+    if (partial && partial.length > 0) {
+      return partial[0].id;
+    }
   }
 
   const { data: fallback } = await executeSql(`SELECT id FROM event_categories LIMIT 1;`);
@@ -325,6 +338,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allow_non_rotaract BOOLEAN DEFAULT TRUE;
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allowed_audience VARCHAR(50) DEFAULT 'ALL';
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+        ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
       `);
     } catch {}
 
@@ -385,7 +399,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         contact_email,
         contact_phone,
         upi_id,
-        upi_payee_name
+        upi_payee_name,
+        tags
       ) VALUES (
         ${escapeSql(organizationId)},
         ${escapeSql(user.clerkId)},
@@ -419,7 +434,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.contactEmail || user.email)},
         ${escapeSql(input.contactPhone)},
         ${escapeSql(input.upiId || "rotaractdistrict3192@okaxis")},
-        ${escapeSql(input.upiPayeeName || "District 3192 Rotaract")}
+        ${escapeSql(input.upiPayeeName || "District 3192 Rotaract")},
+        ${input.tags && input.tags.length > 0 ? `ARRAY[${input.tags.map((t) => escapeSql(t)).join(",")}]::text[]` : `ARRAY[]::text[]`}
       )
       RETURNING id, slug;
     `;
@@ -794,9 +810,21 @@ export async function updateEventAction(
       }
     }
 
+    if (input.tags !== undefined) {
+      const tagsArraySql =
+        input.tags.length > 0
+          ? `ARRAY[${input.tags.map((t) => escapeSql(t)).join(",")}]::text[]`
+          : `ARRAY[]::text[]`;
+      updates.push(`tags = ${tagsArraySql}`);
+    }
+
     updates.push(`updated_at = NOW()`);
 
     if (updates.length > 0) {
+      try {
+        await executeSql(`ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`);
+      } catch (_) {}
+
       await executeSql(`
         UPDATE saas_events
         SET ${updates.join(", ")}
