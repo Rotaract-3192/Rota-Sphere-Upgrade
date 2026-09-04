@@ -327,6 +327,15 @@ export async function cleanupExpiredTicketHoldsAction(): Promise<{ success: bool
       FROM aggregated a
       WHERE t.id = a.ticket_tier_id
       RETURNING t.id, a.total_expired;
+
+      -- Reconcile: reset reserved_count to 0 for tiers with no active holds at all
+      UPDATE saas_ticket_tiers
+      SET reserved_count = 0
+      WHERE id NOT IN (
+        SELECT DISTINCT ticket_tier_id 
+        FROM ticket_inventory_holds 
+        WHERE expires_at >= NOW()
+      ) AND reserved_count > 0;
     `);
 
     if (error) {
@@ -361,7 +370,7 @@ export async function releaseUserHoldAction(sessionId: string): Promise<{ succes
         GROUP BY ticket_tier_id
       )
       UPDATE saas_ticket_tiers t
-      SET reserved_count = GREATEST(0, t.reserved_count - a.total_released)
+      SET reserved_count = GREATEST(0, t.reserved_count - COALESCE(a.total_released, 0))
       FROM aggregated a
       WHERE t.id = a.ticket_tier_id;
     `);
@@ -376,13 +385,15 @@ export interface ReserveTicketHoldInput {
   eventId: string;
   selectedCounts: Record<string, number>;
   holdDurationSeconds?: number;
+  sessionId?: string;
   existingSessionId?: string;
 }
 
 /**
  * Concurrency-safe 5-minute ticket lock action.
- * Atomically increments saas_ticket_tiers.reserved_count and records a hold in ticket_inventory_holds.
- * Prevents double-booking and prevents buyers from paying on UPI for sold-out tickets.
+ * Atomically replaces any existing holds for the checkout session or user,
+ * updates saas_ticket_tiers.reserved_count, and records a hold in ticket_inventory_holds.
+ * Completely eliminates ticket hoarding / double-counting when user clicks +/- multiple times.
  */
 export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Promise<{
   success: boolean;
@@ -395,27 +406,49 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
     const user = await getCurrentUser();
     // Default duration: 300 seconds (5 minutes)
     const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 300));
+    const targetSessionId =
+      input.sessionId || input.existingSessionId || `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const cleanSessionId = escapeSql(targetSessionId);
+    const cleanExistingSessionId = input.existingSessionId ? escapeSql(input.existingSessionId) : "NULL";
+    const cleanUserId = user?.clerkId ? escapeSql(user.clerkId) : "NULL";
+    const cleanEventId = escapeSql(input.eventId);
 
-    // 1. Clean up any expired holds in PostgreSQL first
+    // 1. Atomically release any previous holds for this session or user on this event
+    await executeSql(`
+      WITH released AS (
+        DELETE FROM ticket_inventory_holds
+        WHERE (
+          session_id = ${cleanSessionId}
+          ${input.existingSessionId ? `OR session_id = ${cleanExistingSessionId}` : ""}
+          ${user?.clerkId ? `OR user_id = ${cleanUserId}` : ""}
+        )
+        AND ticket_tier_id IN (SELECT id FROM saas_ticket_tiers WHERE event_id = ${cleanEventId})
+        RETURNING ticket_tier_id, quantity
+      ),
+      aggregated AS (
+        SELECT ticket_tier_id, SUM(quantity)::int as total_released
+        FROM released
+        GROUP BY ticket_tier_id
+      )
+      UPDATE saas_ticket_tiers t
+      SET reserved_count = GREATEST(0, t.reserved_count - COALESCE(a.total_released, 0))
+      FROM aggregated a
+      WHERE t.id = a.ticket_tier_id;
+    `);
+
+    // 2. Clean up any globally expired holds
     await cleanupExpiredTicketHoldsAction();
-
-    // 2. Release user's previous session hold if renewing or changing selection
-    if (input.existingSessionId) {
-      await releaseUserHoldAction(input.existingSessionId);
-    }
 
     const tierEntries = Object.entries(input.selectedCounts).filter(([_, count]) => count > 0);
     if (tierEntries.length === 0) {
-      return { success: false, error: "Please select at least 1 ticket." };
+      return { success: true, holdSessionId: targetSessionId, remainingSeconds: durationSec };
     }
 
-    const holdSessionId = `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const reservedTierRecords: { tierId: string; count: number }[] = [];
 
     // 3. Atomically lock and reserve inventory for each requested tier
     for (const [tierId, count] of tierEntries) {
       const cleanTierId = escapeSql(tierId);
-      const cleanEventId = escapeSql(input.eventId);
 
       // Concurrency-safe atomic check & increment of reserved_count:
       const { data: updateRes, error: updateErr } = await executeSql(`
@@ -471,13 +504,13 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
     for (const rec of reservedTierRecords) {
       await executeSql(`
         INSERT INTO ticket_inventory_holds (ticket_tier_id, session_id, user_id, quantity, expires_at)
-        VALUES (${escapeSql(rec.tierId)}, ${escapeSql(holdSessionId)}, ${userIdVal}, ${rec.count}, ${escapeSql(expiresAt)});
+        VALUES (${escapeSql(rec.tierId)}, ${cleanSessionId}, ${userIdVal}, ${rec.count}, ${escapeSql(expiresAt)});
       `);
     }
 
     return {
       success: true,
-      holdSessionId,
+      holdSessionId: targetSessionId,
       expiresAt,
       remainingSeconds: durationSec,
     };

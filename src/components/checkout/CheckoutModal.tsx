@@ -10,7 +10,7 @@
  * 5. Instant dispatch to Organizer & Admin Verification Queue.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import QRCode from "qrcode";
 import {
   X,
@@ -355,6 +355,22 @@ export function CheckoutModal({
   const [isHoldExpired, setIsHoldExpired] = useState(false);
   const [isRenewingHold, setIsRenewingHold] = useState(false);
 
+  // Stable client session identifier per modal open instance
+  const checkoutSessionIdRef = useRef<string>(`chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+  const debounceHoldTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      checkoutSessionIdRef.current = `chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      setHoldSessionId(checkoutSessionIdRef.current);
+    } else {
+      if (debounceHoldTimerRef.current) {
+        clearTimeout(debounceHoldTimerRef.current);
+        debounceHoldTimerRef.current = null;
+      }
+    }
+  }, [isOpen]);
+
   // Live 5-Minute (300-Second) Hold Timer - Runs on BOTH Ticket Booking screen and Payment screen
   useEffect(() => {
     if (!holdExpiresAt || completedOrder) {
@@ -411,22 +427,28 @@ export function CheckoutModal({
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (holdSessionIdRef.current && !completedOrderRef.current) {
-        releaseUserHoldAction(holdSessionIdRef.current).catch(() => {});
+      const sid = checkoutSessionIdRef.current || holdSessionIdRef.current;
+      if (sid && !completedOrderRef.current) {
+        releaseUserHoldAction(sid).catch(() => {});
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (holdSessionIdRef.current && !completedOrderRef.current) {
-        releaseUserHoldAction(holdSessionIdRef.current).catch(() => {});
+      const sid = checkoutSessionIdRef.current || holdSessionIdRef.current;
+      if (sid && !completedOrderRef.current) {
+        releaseUserHoldAction(sid).catch(() => {});
       }
     };
   }, []);
 
   function handleCloseModal() {
-    if (holdSessionId && !completedOrder) {
-      const sid = holdSessionId;
+    if (debounceHoldTimerRef.current) {
+      clearTimeout(debounceHoldTimerRef.current);
+      debounceHoldTimerRef.current = null;
+    }
+    const sid = checkoutSessionIdRef.current || holdSessionId;
+    if (sid && !completedOrder) {
       setHoldSessionId(null);
       setHoldExpiresAt(null);
       setHoldSecondsRemaining(null);
@@ -444,15 +466,82 @@ export function CheckoutModal({
     onClose();
   }
 
+  // Calculate totals
+  let subtotal = 0;
+  let totalTicketCount = 0;
+  currentTiers.forEach((t) => {
+    const count = selectedCounts[t.id] || 0;
+    subtotal += Number(t.price) * count;
+    totalTicketCount += count;
+  });
+
+  const discountAmount = couponApplied ? (subtotal * discountPercent) / 100 : 0;
+  const fees = calculateOrderFees({
+    subtotal,
+    couponDiscountAmount: discountAmount,
+  });
+
+  const isFreeOrder = fees.totalPayable === 0;
+
+  // Robust ticket hold synchronization function
+  const syncTicketHold = useCallback(
+    async (countsToReserve: Record<string, number>) => {
+      if (!userEmail || completedOrder || isFreeOrder) return;
+      const countSum = Object.values(countsToReserve).reduce((a, b) => a + b, 0);
+      const activeSessionId = checkoutSessionIdRef.current;
+
+      if (countSum === 0) {
+        if (activeSessionId) {
+          await releaseUserHoldAction(activeSessionId);
+          const tierRes = await getEventTiersAction(event.id);
+          if (tierRes.success && tierRes.tiers) {
+            setCurrentTiers(tierRes.tiers);
+            onTiersUpdate?.(tierRes.tiers);
+          }
+        }
+        return;
+      }
+
+      try {
+        const res = await reserveTicketHoldAction({
+          eventId: event.id,
+          selectedCounts: countsToReserve,
+          holdDurationSeconds: 300,
+          sessionId: activeSessionId,
+          existingSessionId: activeSessionId,
+        });
+
+        if (res.success && res.holdSessionId) {
+          setHoldSessionId(res.holdSessionId);
+          if (res.expiresAt) setHoldExpiresAt(new Date(res.expiresAt));
+          if (res.remainingSeconds !== undefined) setHoldSecondsRemaining(res.remainingSeconds);
+          setIsHoldExpired(false);
+          const tierRes = await getEventTiersAction(event.id);
+          if (tierRes.success && tierRes.tiers) {
+            setCurrentTiers(tierRes.tiers);
+            onTiersUpdate?.(tierRes.tiers);
+          }
+        } else if (res.error) {
+          setErrorMessage(res.error);
+        }
+      } catch (err: any) {
+        console.error("Hold reservation sync error:", err);
+      }
+    },
+    [event.id, userEmail, completedOrder, isFreeOrder, onTiersUpdate]
+  );
+
   async function handleRenewHold() {
     setIsRenewingHold(true);
     setErrorMessage(null);
     try {
+      const sid = checkoutSessionIdRef.current || holdSessionId;
       const res = await reserveTicketHoldAction({
         eventId: event.id,
         selectedCounts,
         holdDurationSeconds: 300,
-        existingSessionId: holdSessionId || undefined,
+        sessionId: sid || undefined,
+        existingSessionId: sid || undefined,
       });
 
       if (!res.success || !res.holdSessionId) {
@@ -480,62 +569,17 @@ export function CheckoutModal({
     }
   }
 
-  // Calculate totals
-  let subtotal = 0;
-  let totalTicketCount = 0;
-  currentTiers.forEach((t) => {
-    const count = selectedCounts[t.id] || 0;
-    subtotal += Number(t.price) * count;
-    totalTicketCount += count;
-  });
-
-  const discountAmount = couponApplied ? (subtotal * discountPercent) / 100 : 0;
-  const fees = calculateOrderFees({
-    subtotal,
-    couponDiscountAmount: discountAmount,
-  });
-
-  const isFreeOrder = fees.totalPayable === 0;
-
-  // Automatically acquire 300-second (5-minute) hold as soon as ticket booking screen opens with selected tickets
+  // Automatically acquire 300-second (5-minute) hold once when ticket booking screen opens
   useEffect(() => {
-    if (!isOpen || !userEmail || completedOrder || isFreeOrder || totalTicketCount === 0) {
+    if (!isOpen || !userEmail || completedOrder || isFreeOrder) {
       return;
     }
-
-    // Only acquire initial hold if we do not already have an active hold session
-    if (!holdSessionId) {
-      let isMounted = true;
-      reserveTicketHoldAction({
-        eventId: event.id,
-        selectedCounts,
-        holdDurationSeconds: 300,
-      })
-        .then(async (res) => {
-          if (!isMounted) return;
-          if (res.success && res.holdSessionId) {
-            setHoldSessionId(res.holdSessionId);
-            setHoldExpiresAt(new Date(res.expiresAt!));
-            setHoldSecondsRemaining(res.remainingSeconds ?? 300);
-            setIsHoldExpired(false);
-            const tierRes = await getEventTiersAction(event.id);
-            if (isMounted && tierRes.success && tierRes.tiers) {
-              setCurrentTiers(tierRes.tiers);
-              onTiersUpdate?.(tierRes.tiers);
-            }
-          } else if (res.error) {
-            setErrorMessage(res.error);
-          }
-        })
-        .catch((e) => {
-          console.error("Failed to secure initial 300s hold:", e);
-        });
-
-      return () => {
-        isMounted = false;
-      };
+    const initialSum = Object.values(selectedCounts).reduce((a, b) => a + b, 0);
+    if (initialSum > 0) {
+      syncTicketHold(selectedCounts);
     }
-  }, [isOpen, userEmail, event.id, completedOrder, isFreeOrder, totalTicketCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, userEmail, completedOrder, isFreeOrder]);
 
   // Resolve target Organizer UPI ID & Payee Name
   const targetUpiId = (event as any).upi_id || "rotaractdistrict3192@okaxis";
@@ -606,50 +650,14 @@ export function CheckoutModal({
     setSelectedCounts(newCounts);
     setErrorMessage(null);
 
-    // Update active 300s hold with new ticket counts
-    const countSum = Object.values(newCounts).reduce((a, b) => a + b, 0);
+    // Debounce server hold reservation by 350ms to guarantee zero race conditions or stacked holds when tapping +/-
     if (!isFreeOrder && userEmail) {
-      if (countSum === 0) {
-        if (holdSessionId) {
-          const sid = holdSessionId;
-          setHoldSessionId(null);
-          setHoldExpiresAt(null);
-          setHoldSecondsRemaining(null);
-          setIsHoldExpired(false);
-          releaseUserHoldAction(sid)
-            .then(() => getEventTiersAction(event.id))
-            .then((res) => {
-              if (res.success && res.tiers) {
-                setCurrentTiers(res.tiers);
-                onTiersUpdate?.(res.tiers);
-              }
-            })
-            .catch(() => {});
-        }
-      } else {
-        reserveTicketHoldAction({
-          eventId: event.id,
-          selectedCounts: newCounts,
-          holdDurationSeconds: 300,
-          existingSessionId: holdSessionId || undefined,
-        })
-          .then(async (res) => {
-            if (res.success && res.holdSessionId) {
-              setHoldSessionId(res.holdSessionId);
-              setHoldExpiresAt(new Date(res.expiresAt!));
-              setHoldSecondsRemaining(res.remainingSeconds ?? 300);
-              setIsHoldExpired(false);
-              const tierRes = await getEventTiersAction(event.id);
-              if (tierRes.success && tierRes.tiers) {
-                setCurrentTiers(tierRes.tiers);
-                onTiersUpdate?.(tierRes.tiers);
-              }
-            } else if (res.error) {
-              setErrorMessage(res.error);
-            }
-          })
-          .catch((err) => console.error("Hold update error:", err));
+      if (debounceHoldTimerRef.current) {
+        clearTimeout(debounceHoldTimerRef.current);
       }
+      debounceHoldTimerRef.current = setTimeout(() => {
+        syncTicketHold(newCounts);
+      }, 350);
     }
 
     // Rebuild attendee slots while preserving what user typed
@@ -796,11 +804,18 @@ export function CheckoutModal({
     let acquiredHoldId: string | undefined = undefined;
     if (!isFreeOrder) {
       try {
+        if (debounceHoldTimerRef.current) {
+          clearTimeout(debounceHoldTimerRef.current);
+          debounceHoldTimerRef.current = null;
+        }
+
+        const sid = checkoutSessionIdRef.current || holdSessionId;
         const holdRes = await reserveTicketHoldAction({
           eventId: event.id,
           selectedCounts,
           holdDurationSeconds: 300, // 5-Minute Lock
-          existingSessionId: holdSessionId || undefined,
+          sessionId: sid || undefined,
+          existingSessionId: sid || undefined,
         });
 
         if (!holdRes.success || !holdRes.holdSessionId) {
@@ -877,7 +892,7 @@ export function CheckoutModal({
       };
     });
 
-    const targetHoldSessionId = activeHoldId || holdSessionId || undefined;
+    const targetHoldSessionId = activeHoldId || holdSessionId || checkoutSessionIdRef.current || undefined;
 
     const res = await createCheckoutOrderAction({
       eventId: event.id,
