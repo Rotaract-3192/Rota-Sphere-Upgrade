@@ -2,10 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MessageCircle, X, HelpCircle, Mail, Phone } from "lucide-react";
 
 export function FloatingContactButton() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // Suppress on organizer dashboard, admin panel, or scanner
+  if (
+    pathname.startsWith("/check-in") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin")
+  ) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-20 md:bottom-6 left-4 md:left-auto md:right-6 z-40 flex flex-col items-start md:items-end">

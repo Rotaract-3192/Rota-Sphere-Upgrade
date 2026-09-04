@@ -30,8 +30,12 @@ export function BottomNav() {
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const isSuperAdmin = userEmail === "tech.rotaract3192@gmail.com";
 
-  // Hide BottomNav on scanner or full-screen routes
-  if (pathname.startsWith("/check-in")) {
+  // Hide BottomNav on scanner, organizer host panel (/dashboard), or admin routes
+  if (
+    pathname.startsWith("/check-in") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin")
+  ) {
     return null;
   }
 

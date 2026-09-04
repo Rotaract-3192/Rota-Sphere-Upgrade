@@ -48,6 +48,7 @@ import {
   Megaphone,
   UserPlus,
   Building,
+  Menu,
 } from "lucide-react";
 import {
   duplicateEventAction,
@@ -86,6 +87,7 @@ export function OrganizerDashboardClient({
   const [activeTab, setActiveTab] = useState<
     "overview" | "events" | "tickets" | "attendees" | "orders" | "scanner" | "finance" | "settings" | "trash"
   >("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [events, setEvents] = useState(initialEvents);
   const [orders, setOrders] = useState(initialOrders);
@@ -131,6 +133,7 @@ export function OrganizerDashboardClient({
   const totalTicketsIssued = tickets.length;
   const totalCheckedIn = tickets.filter((t) => t.status === "USED").length;
   const checkInRate = totalTicketsIssued > 0 ? Math.round((totalCheckedIn / totalTicketsIssued) * 100) : 0;
+  const pendingOrdersCount = orders.filter((o: any) => o.status === "PENDING_VERIFICATION").length;
 
   // Finance Chart & Analytics State
   const [financeRange, setFinanceRange] = useState<"7d" | "30d" | "all">("30d");
@@ -393,47 +396,209 @@ export function OrganizerDashboardClient({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row text-gray-900">
       
-      {/* ── MOBILE TOP NAV (visible below md) ───────────────────────────── */}
-      <div className="md:hidden bg-gray-900 text-white border-b border-gray-800 px-4 pt-3 pb-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="relative w-9 h-9 shrink-0">
+      {/* ── MOBILE SLIDE-OVER DRAWER (visible below md) ───────────────── */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Slide-over Drawer Panel */}
+          <aside className="relative w-4/5 max-w-xs bg-gray-900 text-white flex flex-col justify-between h-full overflow-y-auto z-10 shadow-2xl animate-in slide-in-from-left duration-200 border-r border-gray-800">
+            <div className="flex flex-col h-full">
+              {/* Drawer Brand & Close Header */}
+              <div className="px-5 pt-5 pb-4 border-b border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-10 h-10 shrink-0">
+                    <Image
+                      src="/brand/logo.png"
+                      alt="District 3192 Logo"
+                      fill
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#3b82f6] block">
+                      ORGANIZER HUB
+                    </span>
+                    <span className="text-sm font-black text-white leading-tight block truncate max-w-[170px]">
+                      {organization?.name || "District 3192"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors active:scale-95"
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Super Admin Switcher (if applicable) */}
+              {(user?.profile?.role === "super_admin" ||
+                user?.email === "tech.rotaract3192@gmail.com") && (
+                <div className="px-3 pt-3">
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
+                  >
+                    <ShieldAlert size={14} className="text-amber-400" />
+                    <span>Super Admin Panel</span>
+                  </Link>
+                </div>
+              )}
+
+              {/* Drawer Nav Items List */}
+              <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                {[
+                  { id: "overview", label: "Overview", icon: LayoutDashboard, badge: null },
+                  { id: "events", label: "My Events", icon: Calendar, badge: activeEvents.length },
+                  { id: "tickets", label: "Passes & Tiers", icon: Ticket, badge: null },
+                  { id: "attendees", label: "Guest List", icon: Users, badge: tickets.length },
+                  {
+                    id: "orders",
+                    label: "Bookings & Sales",
+                    icon: ShoppingBag,
+                    badge: pendingOrdersCount > 0 ? `${pendingOrdersCount} ⚡` : null,
+                    isUrgent: pendingOrdersCount > 0,
+                  },
+                  { id: "scanner", label: "QR Entry Scanner", icon: QrCode, badge: null },
+                  { id: "finance", label: "Earnings & Payouts", icon: DollarSign, badge: null },
+                  { id: "broadcast", label: "Send Email Broadcast", icon: Megaphone, isBroadcast: true, badge: null },
+                  {
+                    id: "trash",
+                    label: "Recycle Bin",
+                    icon: Trash2,
+                    isTrash: true,
+                    badge: trashedEvents.length > 0 ? trashedEvents.length : null,
+                  },
+                  { id: "settings", label: "Account Settings", icon: Settings, badge: null },
+                ].map(({ id, label, icon: Icon, isTrash, isBroadcast, badge, isUrgent }: any) => {
+                  const active = activeTab === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        if (isBroadcast) {
+                          setSelectedBroadcastEventId("");
+                          setIsBulkEmailOpen(true);
+                        } else {
+                          setActiveTab(id as any);
+                        }
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        active
+                          ? isTrash
+                            ? "bg-rose-600 text-white shadow-sm font-bold"
+                            : "bg-[#0758fc] text-white shadow-sm font-bold"
+                          : isTrash && trashedEvents.length > 0
+                          ? "text-rose-400 hover:bg-gray-800 hover:text-white"
+                          : isUrgent
+                          ? "text-amber-300 hover:bg-gray-800 hover:text-white"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon size={16} />
+                        <span>{label}</span>
+                      </div>
+                      {badge !== null && badge !== undefined && (
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                            active
+                              ? "bg-white/20 text-white"
+                              : isUrgent
+                              ? "bg-amber-500 text-white animate-pulse"
+                              : isTrash
+                              ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                              : "bg-gray-700 text-gray-300"
+                          }`}
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Drawer Footer with Organizer Profile & Exit Link */}
+              <div className="px-3 pb-6 space-y-2 border-t border-gray-800 pt-3">
+                <div className="p-2.5 bg-gray-800/80 rounded-xl flex items-center gap-2.5 border border-gray-700/50">
+                  <div className="w-8 h-8 rounded-full bg-[#0758fc] text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
+                    {user?.profile?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "O"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white truncate">{user?.profile?.full_name || "Rotaract Leader"}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{user?.email || "organizer@rotasphere.org"}</p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-bold py-2.5 px-3 rounded-xl border border-gray-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <ExternalLink size={13} /> Exit to Public Website
+                </Link>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ── STICKY MOBILE TOP BAR (visible below md) ────────────────────── */}
+      <div className="md:hidden bg-gray-900 text-white border-b border-gray-800 px-3.5 py-2.5 sticky top-0 z-30 shadow-md flex items-center justify-between">
+        {/* Left: Hamburger trigger + Brand */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white cursor-pointer active:scale-95 transition-all flex items-center justify-center shrink-0 border border-gray-700/60"
+            aria-label="Open Organizer Menu"
+          >
+            <Menu size={19} />
+          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative w-8 h-8 shrink-0">
               <Image src="/brand/logo.png" alt="Logo" fill className="object-contain" priority />
             </div>
-            <span className="text-sm font-extrabold text-white truncate max-w-[160px]">{organization?.name || "Dashboard"}</span>
+            <div className="min-w-0">
+              <span className="text-xs font-black text-white block leading-tight truncate max-w-[125px] sm:max-w-[200px]">
+                {organization?.name || "District 3192 Hub"}
+              </span>
+              <span className="text-[9px] font-bold text-[#3b82f6] block leading-none">ORGANIZER</span>
+            </div>
           </div>
-          <Link href="/" className="text-[11px] font-bold text-gray-400 hover:text-white bg-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-700 flex items-center gap-1">
+        </div>
+
+        {/* Right: Active Tab Indicator + Exit Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-gray-800/90 text-gray-300 border border-gray-700/70 flex items-center gap-1">
+            {activeTab === "overview" && "🏠 Overview"}
+            {activeTab === "events" && `📅 Events (${activeEvents.length})`}
+            {activeTab === "tickets" && "🎟️ Passes"}
+            {activeTab === "attendees" && `👥 Guests (${tickets.length})`}
+            {activeTab === "orders" && `💳 Orders${pendingOrdersCount > 0 ? ` (${pendingOrdersCount} ⚡)` : ""}`}
+            {activeTab === "scanner" && "📱 Scanner"}
+            {activeTab === "finance" && "💰 Earnings"}
+            {activeTab === "trash" && `🗑️ Trash (${trashedEvents.length})`}
+            {activeTab === "settings" && "⚙️ Settings"}
+          </span>
+          <Link
+            href="/"
+            className="text-[11px] font-bold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2.5 py-1.5 rounded-lg border border-gray-700 flex items-center gap-1 transition-colors"
+          >
             <ExternalLink size={12} /> Exit
           </Link>
-        </div>
-        {/* Horizontal scrollable tab bar */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-1">
-          {[
-            { id: "overview", label: "Overview 🏠", icon: LayoutDashboard },
-            { id: "events", label: `My Events (${activeEvents.length})`, icon: Calendar },
-            { id: "tickets", label: "Passes 🎟️", icon: Ticket },
-            { id: "attendees", label: `Guest List (${tickets.length})`, icon: Users },
-            { id: "orders", label: orders.filter((o: any) => o.status === "PENDING_VERIFICATION").length > 0 ? `Bookings (${orders.filter((o: any) => o.status === "PENDING_VERIFICATION").length} ⚡)` : "Bookings 💳", icon: ShoppingBag },
-            { id: "scanner", label: "QR Scanner 📱", icon: QrCode },
-            { id: "finance", label: "Earnings 💰", icon: DollarSign },
-            { id: "broadcast", label: "Send Emails 📢", icon: Megaphone },
-            { id: "trash", label: `Recycle Bin (${trashedEvents.length})`, icon: Trash2 },
-            { id: "settings", label: "Settings ⚙️", icon: Settings },
-          ].map(({ id, label, icon: Icon }) => {
-            const active = activeTab === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id as any)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
-                  active ? "bg-[#0758fc] text-white" : "bg-gray-800 text-gray-400"
-                }`}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            );
-          })}
         </div>
       </div>
 
