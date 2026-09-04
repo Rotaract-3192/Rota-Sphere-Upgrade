@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, ChevronDown, Check, X, Building, Globe, Sparkles } from "lucide-react";
-import { getDistrictClubsWithZones, getClubZone, matchesClubQuery } from "@/lib/utils/zoneResolver";
-
-const ALL_CLUBS = getDistrictClubsWithZones();
+import { getDistrictClubsWithZones, getClubZone, matchesClubQuery, syncLiveClubsIntoZoneMap } from "@/lib/utils/zoneResolver";
+import { getDistrictClubsAction } from "@/app/actions/clubActions";
 
 interface SearchableClubSelectProps {
   value: string; // club name or "custom" or ""
   customValue?: string; // external club name if value === "custom"
   zone?: string;
+  clubs?: Array<{ name: string; zone: string; partnerClub?: string }>;
   onChange: (clubName: string, zone: string, isCustom: boolean) => void;
   onCustomChange?: (customClubName: string) => void;
   placeholder?: string;
@@ -21,6 +21,7 @@ export function SearchableClubSelect({
   value,
   customValue = "",
   zone = "",
+  clubs: propClubs,
   onChange,
   onCustomChange,
   placeholder = "Search or select Rotaract Club...",
@@ -31,6 +32,44 @@ export function SearchableClubSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Live clubs state dynamically fetched from PostgreSQL organizations table
+  const [clubsList, setClubsList] = useState<Array<{ name: string; zone: string; partnerClub?: string }>>(() => {
+    if (propClubs && propClubs.length > 0) return propClubs;
+    return getDistrictClubsWithZones();
+  });
+
+  const fetchLiveClubs = () => {
+    getDistrictClubsAction()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const liveList = res.data.map((c) => ({
+            name: c.name,
+            zone: c.zone || "District 3192",
+            partnerClub: c.partner_club || "",
+          }));
+          syncLiveClubsIntoZoneMap(liveList);
+          setClubsList(liveList);
+        }
+      })
+      .catch((e) => {
+        console.error("Failed to sync live clubs:", e);
+      });
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    if (!propClubs) {
+      fetchLiveClubs();
+    }
+  }, [propClubs]);
+
+  // Re-fetch when opening dropdown to guarantee latest changes from admin panel
+  useEffect(() => {
+    if (isOpen && !propClubs) {
+      fetchLiveClubs();
+    }
+  }, [isOpen, propClubs]);
 
   const isCustomMode = value === "custom";
 
@@ -62,9 +101,10 @@ export function SearchableClubSelect({
 
   // Filter clubs based on search query
   const filteredClubs = useMemo(() => {
-    if (!searchQuery.trim()) return ALL_CLUBS;
-    return ALL_CLUBS.filter((c) => matchesClubQuery(searchQuery, c));
-  }, [searchQuery]);
+    const list = propClubs && propClubs.length > 0 ? propClubs : clubsList;
+    if (!searchQuery.trim()) return list;
+    return list.filter((c) => matchesClubQuery(searchQuery, c));
+  }, [searchQuery, clubsList, propClubs]);
 
   function handleSelectClub(clubName: string, clubZone: string) {
     setSearchQuery(clubName);

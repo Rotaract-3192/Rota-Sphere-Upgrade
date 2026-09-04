@@ -164,7 +164,8 @@ export async function getDistrictClubsAction(): Promise<{ success: boolean; data
       FROM organizations o
       LEFT JOIN saas_events e ON e.organization_id = o.id AND e.status = 'PUBLISHED'
       LEFT JOIN organization_members om ON om.organization_id = o.id
-      WHERE o.status != 'DELETED' OR o.status IS NULL
+      WHERE (o.status != 'DELETED' OR o.status IS NULL)
+        AND o.id != '328ed943-f625-4fec-82a0-0c92dd7ec592'
       GROUP BY o.id, o.name, o.slug, o.zone, o.club_type, o.partner_club, o.contact_email, o.president_name, o.president_phone, o.president_email, o.status, o.is_verified
       ORDER BY o.name ASC;
     `);

@@ -39,6 +39,29 @@ for (const club of DISTRICT_3192_CLUBS) {
 }
 
 /**
+ * Synchronize live clubs from PostgreSQL organizations into the in-memory lookup map
+ */
+export function syncLiveClubsIntoZoneMap(
+  clubs: Array<{ name: string; zone: string; partnerClub?: string }>
+) {
+  if (!clubs || clubs.length === 0) return;
+  STANDARDIZED_CLUBS.length = 0;
+  for (const club of clubs) {
+    const normKey = cleanClubKey(club.name);
+    const zoneVal = club.zone || "District 3192";
+    if (normKey) {
+      CLUB_ZONE_MAP.set(normKey, zoneVal);
+    }
+    CLUB_ZONE_MAP.set(club.name.toLowerCase().trim(), zoneVal);
+    STANDARDIZED_CLUBS.push({
+      name: club.name,
+      zone: zoneVal,
+      partnerClub: club.partnerClub,
+    });
+  }
+}
+
+/**
  * Universal smart matcher for club search inputs
  * Matches whether the user enters "Rotaract Bangalore West", "Bangalore West",
  * "RAC Bangalore West", or "Rotaract Club of Bangalore West".
