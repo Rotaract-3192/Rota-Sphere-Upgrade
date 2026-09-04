@@ -1804,14 +1804,20 @@ export function CreateEventWizardModal({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  updateTierField(idx, "salesStartDate", formatDateStringToInput(new Date(), timezone));
+                                  if (!tier.salesStartDate) {
+                                    updateTierField(idx, "salesStartDate", formatDateStringToInput(new Date(), timezone));
+                                  }
                                   if (!tier.salesStartTime || tier.salesStartTime === "00:00") {
                                     updateTierField(idx, "salesStartTime", "09:00");
                                   }
                                   updateTierField(idx, "salesEndDate", "");
                                   updateTierField(idx, "salesEndTime", "");
                                 }}
-                                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] rounded-md text-gray-800 dark:text-gray-200 font-bold cursor-pointer transition-colors shadow-2xs"
+                                className={`px-2 py-1 border rounded-md font-bold cursor-pointer transition-all shadow-2xs ${
+                                  !tier.salesEndDate
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-400/30"
+                                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-[#0758fc] text-gray-800 dark:text-gray-200"
+                                }`}
                               >
                                 🎟️ Close After Sold Out (No Time Limit)
                               </button>

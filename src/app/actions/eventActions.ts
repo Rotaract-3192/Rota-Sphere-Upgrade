@@ -456,8 +456,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
         const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
 
-        const salesStartVal = tier.salesStart || new Date().toISOString();
-        const salesEndVal = tier.salesEnd || input.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const salesStartSql = tier.salesStart ? escapeSql(tier.salesStart) : "NOW()";
+        const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
@@ -487,8 +487,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             0,
             0,
             ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
-            ${escapeSql(salesStartVal)},
-            ${escapeSql(salesEndVal)},
+            ${salesStartSql},
+            ${salesEndSql},
             ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
             ${escapeSql(tierAudience)},
             '${benefitsJson}'::jsonb,
@@ -502,8 +502,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
           eventId,
           tierId: tierRes?.data?.[0]?.id,
           tierName: tier.name,
-          salesStart: salesStartVal,
-          salesEnd: salesEndVal,
+          salesStart: tier.salesStart || "NOW()",
+          salesEnd: tier.salesEnd || null,
         });
       }
     }
@@ -835,7 +835,11 @@ export async function updateEventAction(
     // Update Ticket Tiers if provided
     if (input.ticketTiers && input.ticketTiers.length > 0) {
       try {
-        await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+        await executeSql(`
+          ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_end DROP NOT NULL;
+          ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_start DROP NOT NULL;
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+        `);
       } catch (_) {}
 
       const { data: existingTiers } = await executeSql(`
@@ -852,8 +856,8 @@ export async function updateEventAction(
         const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
         const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
         const tierAudience = tier.allowedAudience || (tierAllowNonRotaract ? "ALL" : "ROTARACT_ONLY");
-        const salesStartVal = tier.salesStart || new Date().toISOString();
-        const salesEndVal = tier.salesEnd || input.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const salesStartSql = tier.salesStart ? escapeSql(tier.salesStart) : "NOW()";
+        const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const match =
           (tier.id ? (existingTiers || []).find((t: any) => t.id === tier.id) : null) ||
@@ -870,8 +874,8 @@ export async function updateEventAction(
               price = ${Number(tier.price) || 0},
               total_capacity = ${Number(tier.totalCapacity) || 100},
               max_per_order = ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
-              sales_start = ${escapeSql(salesStartVal)},
-              sales_end = ${escapeSql(salesEndVal)},
+              sales_start = ${salesStartSql},
+              sales_end = ${salesEndSql},
               allow_non_rotaract = ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
               allowed_audience = ${escapeSql(tierAudience)},
               benefits = '${benefitsJson}'::jsonb,
@@ -884,8 +888,8 @@ export async function updateEventAction(
             eventId,
             tierId: match.id,
             tierName: tier.name,
-            salesStart: salesStartVal,
-            salesEnd: salesEndVal,
+            salesStart: tier.salesStart || "NOW()",
+            salesEnd: tier.salesEnd || null,
           });
         } else {
           const insertRes = await executeSql(`
@@ -916,8 +920,8 @@ export async function updateEventAction(
               0,
               0,
               ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
-              ${escapeSql(salesStartVal)},
-              ${escapeSql(salesEndVal)},
+              ${salesStartSql},
+              ${salesEndSql},
               ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
               ${escapeSql(tierAudience)},
               '${benefitsJson}'::jsonb,
@@ -930,8 +934,8 @@ export async function updateEventAction(
             eventId,
             tierId: insertRes?.data?.[0]?.id,
             tierName: tier.name,
-            salesStart: salesStartVal,
-            salesEnd: salesEndVal,
+            salesStart: tier.salesStart || "NOW()",
+            salesEnd: tier.salesEnd || null,
           });
         }
       }
