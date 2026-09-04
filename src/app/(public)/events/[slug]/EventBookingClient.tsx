@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
+import { getEventTiersAction } from "@/app/actions/orderActions";
 
 interface EventBookingClientProps {
   event: SaasEvent;
@@ -58,9 +59,19 @@ function formatCountdown(diffMs: number): string {
 function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
   const cap = Number(tier.total_capacity) || 9999;
   const sold = Number(tier.sold_count) || 0;
-  const remaining = cap - sold;
+  const reserved = Number(tier.reserved_count) || 0;
+  const remaining = Math.max(0, cap - (sold + reserved));
 
   if (remaining <= 0) {
+    if (sold < cap) {
+      return {
+        state: "SOLD_OUT",
+        badgeText: "In Checkout",
+        badgeClass: "bg-amber-100 text-amber-900 border-amber-300 font-bold",
+        detailText: "Locked in checkout by another attendee",
+        canBook: false,
+      };
+    }
     return {
       state: "SOLD_OUT",
       badgeText: "Sold Out",
@@ -127,14 +138,42 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
-  const generalTiers = tiers.filter(
+  // Dynamic live tiers reflecting real-time inventory holds
+  const [liveTiers, setLiveTiers] = useState<SaasTicketTier[]>(tiers);
+
+  useEffect(() => {
+    setLiveTiers(tiers);
+  }, [tiers]);
+
+  // Sync real-time ticket availability every 3 seconds and on window focus
+  useEffect(() => {
+    let isMounted = true;
+    const syncInventory = async () => {
+      try {
+        const res = await getEventTiersAction(event.id);
+        if (isMounted && res.success && res.tiers && res.tiers.length > 0) {
+          setLiveTiers(res.tiers);
+        }
+      } catch (_) {}
+    };
+
+    const interval = setInterval(syncInventory, 3000);
+    window.addEventListener("focus", syncInventory);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", syncInventory);
+    };
+  }, [event.id]);
+
+  const earlyBirdTiers = liveTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = liveTiers.filter(
     (t) =>
       (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD"
   );
-  const otherTiers = tiers.filter(
+  const otherTiers = liveTiers.filter(
     (t) =>
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD" &&
@@ -146,17 +185,17 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
     earlyBirdTiers.length > 0 &&
     earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
-  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = liveTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
   // Find the earliest upcoming release tier if everything is locked
-  const earliestUpcoming = tiers
+  const earliestUpcoming = liveTiers
     .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
     .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
     .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
-  const prices = tiers.map((t) => Number(t.price));
+  const prices = liveTiers.map((t) => Number(t.price));
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const isFree = minPrice === 0;
 
@@ -178,8 +217,14 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
     setIsSaved((prev) => !prev);
   }
 
-  function handleOpenCheckout(e: React.MouseEvent) {
+  async function handleOpenCheckout(e: React.MouseEvent) {
     e.stopPropagation();
+    try {
+      const res = await getEventTiersAction(event.id);
+      if (res.success && res.tiers && res.tiers.length > 0) {
+        setLiveTiers(res.tiers);
+      }
+    } catch (_) {}
     setModalOpen(true);
   }
 
@@ -227,7 +272,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
         <div className="space-y-3">
           <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Available Passes &amp; Release Slabs</span>
           <div className="space-y-2.5">
-            {tiers.length === 0 ? (
+            {liveTiers.length === 0 ? (
               <p className="text-xs text-gray-500 italic">No tickets announced yet.</p>
             ) : (
               <>
@@ -524,9 +569,10 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
       {/* Checkout Modal (rendered with z-[9999] high priority) */}
       <CheckoutModal
         event={event}
-        tiers={tiers}
+        tiers={liveTiers}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+        onTiersUpdate={(updated) => setLiveTiers(updated)}
         userEmail={userEmail}
         userName={userName}
         initialServerTime={initialServerTime}

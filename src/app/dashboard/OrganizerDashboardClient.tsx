@@ -445,62 +445,19 @@ export function OrganizerDashboardClient({
                 </button>
               </div>
 
-              {/* Tenant Portal Scope Badge */}
-              <div className="px-3 pt-3 flex items-center justify-between">
-                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
-                  isDistrictHub
-                    ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                    : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                }`}>
-                  {isDistrictHub ? "🏛️ District Events Only" : "🏢 Club Scoped Hub"}
-                </span>
-
-                {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+              {/* Active Portal Switch / Return */}
+              {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+                <div className="px-3 pt-2">
                   <Link
                     href="/dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-[10px] font-bold text-blue-400 hover:text-white underline"
+                    className="text-xs font-semibold text-blue-400 hover:text-white transition-colors inline-flex items-center gap-1"
                   >
                     ← District Hub
                   </Link>
-                )}
-              </div>
-
-              {/* Active Portal Switcher (Super Admin) */}
-              {(user?.profile?.role === "super_admin" ||
-                user?.email === "tech.rotaract3192@gmail.com") && allOrganizations.length > 0 && (
-                <div className="px-3 pt-2">
-                  <label className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-1">
-                    SWITCH ACTIVE HUB
-                  </label>
-                  <select
-                    value={organization?.id || ""}
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
-                      setMobileMenuOpen(false);
-                      if (!selectedId || selectedId === "328ed943-f625-4fec-82a0-0c92dd7ec592") {
-                        router.push("/dashboard");
-                      } else {
-                        router.push(`/dashboard?orgId=${selectedId}`);
-                      }
-                    }}
-                    className="w-full text-xs font-semibold bg-gray-800 text-white border border-gray-700 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer truncate"
-                  >
-                    <option value="328ed943-f625-4fec-82a0-0c92dd7ec592">
-                      🏛️ District 3192 Hub (District Events)
-                    </option>
-                    <optgroup label="Chartered District Clubs">
-                      {allOrganizations
-                        .filter((o: any) => o.id !== "328ed943-f625-4fec-82a0-0c92dd7ec592")
-                        .map((org: any) => (
-                          <option key={org.id} value={org.id}>
-                            {org.name}
-                          </option>
-                        ))}
-                    </optgroup>
-                  </select>
                 </div>
               )}
+
 
               {/* Super Admin Switcher (if applicable) */}
               {(user?.profile?.role === "super_admin" ||
@@ -703,61 +660,19 @@ export function OrganizerDashboardClient({
               {organization?.name || "District 3192 Hub"}
             </h1>
 
-            {/* Portal Scope Badge */}
-            <div className="flex items-center justify-between gap-1 pt-0.5">
-              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                isDistrictHub
-                  ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                  : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-              }`}>
-                {isDistrictHub ? "🏛️ District Events Only" : "🏢 Club Scoped Hub"}
-              </span>
-
-              {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+            {/* Return to District Hub (Super Admin) */}
+            {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+              <div className="pt-1">
                 <Link
                   href="/dashboard"
-                  className="text-[10px] font-bold text-blue-400 hover:text-white underline"
+                  className="text-xs font-semibold text-blue-400 hover:text-white transition-colors inline-flex items-center gap-1"
                   title="Switch back to District 3192 Hub"
                 >
                   ← District Hub
                 </Link>
-              )}
-            </div>
-
-            {/* Active Portal Switcher (Super Admin) */}
-            {(user?.profile?.role === "super_admin" ||
-              user?.email === "tech.rotaract3192@gmail.com") && allOrganizations.length > 0 && (
-              <div className="pt-2">
-                <label className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-1">
-                  SWITCH ACTIVE HUB
-                </label>
-                <select
-                  value={organization?.id || ""}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    if (!selectedId || selectedId === "328ed943-f625-4fec-82a0-0c92dd7ec592") {
-                      router.push("/dashboard");
-                    } else {
-                      router.push(`/dashboard?orgId=${selectedId}`);
-                    }
-                  }}
-                  className="w-full text-xs font-semibold bg-gray-800 text-white border border-gray-700 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer truncate"
-                >
-                  <option value="328ed943-f625-4fec-82a0-0c92dd7ec592">
-                    🏛️ District 3192 Hub (District Events)
-                  </option>
-                  <optgroup label="Chartered District Clubs">
-                    {allOrganizations
-                      .filter((o: any) => o.id !== "328ed943-f625-4fec-82a0-0c92dd7ec592")
-                      .map((org: any) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                </select>
               </div>
             )}
+
 
             {/* Super Admin Switcher banner */}
             {(user?.profile?.role === "super_admin" ||

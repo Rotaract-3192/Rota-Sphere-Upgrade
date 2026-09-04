@@ -34,6 +34,8 @@ export async function ensureClubColumns() {
       ALTER TABLE organizations ADD COLUMN IF NOT EXISTS president_email text;
       ALTER TABLE organizations ADD COLUMN IF NOT EXISTS status text DEFAULT 'ACTIVE';
       ALTER TABLE organizations ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT true;
+      ALTER TABLE organizations ALTER COLUMN support_email DROP NOT NULL;
+      ALTER TABLE organizations ALTER COLUMN city DROP NOT NULL;
     `);
   } catch (e) {
     console.error("Error ensuring club columns:", e);
@@ -243,12 +245,16 @@ export async function createDistrictClubAction(formData: {
 
     await ensureClubColumns();
     const slug = generateSlug(formData.name);
+    const supportEmail =
+      (formData.contactEmail && formData.contactEmail.split(",")[0].trim()) ||
+      formData.presidentEmail?.trim() ||
+      `${slug}@rotaract3192.org`;
 
     const res = await executeSql(`
       INSERT INTO organizations (
-        name, slug, zone, club_type, partner_club, contact_email, 
+        name, slug, zone, club_type, partner_club, contact_email, support_email, city, country,
         president_name, president_phone, president_email, 
-        status, is_verified, created_at, updated_at
+        status, is_verified, kyc_status, created_at, updated_at
       )
       VALUES (
         ${escapeSql(formData.name.trim())},
@@ -257,19 +263,41 @@ export async function createDistrictClubAction(formData: {
         ${escapeSql(formData.clubType || "Community Based")},
         ${escapeSql(formData.partnerClub || "")},
         ${escapeSql(formData.contactEmail || "")},
+        ${escapeSql(supportEmail)},
+        'Bengaluru',
+        'India',
         ${escapeSql(formData.presidentName || "")},
         ${escapeSql(formData.presidentPhone || "")},
         ${escapeSql(formData.presidentEmail || "")},
         'ACTIVE',
         true,
+        'VERIFIED',
         NOW(),
         NOW()
       )
+      ON CONFLICT (slug) DO UPDATE SET
+        name = EXCLUDED.name,
+        zone = EXCLUDED.zone,
+        club_type = EXCLUDED.club_type,
+        partner_club = EXCLUDED.partner_club,
+        contact_email = EXCLUDED.contact_email,
+        support_email = EXCLUDED.support_email,
+        president_name = EXCLUDED.president_name,
+        president_phone = EXCLUDED.president_phone,
+        president_email = EXCLUDED.president_email,
+        status = 'ACTIVE',
+        is_verified = true,
+        kyc_status = 'VERIFIED',
+        updated_at = NOW()
       RETURNING id;
     `);
 
     if (res.error) {
-      return { success: false, error: res.error?.message || "Failed to create club." };
+      const errorMsg =
+        typeof res.error === "object"
+          ? res.error.message || JSON.stringify(res.error)
+          : String(res.error);
+      return { success: false, error: errorMsg || "Failed to create club." };
     }
 
     const newClubId = res.data?.[0]?.id;
@@ -312,6 +340,10 @@ export async function updateDistrictClubAction(
   try {
     const user = await requireRole("admin");
 
+    const email =
+      (formData.contactEmail && formData.contactEmail.split(",")[0].trim()) ||
+      formData.presidentEmail?.trim();
+
     const res = await executeSql(`
       UPDATE organizations
       SET
@@ -320,6 +352,7 @@ export async function updateDistrictClubAction(
         club_type = ${escapeSql(formData.clubType)},
         partner_club = ${escapeSql(formData.partnerClub || "")},
         contact_email = ${escapeSql(formData.contactEmail || "")},
+        ${email ? `support_email = ${escapeSql(email)},` : ""}
         president_name = ${escapeSql(formData.presidentName || "")},
         president_phone = ${escapeSql(formData.presidentPhone || "")},
         president_email = ${escapeSql(formData.presidentEmail || "")},
@@ -329,7 +362,11 @@ export async function updateDistrictClubAction(
     `);
 
     if (res.error) {
-      return { success: false, error: res.error?.message || "Failed to update club." };
+      const errorMsg =
+        typeof res.error === "object"
+          ? res.error.message || JSON.stringify(res.error)
+          : String(res.error);
+      return { success: false, error: errorMsg || "Failed to update club." };
     }
 
     await logAuditAction({

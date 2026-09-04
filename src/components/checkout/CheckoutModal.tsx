@@ -10,7 +10,7 @@
  * 5. Instant dispatch to Organizer & Admin Verification Queue.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import {
   X,
@@ -43,6 +43,7 @@ import { calculateOrderFees } from "@/lib/services/feeCalculator";
 import {
   createCheckoutOrderAction,
   getEventCustomQuestionsAction,
+  getEventTiersAction,
   validateTicketTiersAvailabilityAction,
   reserveTicketHoldAction,
   releaseUserHoldAction,
@@ -64,17 +65,10 @@ interface CheckoutModalProps {
   tiers: SaasTicketTier[];
   isOpen: boolean;
   onClose: () => void;
+  onTiersUpdate?: (tiers: SaasTicketTier[]) => void;
   userEmail?: string;
   userName?: string;
   initialServerTime?: string;
-}
-
-interface TierStatusInfo {
-  state: "UPCOMING" | "LIVE" | "CLOSED" | "SOLD_OUT";
-  badgeText: string;
-  badgeClass: string;
-  detailText: string;
-  canBook: boolean;
 }
 
 interface TierStatusInfo {
@@ -117,12 +111,23 @@ export function formatSecondsToTimer(totalSecs: number | null | undefined): stri
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
+function getTierScheduleStatus(
+  tier: SaasTicketTier,
+  currentTime: Date = new Date(),
+  userSelectedCount: number = 0
+): TierStatusInfo {
   const cap = Number(tier.total_capacity) || 9999;
   const sold = Number(tier.sold_count) || 0;
   const reserved = Number(tier.reserved_count) || 0;
-  const remaining = cap - (sold + reserved);
-  if (remaining <= 0) {
+
+  // Total unheld seats remaining in general (locked passes are immediately deducted from the count)
+  const remaining = Math.max(0, cap - (sold + reserved));
+
+  // Seats available for this active user session (accounting for tickets already held in user's current session)
+  const othersReserved = Math.max(0, reserved - userSelectedCount);
+  const remainingForUser = Math.max(0, cap - (sold + othersReserved));
+
+  if (remainingForUser <= 0) {
     if (sold < cap) {
       return {
         state: "SOLD_OUT",
@@ -196,6 +201,7 @@ export function CheckoutModal({
   tiers,
   isOpen,
   onClose,
+  onTiersUpdate,
   userEmail,
   userName,
   initialServerTime,
@@ -203,6 +209,13 @@ export function CheckoutModal({
   // Tamper-proof, server-synchronized monotonic time
   const currentTime = useServerSyncedTime(initialServerTime);
   const [checkoutStep, setCheckoutStep] = useState<"SELECT_PASSES" | "UPI_PAYMENT" | "SUCCESS">("SELECT_PASSES");
+
+  // Dynamic current tiers state synced with PostgreSQL reserved_count
+  const [currentTiers, setCurrentTiers] = useState<SaasTicketTier[]>(tiers);
+
+  useEffect(() => {
+    setCurrentTiers(tiers);
+  }, [tiers]);
 
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
@@ -219,7 +232,7 @@ export function CheckoutModal({
       setSelectedCounts((prev) => {
         let changed = false;
         const updated = { ...prev };
-        tiers.forEach((t) => {
+        currentTiers.forEach((t) => {
           const max = t.max_per_order ? Number(t.max_per_order) : 10;
           if (updated[t.id] && updated[t.id] > max) {
             updated[t.id] = max;
@@ -229,7 +242,7 @@ export function CheckoutModal({
         return changed ? updated : prev;
       });
     }
-  }, [isOpen, tiers]);
+  }, [isOpen, currentTiers]);
 
   const [couponCode, setCouponCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -244,14 +257,14 @@ export function CheckoutModal({
   }, []);
 
   // Tier Staggering & Categorization (Early Bird -> General Release Dropdown -> VIP)
-  const earlyBirdTiers = tiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
-  const generalTiers = tiers.filter(
+  const earlyBirdTiers = currentTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = currentTiers.filter(
     (t) =>
       (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD"
   );
-  const otherTiers = tiers.filter(
+  const otherTiers = currentTiers.filter(
     (t) =>
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD" &&
@@ -263,9 +276,9 @@ export function CheckoutModal({
     earlyBirdTiers.length > 0 &&
     earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
-  const hasAnyBookableTier = tiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = currentTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
-  const earliestUpcoming = tiers
+  const earliestUpcoming = currentTiers
     .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
     .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
     .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
@@ -364,22 +377,69 @@ export function CheckoutModal({
     return () => clearInterval(timer);
   }, [holdExpiresAt, completedOrder]);
 
-  // Release hold if user navigates away, closes modal, or unmounts before order completion
+  // Sync inventory in real-time every 3 seconds while checkout is open
   useEffect(() => {
+    if (!isOpen || completedOrder) return;
+    let isMounted = true;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await getEventTiersAction(event.id);
+        if (isMounted && res.success && res.tiers && res.tiers.length > 0) {
+          setCurrentTiers(res.tiers);
+          onTiersUpdate?.(res.tiers);
+        }
+      } catch (_) {}
+    }, 3000);
+
     return () => {
-      if (holdSessionId && !completedOrder) {
-        releaseUserHoldAction(holdSessionId).catch(() => {});
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, [isOpen, event.id, completedOrder, onTiersUpdate]);
+
+  // Hold session ref to safely manage cleanup without React strict-mode false unmounts
+  const holdSessionIdRef = useRef<string | null>(null);
+  const completedOrderRef = useRef<any>(null);
+
+  useEffect(() => {
+    holdSessionIdRef.current = holdSessionId;
+  }, [holdSessionId]);
+
+  useEffect(() => {
+    completedOrderRef.current = completedOrder;
+  }, [completedOrder]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (holdSessionIdRef.current && !completedOrderRef.current) {
+        releaseUserHoldAction(holdSessionIdRef.current).catch(() => {});
       }
     };
-  }, [holdSessionId, completedOrder]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (holdSessionIdRef.current && !completedOrderRef.current) {
+        releaseUserHoldAction(holdSessionIdRef.current).catch(() => {});
+      }
+    };
+  }, []);
 
   function handleCloseModal() {
     if (holdSessionId && !completedOrder) {
-      releaseUserHoldAction(holdSessionId).catch(() => {});
+      const sid = holdSessionId;
       setHoldSessionId(null);
       setHoldExpiresAt(null);
       setHoldSecondsRemaining(null);
       setIsHoldExpired(false);
+      releaseUserHoldAction(sid)
+        .then(() => getEventTiersAction(event.id))
+        .then((res) => {
+          if (res.success && res.tiers) {
+            setCurrentTiers(res.tiers);
+            onTiersUpdate?.(res.tiers);
+          }
+        })
+        .catch(() => {});
     }
     onClose();
   }
@@ -408,6 +468,11 @@ export function CheckoutModal({
       setHoldExpiresAt(new Date(res.expiresAt!));
       setHoldSecondsRemaining(res.remainingSeconds ?? 120);
       setIsHoldExpired(false);
+      const tierRes = await getEventTiersAction(event.id);
+      if (tierRes.success && tierRes.tiers) {
+        setCurrentTiers(tierRes.tiers);
+        onTiersUpdate?.(tierRes.tiers);
+      }
     } catch (err: any) {
       setErrorMessage(err?.message || "Failed to renew ticket reservation.");
     } finally {
@@ -418,7 +483,7 @@ export function CheckoutModal({
   // Calculate totals
   let subtotal = 0;
   let totalTicketCount = 0;
-  tiers.forEach((t) => {
+  currentTiers.forEach((t) => {
     const count = selectedCounts[t.id] || 0;
     subtotal += Number(t.price) * count;
     totalTicketCount += count;
@@ -446,13 +511,18 @@ export function CheckoutModal({
         selectedCounts,
         holdDurationSeconds: 120,
       })
-        .then((res) => {
+        .then(async (res) => {
           if (!isMounted) return;
           if (res.success && res.holdSessionId) {
             setHoldSessionId(res.holdSessionId);
             setHoldExpiresAt(new Date(res.expiresAt!));
             setHoldSecondsRemaining(res.remainingSeconds ?? 120);
             setIsHoldExpired(false);
+            const tierRes = await getEventTiersAction(event.id);
+            if (isMounted && tierRes.success && tierRes.tiers) {
+              setCurrentTiers(tierRes.tiers);
+              onTiersUpdate?.(tierRes.tiers);
+            }
           } else if (res.error) {
             setErrorMessage(res.error);
           }
@@ -501,25 +571,34 @@ export function CheckoutModal({
   if (!isOpen) return null;
 
   function handleCountChange(tierId: string, delta: number) {
-    const targetTier = tiers.find((t) => t.id === tierId);
+    const targetTier = currentTiers.find((t) => t.id === tierId);
     if (!targetTier) return;
 
-    if (delta > 0) {
-      const status = getTierScheduleStatus(targetTier, currentTime);
-      if (!status.canBook) {
-        setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
-        return;
-      }
+    const current = selectedCounts[tierId] || 0;
+    const status = getTierScheduleStatus(targetTier, currentTime, current);
+    if (delta > 0 && !status.canBook) {
+      setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
+      return;
     }
 
-    const current = selectedCounts[tierId] || 0;
-    const maxAllowed = targetTier.max_per_order ? Number(targetTier.max_per_order) : 10;
+    const cap = Number(targetTier.total_capacity) || 9999;
+    const sold = Number(targetTier.sold_count) || 0;
+    const reserved = Number(targetTier.reserved_count) || 0;
+    const othersReserved = Math.max(0, reserved - current);
+    const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
+    const tierMax = targetTier.max_per_order ? Number(targetTier.max_per_order) : 10;
+    const maxAllowed = Math.min(tierMax, maxAvailableForUser);
+
     if (delta > 0 && current >= maxAllowed) {
-      setErrorMessage(
-        maxAllowed === 1
-          ? `"${targetTier.name}" is strictly limited to 1 ticket per booking.`
-          : `You can only select up to ${maxAllowed} tickets for "${targetTier.name}".`
-      );
+      if (current >= maxAvailableForUser && maxAvailableForUser < tierMax) {
+        setErrorMessage(`No more seats available for "${targetTier.name}". Other passes are booked or locked in checkout.`);
+      } else {
+        setErrorMessage(
+          tierMax === 1
+            ? `"${targetTier.name}" is strictly limited to 1 ticket per booking.`
+            : `You can only select up to ${tierMax} tickets for "${targetTier.name}".`
+        );
+      }
       return;
     }
     const next = Math.max(0, Math.min(maxAllowed, current + delta));
@@ -532,11 +611,20 @@ export function CheckoutModal({
     if (!isFreeOrder && userEmail) {
       if (countSum === 0) {
         if (holdSessionId) {
-          releaseUserHoldAction(holdSessionId).catch(() => {});
+          const sid = holdSessionId;
           setHoldSessionId(null);
           setHoldExpiresAt(null);
           setHoldSecondsRemaining(null);
           setIsHoldExpired(false);
+          releaseUserHoldAction(sid)
+            .then(() => getEventTiersAction(event.id))
+            .then((res) => {
+              if (res.success && res.tiers) {
+                setCurrentTiers(res.tiers);
+                onTiersUpdate?.(res.tiers);
+              }
+            })
+            .catch(() => {});
         }
       } else {
         reserveTicketHoldAction({
@@ -545,12 +633,17 @@ export function CheckoutModal({
           holdDurationSeconds: 120,
           existingSessionId: holdSessionId || undefined,
         })
-          .then((res) => {
+          .then(async (res) => {
             if (res.success && res.holdSessionId) {
               setHoldSessionId(res.holdSessionId);
               setHoldExpiresAt(new Date(res.expiresAt!));
               setHoldSecondsRemaining(res.remainingSeconds ?? 120);
               setIsHoldExpired(false);
+              const tierRes = await getEventTiersAction(event.id);
+              if (tierRes.success && tierRes.tiers) {
+                setCurrentTiers(tierRes.tiers);
+                onTiersUpdate?.(tierRes.tiers);
+              }
             } else if (res.error) {
               setErrorMessage(res.error);
             }
@@ -573,7 +666,7 @@ export function CheckoutModal({
       customAnswers?: Record<string, any>;
     }> = [];
     let prevIndex = 0;
-    tiers.forEach((t) => {
+    currentTiers.forEach((t) => {
       const count = newCounts[t.id] || 0;
       for (let i = 0; i < count; i++) {
         const existing = attendees[prevIndex];
@@ -597,7 +690,7 @@ export function CheckoutModal({
         ? newAttendees
         : [
             {
-              tierId: tiers[0]?.id || "",
+              tierId: currentTiers[0]?.id || "",
               name: "",
               email: "",
               phone: "",
@@ -724,6 +817,11 @@ export function CheckoutModal({
         setHoldExpiresAt(new Date(holdRes.expiresAt!));
         setHoldSecondsRemaining(holdRes.remainingSeconds ?? 120);
         setIsHoldExpired(false);
+        const tierRes = await getEventTiersAction(event.id);
+        if (tierRes.success && tierRes.tiers) {
+          setCurrentTiers(tierRes.tiers);
+          onTiersUpdate?.(tierRes.tiers);
+        }
       } catch (err: any) {
         setLoading(false);
         setErrorMessage(err?.message || "Failed to secure ticket reservation hold.");
@@ -811,6 +909,14 @@ export function CheckoutModal({
       status: res.status || "PENDING_VERIFICATION",
     });
     setCheckoutStep("SUCCESS");
+    getEventTiersAction(event.id)
+      .then((tierRes) => {
+        if (tierRes.success && tierRes.tiers) {
+          setCurrentTiers(tierRes.tiers);
+          onTiersUpdate?.(tierRes.tiers);
+        }
+      })
+      .catch(() => {});
   }
 
   function handleCopy(text: string, type: "upi" | "amount") {
@@ -860,22 +966,38 @@ export function CheckoutModal({
             </div>
 
             <div className="flex items-center gap-2 relative z-10">
-              {/* Header Live Timer Badge (Always visible across booking and payment) */}
+              {/* Single Intimidating RED Live Timer (The only timer across checkout) */}
               {userEmail && !isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
-                <div
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black font-mono tracking-tight transition-all border ${
-                    isHoldExpired
-                      ? "bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse"
-                      : holdSecondsRemaining <= 30
-                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse"
-                      : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                  }`}
-                  title={isHoldExpired ? "Hold Expired" : "120-Second Ticket Lock-In Timer"}
-                >
-                  <Clock size={13} className={!isHoldExpired ? "animate-pulse" : ""} />
-                  <span>{formatSecondsToTimer(holdSecondsRemaining)}</span>
-                  <span className="hidden sm:inline text-[9px] uppercase font-bold opacity-80">Lock</span>
-                </div>
+                !isHoldExpired ? (
+                  <div
+                    className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-black font-mono tracking-wider transition-all bg-red-950/90 text-red-400 border border-red-500/80 shadow-[0_0_16px_rgba(239,68,68,0.5)] select-none animate-pulse"
+                    title="120-Second Ticket Lock-in: Complete checkout before timer reaches 0"
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    </span>
+                    <Clock size={14} className="text-red-400 animate-pulse" />
+                    <span className="text-red-300 font-extrabold">{formatSecondsToTimer(holdSecondsRemaining)}</span>
+                    <span className="hidden sm:inline text-[9px] uppercase font-black tracking-widest text-red-300 bg-red-900/60 px-1.5 py-0.5 rounded border border-red-500/30">
+                      LOCK
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isRenewingHold}
+                    onClick={handleRenewHold}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black font-mono tracking-tight bg-red-950 text-red-200 border border-red-600 shadow-[0_0_14px_rgba(239,68,68,0.6)] cursor-pointer hover:bg-red-900 transition-all active:scale-95 disabled:opacity-60"
+                    title="120s Hold Expired. Click to re-lock your tickets"
+                  >
+                    {isRenewingHold ? <Loader2 size={12} className="animate-spin text-red-300" /> : <RefreshCw size={12} className="text-red-300" />}
+                    <span className="text-red-300">00:00 EXPIRED</span>
+                    <span className="text-[9px] uppercase font-extrabold bg-red-600 text-white px-1.5 py-0.5 rounded">
+                      RE-LOCK
+                    </span>
+                  </button>
+                )
               )}
 
               <button
@@ -884,44 +1006,6 @@ export function CheckoutModal({
               >
                 <X size={18} />
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Sticky Lock-In Progress Sub-Bar (Visible across both Ticket Selection and Payment) */}
-        {checkoutStep !== "SUCCESS" && userEmail && !isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
-          <div className="bg-gray-950 border-b border-gray-800 px-4 sm:px-6 py-2 flex items-center justify-between text-xs shrink-0 select-none">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isHoldExpired ? "bg-rose-500" : holdSecondsRemaining <= 30 ? "bg-amber-500 animate-ping" : "bg-emerald-400 animate-pulse"}`} />
-              <span className="text-[11px] font-bold text-gray-300 truncate">
-                {isHoldExpired ? (
-                  <span className="text-rose-400 font-extrabold">120s Lock Expired — Passes returned to general pool</span>
-                ) : (
-                  <>
-                    <strong className="text-white font-black">{totalTicketCount} Pass{totalTicketCount > 1 ? "es" : ""} Locked</strong>
-                    <span className="hidden sm:inline text-gray-400"> (120s exclusive hold)</span>
-                  </>
-                )}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {!isHoldExpired ? (
-                <div className="flex items-center gap-1.5 font-mono font-black text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-0.5 rounded-lg shadow-xs">
-                  <Clock size={12} className="text-emerald-400 animate-pulse" />
-                  <span>{formatSecondsToTimer(holdSecondsRemaining)}</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={isRenewingHold}
-                  onClick={handleRenewHold}
-                  className="text-[11px] font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                >
-                  {isRenewingHold ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                  <span>Re-lock 120s</span>
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -981,64 +1065,29 @@ export function CheckoutModal({
               </div>
             )}
 
-            {/* 2-Minute Ticket Reservation Lock-In Banner */}
-            <div
-              className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                isHoldExpired
-                  ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
-                  : (holdSecondsRemaining ?? 120) <= 30
-                  ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 animate-pulse"
-                  : "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    isHoldExpired
-                      ? "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300"
-                      : (holdSecondsRemaining ?? 120) <= 30
-                      ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300"
-                      : "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300"
-                  }`}
-                >
-                  <Clock size={20} className={!isHoldExpired ? "animate-pulse" : ""} />
-                </div>
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-black uppercase tracking-wider">
-                      {isHoldExpired
-                        ? "Reservation Hold Expired"
-                        : (holdSecondsRemaining ?? 120) <= 30
-                        ? "Hurry! Hold Expiring Soon"
-                        : "Passes Reserved For You (2 Min Lock)"}
-                    </p>
+            {/* Hold Expired Alert (Only shown if hold actually expired) */}
+            {!isFreeOrder && isHoldExpired && (
+              <div className="p-4 rounded-2xl border bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
+                    <Clock size={18} />
                   </div>
-                  <p className="text-[11px] opacity-90 truncate">
-                    {isHoldExpired
-                      ? "Your 2-min lock expired. Passes were returned to the general pool."
-                      : "Complete UPI payment & upload receipt before the timer reaches 0."}
-                  </p>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-300">Reservation Expired</p>
+                    <p className="text-[11px] opacity-85">Your hold expired. Re-lock seats to continue.</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  disabled={isRenewingHold}
+                  onClick={handleRenewHold}
+                  className="text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+                >
+                  {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  <span>Re-lock Seats</span>
+                </button>
               </div>
-
-              <div className="text-right shrink-0">
-                {!isHoldExpired ? (
-                  <span className="font-mono text-base sm:text-lg font-black tracking-tight px-3 py-1.5 bg-white/90 dark:bg-black/50 rounded-xl border border-current shadow-xs block">
-                    {formatSecondsToTimer(holdSecondsRemaining)}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={isRenewingHold}
-                    onClick={handleRenewHold}
-                    className="text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
-                  >
-                    {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                    <span>Re-lock Seats</span>
-                  </button>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Price Summary Pill */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -1287,75 +1336,27 @@ export function CheckoutModal({
               </div>
             )}
 
-            {/* 120-Second Live Ticket Lock-In Hero Card (Visible while booking tickets) */}
-            {!isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
-              <div
-                className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-xs ${
-                  isHoldExpired
-                    ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
-                    : holdSecondsRemaining <= 30
-                    ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 animate-pulse"
-                    : "bg-blue-50/70 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/80 text-blue-950 dark:text-blue-200"
-                }`}
-              >
+            {/* Hold Expired Alert (Only shown if hold actually expired) */}
+            {!isFreeOrder && totalTicketCount > 0 && isHoldExpired && (
+              <div className="p-4 rounded-2xl border bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
-                      isHoldExpired
-                        ? "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300"
-                        : holdSecondsRemaining <= 30
-                        ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300"
-                        : "bg-[#0758fc]/15 dark:bg-blue-900/60 text-[#0758fc] dark:text-blue-400"
-                    }`}
-                  >
-                    <Clock size={22} className={!isHoldExpired ? "animate-pulse" : ""} />
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
+                    <Clock size={18} />
                   </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-black uppercase tracking-wider">
-                        {isHoldExpired
-                          ? "120s Reservation Hold Expired"
-                          : holdSecondsRemaining <= 30
-                          ? "Hurry! 120s Lock Expiring Soon"
-                          : "120-Second Ticket Lock-in Active"}
-                      </span>
-                      {!isHoldExpired && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                          <ShieldCheck size={11} /> Seats Held
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] opacity-85 leading-tight">
-                      {isHoldExpired
-                        ? "Your 120-second hold expired. Click 'Re-lock Passes' to reserve your tickets again."
-                        : `Your ${totalTicketCount} pass${totalTicketCount > 1 ? "es are" : " is"} locked for 120 seconds. Complete attendee details before the timer reaches 0:00!`}
-                    </p>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-300">Reservation Expired</p>
+                    <p className="text-[11px] opacity-85">Click re-lock to hold your tickets again.</p>
                   </div>
                 </div>
-
-                <div className="text-right shrink-0">
-                  {!isHoldExpired ? (
-                    <div className="flex flex-col items-end">
-                      <span className="font-mono text-base sm:text-xl font-black tracking-tight px-3 py-1.5 bg-white dark:bg-gray-900 rounded-xl border border-current shadow-xs flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                        {formatSecondsToTimer(holdSecondsRemaining)}
-                      </span>
-                      <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mt-0.5">
-                        Remaining
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isRenewingHold}
-                      onClick={handleRenewHold}
-                      className="text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
-                    >
-                      {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                      <span>Re-lock Passes</span>
-                    </button>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  disabled={isRenewingHold}
+                  onClick={handleRenewHold}
+                  className="text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+                >
+                  {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  <span>Re-lock Passes</span>
+                </button>
               </div>
             )}
 
@@ -1389,7 +1390,14 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {earlyBirdTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier, currentTime);
+                        const status = getTierScheduleStatus(tier, currentTime, count);
+                        const cap = Number(tier.total_capacity) || 9999;
+                        const sold = Number(tier.sold_count) || 0;
+                        const reserved = Number(tier.reserved_count) || 0;
+                        const othersReserved = Math.max(0, reserved - count);
+                        const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
+                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                        const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                         return (
                           <div
                             key={tier.id}
@@ -1432,7 +1440,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
+                                disabled={!status.canBook || count >= maxAllowed}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +
@@ -1478,7 +1486,14 @@ export function CheckoutModal({
                       <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-white dark:bg-gray-900">
                         {generalTiers.map((tier) => {
                           const count = selectedCounts[tier.id] || 0;
-                          const status = getTierScheduleStatus(tier, currentTime);
+                          const status = getTierScheduleStatus(tier, currentTime, count);
+                          const cap = Number(tier.total_capacity) || 9999;
+                          const sold = Number(tier.sold_count) || 0;
+                          const reserved = Number(tier.reserved_count) || 0;
+                          const othersReserved = Math.max(0, reserved - count);
+                          const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
+                          const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                          const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                           return (
                             <div
                               key={tier.id}
@@ -1517,7 +1532,7 @@ export function CheckoutModal({
                                 <button
                                   type="button"
                                   onClick={() => handleCountChange(tier.id, 1)}
-                                  disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
+                                  disabled={!status.canBook || count >= maxAllowed}
                                   className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   +
@@ -1536,7 +1551,14 @@ export function CheckoutModal({
                   <div className="space-y-2">
                     {generalTiers.map((tier) => {
                       const count = selectedCounts[tier.id] || 0;
-                      const status = getTierScheduleStatus(tier, currentTime);
+                      const status = getTierScheduleStatus(tier, currentTime, count);
+                      const cap = Number(tier.total_capacity) || 9999;
+                      const sold = Number(tier.sold_count) || 0;
+                      const reserved = Number(tier.reserved_count) || 0;
+                      const othersReserved = Math.max(0, reserved - count);
+                      const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
+                      const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                      const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                       return (
                         <div
                           key={tier.id}
@@ -1575,7 +1597,7 @@ export function CheckoutModal({
                             <button
                               type="button"
                               onClick={() => handleCountChange(tier.id, 1)}
-                              disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
+                              disabled={!status.canBook || count >= maxAllowed}
                               className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               +
@@ -1598,7 +1620,14 @@ export function CheckoutModal({
                     <div className="space-y-2">
                       {otherTiers.map((tier) => {
                         const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier, currentTime);
+                        const status = getTierScheduleStatus(tier, currentTime, count);
+                        const cap = Number(tier.total_capacity) || 9999;
+                        const sold = Number(tier.sold_count) || 0;
+                        const reserved = Number(tier.reserved_count) || 0;
+                        const othersReserved = Math.max(0, reserved - count);
+                        const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
+                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                        const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                         return (
                           <div
                             key={tier.id}
@@ -1637,7 +1666,7 @@ export function CheckoutModal({
                               <button
                                 type="button"
                                 onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= (tier.max_per_order ? Number(tier.max_per_order) : 10)}
+                                disabled={!status.canBook || count >= maxAllowed}
                                 className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 +

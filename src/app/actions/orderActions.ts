@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
 import { sendTicketEmailWithQR, sendBookingReceivedEmail } from "@/lib/notifications/notificationService";
 import { resolveClubAndZone } from "@/lib/utils/zoneResolver";
+import type { SaasTicketTier } from "@/types/saas";
 
 export interface CheckoutAttendeeItem {
   ticketTierId: string;
@@ -171,12 +172,12 @@ export async function getEventTiersAction(eventId: string) {
   try {
     await cleanupExpiredTicketHoldsAction();
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, reserved_count, tier_type, description, max_per_order
+      SELECT *
       FROM saas_ticket_tiers
-      WHERE event_id = ${escapeSql(eventId)}
+      WHERE event_id = ${escapeSql(eventId)} AND is_active = true AND is_visible = true
       ORDER BY price ASC, name ASC;
     `);
-    return { success: true, tiers: tiers || [] };
+    return { success: true, tiers: (tiers || []) as unknown as SaasTicketTier[] };
   } catch (err: any) {
     return { success: false, tiers: [], error: err?.message || String(err) };
   }
