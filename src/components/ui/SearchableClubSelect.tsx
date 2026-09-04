@@ -187,29 +187,48 @@ export function SearchableClubSelect({
           </div>
 
           {/* List items */}
-          <div className="max-h-56 overflow-y-auto p-1.5 space-y-0.5 scrollbar-thin">
+          <div className="max-h-64 sm:max-h-80 overflow-y-auto p-1.5 space-y-1 scrollbar-thin">
             {filteredClubs.length > 0 ? (
               filteredClubs.map((club) => {
                 const isSelected = value === club.name;
+                // Separate "Rotaract Club of " prefix for maximum mobile clarity & zero truncation
+                const prefixMatch = club.name.match(/^(Rotaract Club of\s+)(.*)$/i);
+                const prefix = prefixMatch ? prefixMatch[1] : "";
+                const coreName = prefixMatch ? prefixMatch[2] : club.name;
+
                 return (
                   <button
                     key={club.name}
                     type="button"
                     onClick={() => handleSelectClub(club.name, club.zone)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                    className={`w-full text-left p-2.5 sm:px-3 sm:py-2.5 rounded-xl text-xs flex items-start justify-between gap-2.5 transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-blue-50/90 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 font-black border border-blue-200 dark:border-blue-800"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold"
+                        ? "bg-blue-50/90 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                      <Building size={13} className={isSelected ? "text-[#0758fc] dark:text-blue-400" : "text-gray-400 dark:text-gray-500"} />
-                      <span className="truncate">{club.name}</span>
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <Building
+                        size={14}
+                        className={`mt-0.5 shrink-0 ${isSelected ? "text-[#0758fc] dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
+                      />
+                      <div className="min-w-0 flex-1 text-left">
+                        {prefix && (
+                          <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 block leading-tight">
+                            {prefix}
+                          </span>
+                        )}
+                        <span className={`text-xs sm:text-[13px] font-bold leading-snug break-words whitespace-normal block ${
+                          isSelected ? "text-[#0758fc] dark:text-blue-400 font-extrabold" : "text-gray-900 dark:text-white font-extrabold"
+                        }`}>
+                          {coreName}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 self-start mt-0.5">
                       <span
-                        className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                        className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border whitespace-nowrap ${
                           isSelected
                             ? "bg-blue-100 dark:bg-blue-950 text-[#0758fc] dark:text-blue-400 border-blue-300 dark:border-blue-700"
                             : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
@@ -217,7 +236,7 @@ export function SearchableClubSelect({
                       >
                         {club.zone}
                       </span>
-                      {isSelected && <Check size={14} className="text-[#0758fc] dark:text-blue-400" />}
+                      {isSelected && <Check size={14} className="text-[#0758fc] dark:text-blue-400 shrink-0" />}
                     </div>
                   </button>
                 );
