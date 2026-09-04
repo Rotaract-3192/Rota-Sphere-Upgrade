@@ -27,6 +27,7 @@ import {
 } from "@/lib/utils/dateTimeUtils";
 import { EventJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { EventBookingClient } from "./EventBookingClient";
+import { cleanupExpiredTicketHoldsAction } from "@/app/actions/orderActions";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
 export const dynamic = "force-dynamic";
@@ -150,9 +151,10 @@ export default async function EventDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch Tiers
+  // Fetch Tiers with expired holds purged
   try {
     await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+    await cleanupExpiredTicketHoldsAction();
   } catch (_) {}
 
   const { data: tierRows } = await executeSql(`

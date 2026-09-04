@@ -36,10 +36,17 @@ import {
   User,
   Briefcase,
   Award,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
-import { createCheckoutOrderAction, getEventCustomQuestionsAction, validateTicketTiersAvailabilityAction } from "@/app/actions/orderActions";
+import {
+  createCheckoutOrderAction,
+  getEventCustomQuestionsAction,
+  validateTicketTiersAvailabilityAction,
+  reserveTicketHoldAction,
+  releaseUserHoldAction,
+} from "@/app/actions/orderActions";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
 import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
@@ -105,8 +112,18 @@ function formatCountdown(diffMs: number): string {
 function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
   const cap = Number(tier.total_capacity) || 9999;
   const sold = Number(tier.sold_count) || 0;
-  const remaining = cap - sold;
+  const reserved = Number(tier.reserved_count) || 0;
+  const remaining = cap - (sold + reserved);
   if (remaining <= 0) {
+    if (sold < cap) {
+      return {
+        state: "SOLD_OUT",
+        badgeText: "In Checkout",
+        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700",
+        detailText: "Remaining passes currently locked in checkout",
+        canBook: false,
+      };
+    }
     return {
       state: "SOLD_OUT",
       badgeText: "Sold Out",
@@ -309,6 +326,84 @@ export function CheckoutModal({
     status: string;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 2-Minute Reservation Hold State (Ticket Lock-In)
+  const [holdSessionId, setHoldSessionId] = useState<string | null>(null);
+  const [holdExpiresAt, setHoldExpiresAt] = useState<Date | null>(null);
+  const [holdSecondsRemaining, setHoldSecondsRemaining] = useState<number | null>(null);
+  const [isHoldExpired, setIsHoldExpired] = useState(false);
+  const [isRenewingHold, setIsRenewingHold] = useState(false);
+
+  // Live 2-Minute Hold Timer
+  useEffect(() => {
+    if (!holdExpiresAt || checkoutStep !== "UPI_PAYMENT" || completedOrder) {
+      return;
+    }
+
+    const updateTimer = () => {
+      const diffMs = holdExpiresAt.getTime() - Date.now();
+      const secs = Math.max(0, Math.ceil(diffMs / 1000));
+      setHoldSecondsRemaining(secs);
+      if (secs <= 0) {
+        setIsHoldExpired(true);
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [holdExpiresAt, checkoutStep, completedOrder]);
+
+  // Release hold if user navigates away, closes modal, or unmounts before order completion
+  useEffect(() => {
+    return () => {
+      if (holdSessionId && !completedOrder) {
+        releaseUserHoldAction(holdSessionId).catch(() => {});
+      }
+    };
+  }, [holdSessionId, completedOrder]);
+
+  function handleCloseModal() {
+    if (holdSessionId && !completedOrder) {
+      releaseUserHoldAction(holdSessionId).catch(() => {});
+      setHoldSessionId(null);
+      setHoldExpiresAt(null);
+      setHoldSecondsRemaining(null);
+      setIsHoldExpired(false);
+    }
+    onClose();
+  }
+
+  async function handleRenewHold() {
+    setIsRenewingHold(true);
+    setErrorMessage(null);
+    try {
+      const res = await reserveTicketHoldAction({
+        eventId: event.id,
+        selectedCounts,
+        holdDurationSeconds: 120,
+        existingSessionId: holdSessionId || undefined,
+      });
+
+      if (!res.success || !res.holdSessionId) {
+        setErrorMessage(
+          res.error ||
+            "Unable to renew hold: all tickets have been taken by another attendee."
+        );
+        setIsRenewingHold(false);
+        return;
+      }
+
+      setHoldSessionId(res.holdSessionId);
+      setHoldExpiresAt(new Date(res.expiresAt!));
+      setHoldSecondsRemaining(res.remainingSeconds ?? 120);
+      setIsHoldExpired(false);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to renew ticket reservation.");
+    } finally {
+      setIsRenewingHold(false);
+    }
+  }
 
   // Calculate totals
   let subtotal = 0;
@@ -527,18 +622,50 @@ export function CheckoutModal({
       return;
     }
 
+    // 2-Minute Lock Reservation:
+    let acquiredHoldId: string | undefined = undefined;
+    if (!isFreeOrder) {
+      try {
+        const holdRes = await reserveTicketHoldAction({
+          eventId: event.id,
+          selectedCounts,
+          holdDurationSeconds: 120, // 2-Minute Lock
+          existingSessionId: holdSessionId || undefined,
+        });
+
+        if (!holdRes.success || !holdRes.holdSessionId) {
+          setLoading(false);
+          setErrorMessage(
+            holdRes.error ||
+              "All remaining passes for this tier are currently locked in checkout by other attendees. Please wait 2 minutes and check again."
+          );
+          return;
+        }
+
+        acquiredHoldId = holdRes.holdSessionId;
+        setHoldSessionId(holdRes.holdSessionId);
+        setHoldExpiresAt(new Date(holdRes.expiresAt!));
+        setHoldSecondsRemaining(holdRes.remainingSeconds ?? 120);
+        setIsHoldExpired(false);
+      } catch (err: any) {
+        setLoading(false);
+        setErrorMessage(err?.message || "Failed to secure ticket reservation hold.");
+        return;
+      }
+    }
+
     setLoading(false);
 
     if (isFreeOrder) {
       // If free, submit immediately
-      handleSubmitOrder("");
+      handleSubmitOrder("", acquiredHoldId);
     } else {
       // Show Dynamic UPI QR Screen
       setCheckoutStep("UPI_PAYMENT");
     }
   }
 
-  async function handleSubmitOrder(utrNumber: string) {
+  async function handleSubmitOrder(utrNumber: string, activeHoldId?: string) {
     if (!isFreeOrder && !paymentProofUrl && !utrNumber.trim()) {
       setErrorMessage("Please attach your payment screenshot or enter your UTR number to confirm.");
       return;
@@ -575,6 +702,8 @@ export function CheckoutModal({
       };
     });
 
+    const targetHoldSessionId = activeHoldId || holdSessionId || undefined;
+
     const res = await createCheckoutOrderAction({
       eventId: event.id,
       attendees: formattedAttendees,
@@ -584,6 +713,7 @@ export function CheckoutModal({
       customerPhone: attendees[0]?.phone,
       upiTransactionId: utrNumber.trim() || undefined,
       paymentProofUrl: paymentProofUrl || undefined,
+      holdSessionId: targetHoldSessionId,
     });
 
     setLoading(false);
@@ -592,6 +722,11 @@ export function CheckoutModal({
       setErrorMessage(res.error || "Failed to submit order");
       return;
     }
+
+    setHoldSessionId(null);
+    setHoldExpiresAt(null);
+    setHoldSecondsRemaining(null);
+    setIsHoldExpired(false);
 
     setCompletedOrder({
       orderNumber: res.orderNumber || "RS-CONFIRMED",
@@ -616,7 +751,7 @@ export function CheckoutModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in-50">
       {/* Explicit backdrop element */}
       <div
-        onClick={onClose}
+        onClick={handleCloseModal}
         className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
       />
 
@@ -648,7 +783,7 @@ export function CheckoutModal({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="relative z-10 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X size={18} />
@@ -710,6 +845,66 @@ export function CheckoutModal({
                 <span>{errorMessage}</span>
               </div>
             )}
+
+            {/* 2-Minute Ticket Reservation Lock-In Banner */}
+            <div
+              className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                isHoldExpired
+                  ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+                  : (holdSecondsRemaining ?? 120) <= 30
+                  ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 animate-pulse"
+                  : "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    isHoldExpired
+                      ? "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300"
+                      : (holdSecondsRemaining ?? 120) <= 30
+                      ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300"
+                      : "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300"
+                  }`}
+                >
+                  <Clock size={20} className={!isHoldExpired ? "animate-pulse" : ""} />
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-black uppercase tracking-wider">
+                      {isHoldExpired
+                        ? "Reservation Hold Expired"
+                        : (holdSecondsRemaining ?? 120) <= 30
+                        ? "Hurry! Hold Expiring Soon"
+                        : "Passes Reserved For You (2 Min Lock)"}
+                    </p>
+                  </div>
+                  <p className="text-[11px] opacity-90 truncate">
+                    {isHoldExpired
+                      ? "Your 2-min lock expired. Passes were returned to the general pool."
+                      : "Complete UPI payment & upload receipt before the timer reaches 0."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                {!isHoldExpired ? (
+                  <span className="font-mono text-base sm:text-lg font-black tracking-tight px-3 py-1.5 bg-white/90 dark:bg-black/50 rounded-xl border border-current shadow-xs block">
+                    {String(Math.floor((holdSecondsRemaining ?? 120) / 60)).padStart(2, "0")}:
+                    {String((holdSecondsRemaining ?? 120) % 60).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isRenewingHold}
+                    onClick={handleRenewHold}
+                    className="text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
+                  >
+                    {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    <span>Re-lock Seats</span>
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Price Summary Pill */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -927,18 +1122,21 @@ export function CheckoutModal({
               </button>
 
               {(() => {
-                const canSubmit = isFreeOrder || Boolean(paymentProofUrl || upiTransactionId.trim());
+                const canSubmit =
+                  (isFreeOrder || Boolean(paymentProofUrl || upiTransactionId.trim())) && !isHoldExpired;
                 return (
                   <SlideToPayButton
                     onSuccess={() => handleSubmitOrder(upiTransactionId)}
                     label={
                       loading
                         ? "Submitting..."
+                        : isHoldExpired
+                        ? "Hold Expired — Please Re-lock Seats Above"
                         : !canSubmit
                         ? "Upload Screenshot or Enter UTR to Confirm"
                         : "Slide to Submit Ticket for Approval"
                     }
-                    disabled={loading || !canSubmit}
+                    disabled={loading || !canSubmit || isHoldExpired}
                     loading={loading}
                   />
                 );

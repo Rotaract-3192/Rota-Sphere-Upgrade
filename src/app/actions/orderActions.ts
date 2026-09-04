@@ -40,6 +40,7 @@ export interface CreateCheckoutInput {
   paymentProofUrl?: string;
   idempotencyKey?: string;
   customAnswers?: Record<string, any>;
+  holdSessionId?: string;
 }
 
 export interface SelectedTierInput {
@@ -132,6 +133,24 @@ async function ensureUpiColumns() {
         CHECK (total_capacity <= 0 OR sold_count <= total_capacity);
     `);
   } catch (_) { /* ignore if already exists */ }
+
+  try {
+    // Ensure ticket_inventory_holds table and performance indexes exist for 2-min reservation lock-in
+    await executeSql(`
+      CREATE TABLE IF NOT EXISTS ticket_inventory_holds (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        ticket_tier_id UUID NOT NULL,
+        session_id VARCHAR(128) NOT NULL,
+        user_id VARCHAR(128),
+        quantity INT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inventory_holds_tier ON ticket_inventory_holds(ticket_tier_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_holds_expiry ON ticket_inventory_holds(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_inventory_holds_session ON ticket_inventory_holds(session_id);
+    `);
+  } catch (_) { /* ignore if already exists */ }
 }
 
 export async function getEventCustomQuestionsAction(eventId: string) {
@@ -150,8 +169,9 @@ export async function getEventCustomQuestionsAction(eventId: string) {
 
 export async function getEventTiersAction(eventId: string) {
   try {
+    await cleanupExpiredTicketHoldsAction();
     const { data: tiers } = await executeSql(`
-      SELECT id, name, price, total_capacity, sold_count, tier_type, description, max_per_order
+      SELECT id, name, price, total_capacity, sold_count, reserved_count, tier_type, description, max_per_order
       FROM saas_ticket_tiers
       WHERE event_id = ${escapeSql(eventId)}
       ORDER BY price ASC, name ASC;
@@ -177,6 +197,8 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
   serverTime: string;
 }> {
   try {
+    await cleanupExpiredTicketHoldsAction();
+
     const tierEntries = Object.entries(input.selectedCounts).filter(([_, count]) => count > 0);
     if (tierEntries.length === 0) {
       return { valid: true, serverTime: new Date().toISOString() };
@@ -191,6 +213,7 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
         price, 
         total_capacity, 
         sold_count, 
+        reserved_count,
         sales_start, 
         sales_end, 
         is_active,
@@ -250,8 +273,16 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
       }
 
       const sold = Number(tier.sold_count) || 0;
+      const reserved = Number(tier.reserved_count) || 0;
       const capacity = Number(tier.total_capacity) || 0;
-      if (capacity > 0 && sold + count > capacity) {
+      if (capacity > 0 && sold + reserved + count > capacity) {
+        if (sold + count <= capacity) {
+          return {
+            valid: false,
+            error: `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 2 minutes or try another pass.`,
+            serverTime: serverNowStr,
+          };
+        }
         return {
           valid: false,
           error: `Pass tier "${tier.name}" has only ${Math.max(0, capacity - sold)} seats remaining.`,
@@ -269,6 +300,191 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
       valid: false,
       error: err?.message || "Server verification error. Please try again.",
       serverTime: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Purges expired inventory holds and restores reserved capacity back to saas_ticket_tiers.
+ * Runs atomically in PostgreSQL using a single CTE query.
+ */
+export async function cleanupExpiredTicketHoldsAction(): Promise<{ success: boolean; releasedCount?: number }> {
+  try {
+    const { data: result, error } = await executeSql(`
+      WITH expired AS (
+        DELETE FROM ticket_inventory_holds
+        WHERE expires_at < NOW()
+        RETURNING ticket_tier_id, quantity
+      ),
+      aggregated AS (
+        SELECT ticket_tier_id, SUM(quantity)::int as total_expired
+        FROM expired
+        GROUP BY ticket_tier_id
+      )
+      UPDATE saas_ticket_tiers t
+      SET reserved_count = GREATEST(0, t.reserved_count - a.total_expired)
+      FROM aggregated a
+      WHERE t.id = a.ticket_tier_id
+      RETURNING t.id, a.total_expired;
+    `);
+
+    if (error) {
+      logger.error("cleanupExpiredTicketHoldsAction error", { error });
+      return { success: false };
+    }
+
+    return { success: true, releasedCount: result?.length || 0 };
+  } catch (err: any) {
+    logger.error("cleanupExpiredTicketHoldsAction error", { error: String(err) });
+    return { success: false };
+  }
+}
+
+/**
+ * Immediately releases an active reservation hold for a checkout session
+ * (called if attendee cancels, navigates away, or closes the checkout modal).
+ */
+export async function releaseUserHoldAction(sessionId: string): Promise<{ success: boolean }> {
+  if (!sessionId) return { success: true };
+  try {
+    const cleanSession = escapeSql(sessionId);
+    await executeSql(`
+      WITH released AS (
+        DELETE FROM ticket_inventory_holds
+        WHERE session_id = ${cleanSession}
+        RETURNING ticket_tier_id, quantity
+      ),
+      aggregated AS (
+        SELECT ticket_tier_id, SUM(quantity)::int as total_released
+        FROM released
+        GROUP BY ticket_tier_id
+      )
+      UPDATE saas_ticket_tiers t
+      SET reserved_count = GREATEST(0, t.reserved_count - a.total_released)
+      FROM aggregated a
+      WHERE t.id = a.ticket_tier_id;
+    `);
+    return { success: true };
+  } catch (err) {
+    logger.error("releaseUserHoldAction error", { error: String(err) });
+    return { success: false };
+  }
+}
+
+export interface ReserveTicketHoldInput {
+  eventId: string;
+  selectedCounts: Record<string, number>;
+  holdDurationSeconds?: number;
+  existingSessionId?: string;
+}
+
+/**
+ * Concurrency-safe 2-minute ticket lock action.
+ * Atomically increments saas_ticket_tiers.reserved_count and records a hold in ticket_inventory_holds.
+ * Prevents double-booking and prevents buyers from paying on UPI for sold-out tickets.
+ */
+export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Promise<{
+  success: boolean;
+  holdSessionId?: string;
+  expiresAt?: string;
+  remainingSeconds?: number;
+  error?: string;
+}> {
+  try {
+    const user = await getCurrentUser();
+    // Default duration: 120 seconds (2 minutes)
+    const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 120));
+
+    // 1. Clean up any expired holds in PostgreSQL first
+    await cleanupExpiredTicketHoldsAction();
+
+    // 2. Release user's previous session hold if renewing or changing selection
+    if (input.existingSessionId) {
+      await releaseUserHoldAction(input.existingSessionId);
+    }
+
+    const tierEntries = Object.entries(input.selectedCounts).filter(([_, count]) => count > 0);
+    if (tierEntries.length === 0) {
+      return { success: false, error: "Please select at least 1 ticket." };
+    }
+
+    const holdSessionId = `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const reservedTierRecords: { tierId: string; count: number }[] = [];
+
+    // 3. Atomically lock and reserve inventory for each requested tier
+    for (const [tierId, count] of tierEntries) {
+      const cleanTierId = escapeSql(tierId);
+      const cleanEventId = escapeSql(input.eventId);
+
+      // Concurrency-safe atomic check & increment of reserved_count:
+      const { data: updateRes, error: updateErr } = await executeSql(`
+        UPDATE saas_ticket_tiers
+        SET reserved_count = reserved_count + ${count}
+        WHERE id = ${cleanTierId}
+          AND event_id = ${cleanEventId}
+          AND is_active = true
+          AND (total_capacity <= 0 OR (sold_count + reserved_count + ${count}) <= total_capacity)
+        RETURNING id, name, total_capacity, sold_count, reserved_count;
+      `);
+
+      if (updateErr || !updateRes || updateRes.length === 0) {
+        // Rollback any earlier tiers successfully updated in this loop
+        for (const prev of reservedTierRecords) {
+          await executeSql(`
+            UPDATE saas_ticket_tiers
+            SET reserved_count = GREATEST(0, reserved_count - ${prev.count})
+            WHERE id = ${escapeSql(prev.tierId)};
+          `);
+        }
+
+        // Fetch tier name for informative error message
+        const { data: tInfo } = await executeSql(`
+          SELECT name, total_capacity, sold_count, reserved_count 
+          FROM saas_ticket_tiers 
+          WHERE id = ${cleanTierId};
+        `);
+        const tierName = tInfo?.[0]?.name || "selected pass";
+        const sold = Number(tInfo?.[0]?.sold_count) || 0;
+        const cap = Number(tInfo?.[0]?.total_capacity) || 0;
+
+        if (cap > 0 && sold >= cap) {
+          return {
+            success: false,
+            error: `Pass "${tierName}" is completely sold out.`,
+          };
+        }
+
+        return {
+          success: false,
+          error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 2 minutes and check again.`,
+        };
+      }
+
+      reservedTierRecords.push({ tierId, count });
+    }
+
+    // 4. Insert hold records into ticket_inventory_holds
+    const expiresAt = new Date(Date.now() + durationSec * 1000).toISOString();
+    const userIdVal = user?.clerkId ? escapeSql(user.clerkId) : "NULL";
+
+    for (const rec of reservedTierRecords) {
+      await executeSql(`
+        INSERT INTO ticket_inventory_holds (ticket_tier_id, session_id, user_id, quantity, expires_at)
+        VALUES (${escapeSql(rec.tierId)}, ${escapeSql(holdSessionId)}, ${userIdVal}, ${rec.count}, ${escapeSql(expiresAt)});
+      `);
+    }
+
+    return {
+      success: true,
+      holdSessionId,
+      expiresAt,
+      remainingSeconds: durationSec,
+    };
+  } catch (err: any) {
+    logger.error("reserveTicketHoldAction error", { error: String(err) });
+    return {
+      success: false,
+      error: err?.message || "Failed to reserve tickets. Please try again.",
     };
   }
 }
@@ -502,51 +718,105 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const paymentGateway = isFree ? "FREE" : "UPI_QR";
     const targetUpiId = event.upi_id || "rotaractdistrict3192@okaxis";
 
-    // 5. Atomic Inventory Reservation (Concurrency & Overselling Guardrail)
-    // Uses PostgreSQL row-level locks so that even if multiple attendees submit at the exact same millisecond,
-    // total tickets sold will NEVER exceed total_capacity (e.g. 14 tickets).
-    for (const [tId, requestedCount] of Object.entries(countPerTier)) {
-      const tier = tierMap.get(tId);
-      const { data: reserveRes, error: reserveErr } = await executeSql(`
-        UPDATE saas_ticket_tiers
-        SET sold_count = sold_count + ${requestedCount}
-        WHERE id = ${escapeSql(tId)}
-          AND (total_capacity <= 0 OR sold_count + ${requestedCount} <= total_capacity)
-        RETURNING id, name, sold_count, total_capacity, auto_activate_when_tier_sells_out;
+    // 5. Atomic Inventory Reservation / 2-Min Hold Conversion
+    // Concurrency-safe: If attendee holds an active 2-minute lock (holdSessionId), convert the held seat
+    // into sold_count atomically (reserved_count -> sold_count).
+    // If no hold or hold expired, fallback to direct atomic capacity check.
+    let hasActiveHold = false;
+    if (input.holdSessionId) {
+      const { data: activeHolds } = await executeSql(`
+        SELECT id, ticket_tier_id, quantity, expires_at
+        FROM ticket_inventory_holds
+        WHERE session_id = ${escapeSql(input.holdSessionId)}
+          AND expires_at >= NOW();
       `);
+      if (activeHolds && activeHolds.length > 0) {
+        hasActiveHold = true;
+      }
+    }
 
-      if (reserveErr || !reserveRes || reserveRes.length === 0) {
-        // High-concurrency collision: another user secured the last ticket a fraction of a millisecond earlier!
-        // Immediately rollback any tiers already incremented for this order
-        for (const rev of reservedTiers) {
-          await executeSql(`
-            UPDATE saas_ticket_tiers
-            SET sold_count = GREATEST(0, sold_count - ${rev.count})
-            WHERE id = ${escapeSql(rev.tierId)};
-          `);
+    if (hasActiveHold && input.holdSessionId) {
+      // Convert held inventory to sold inventory
+      for (const [tId, requestedCount] of Object.entries(countPerTier)) {
+        const { data: convRes } = await executeSql(`
+          UPDATE saas_ticket_tiers
+          SET reserved_count = GREATEST(0, reserved_count - ${requestedCount}),
+              sold_count = sold_count + ${requestedCount}
+          WHERE id = ${escapeSql(tId)}
+          RETURNING id, name, sold_count, total_capacity, auto_activate_when_tier_sells_out;
+        `);
+
+        reservedTiers.push({ tierId: tId, count: requestedCount });
+
+        // Auto-cascade tier activation if this tier just hit maximum capacity
+        const updatedRow = convRes?.[0];
+        if (
+          updatedRow &&
+          updatedRow.total_capacity > 0 &&
+          Number(updatedRow.sold_count) >= Number(updatedRow.total_capacity) &&
+          updatedRow.auto_activate_when_tier_sells_out
+        ) {
+          try {
+            await executeSql(`
+              UPDATE saas_ticket_tiers
+              SET is_active = true
+              WHERE id = ${escapeSql(updatedRow.auto_activate_when_tier_sells_out)};
+            `);
+          } catch (_) {}
         }
-        return {
-          success: false,
-          error: `Ticket Sold Out: Pass tier "${tier?.name || "Selected Pass"}" has just reached maximum capacity (${tier?.total_capacity || 0} seats). Another attendee booked the last available ticket.`,
-        };
       }
 
-      reservedTiers.push({ tierId: tId, count: requestedCount });
+      // Delete the consumed hold records from ticket_inventory_holds
+      await executeSql(`
+        DELETE FROM ticket_inventory_holds WHERE session_id = ${escapeSql(input.holdSessionId)};
+      `);
+    } else {
+      // Direct atomic reservation (for bookings without active hold or if hold expired)
+      for (const [tId, requestedCount] of Object.entries(countPerTier)) {
+        const tier = tierMap.get(tId);
+        const { data: reserveRes, error: reserveErr } = await executeSql(`
+          UPDATE saas_ticket_tiers
+          SET sold_count = sold_count + ${requestedCount}
+          WHERE id = ${escapeSql(tId)}
+            AND (total_capacity <= 0 OR sold_count + ${requestedCount} <= total_capacity)
+          RETURNING id, name, sold_count, total_capacity, auto_activate_when_tier_sells_out;
+        `);
 
-      // Auto-cascade tier activation if this tier just hit maximum capacity
-      const updatedRow = reserveRes[0];
-      if (
-        updatedRow.total_capacity > 0 &&
-        Number(updatedRow.sold_count) >= Number(updatedRow.total_capacity) &&
-        updatedRow.auto_activate_when_tier_sells_out
-      ) {
-        try {
-          await executeSql(`
-            UPDATE saas_ticket_tiers
-            SET is_active = true
-            WHERE id = ${escapeSql(updatedRow.auto_activate_when_tier_sells_out)};
-          `);
-        } catch (_) {}
+        if (reserveErr || !reserveRes || reserveRes.length === 0) {
+          // High-concurrency collision: another user secured the last ticket a fraction of a millisecond earlier!
+          // Immediately rollback any tiers already incremented for this order
+          for (const rev of reservedTiers) {
+            await executeSql(`
+              UPDATE saas_ticket_tiers
+              SET sold_count = GREATEST(0, sold_count - ${rev.count})
+              WHERE id = ${escapeSql(rev.tierId)};
+            `);
+          }
+          return {
+            success: false,
+            error: input.holdSessionId
+              ? `Your 2-minute reservation expired, and pass tier "${tier?.name || "Selected Pass"}" reached maximum capacity before confirmation. If you already made a payment, please contact support with your UPI reference.`
+              : `Ticket Sold Out: Pass tier "${tier?.name || "Selected Pass"}" has just reached maximum capacity (${tier?.total_capacity || 0} seats). Another attendee booked the last available ticket.`,
+          };
+        }
+
+        reservedTiers.push({ tierId: tId, count: requestedCount });
+
+        // Auto-cascade tier activation if this tier just hit maximum capacity
+        const updatedRow = reserveRes[0];
+        if (
+          updatedRow.total_capacity > 0 &&
+          Number(updatedRow.sold_count) >= Number(updatedRow.total_capacity) &&
+          updatedRow.auto_activate_when_tier_sells_out
+        ) {
+          try {
+            await executeSql(`
+              UPDATE saas_ticket_tiers
+              SET is_active = true
+              WHERE id = ${escapeSql(updatedRow.auto_activate_when_tier_sells_out)};
+            `);
+          } catch (_) {}
+        }
       }
     }
 
