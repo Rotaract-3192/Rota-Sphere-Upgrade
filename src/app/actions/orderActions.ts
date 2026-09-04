@@ -280,7 +280,7 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
         if (sold + count <= capacity) {
           return {
             valid: false,
-            error: `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 2 minutes or try another pass.`,
+            error: `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`,
             serverTime: serverNowStr,
           };
         }
@@ -380,7 +380,7 @@ export interface ReserveTicketHoldInput {
 }
 
 /**
- * Concurrency-safe 2-minute ticket lock action.
+ * Concurrency-safe 5-minute ticket lock action.
  * Atomically increments saas_ticket_tiers.reserved_count and records a hold in ticket_inventory_holds.
  * Prevents double-booking and prevents buyers from paying on UPI for sold-out tickets.
  */
@@ -393,8 +393,8 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
 }> {
   try {
     const user = await getCurrentUser();
-    // Default duration: 120 seconds (2 minutes)
-    const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 120));
+    // Default duration: 300 seconds (5 minutes)
+    const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 300));
 
     // 1. Clean up any expired holds in PostgreSQL first
     await cleanupExpiredTicketHoldsAction();
@@ -457,7 +457,7 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
 
         return {
           success: false,
-          error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 2 minutes and check again.`,
+          error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 5 minutes and check again.`,
         };
       }
 
@@ -719,8 +719,8 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const paymentGateway = isFree ? "FREE" : "UPI_QR";
     const targetUpiId = event.upi_id || "rotaractdistrict3192@okaxis";
 
-    // 5. Atomic Inventory Reservation / 2-Min Hold Conversion
-    // Concurrency-safe: If attendee holds an active 2-minute lock (holdSessionId), convert the held seat
+    // 5. Atomic Inventory Reservation / 5-Min Hold Conversion
+    // Concurrency-safe: If attendee holds an active 5-minute lock (holdSessionId), convert the held seat
     // into sold_count atomically (reserved_count -> sold_count).
     // If no hold or hold expired, fallback to direct atomic capacity check.
     let hasActiveHold = false;
@@ -796,7 +796,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           return {
             success: false,
             error: input.holdSessionId
-              ? `Your 2-minute reservation expired, and pass tier "${tier?.name || "Selected Pass"}" reached maximum capacity before confirmation. If you already made a payment, please contact support with your UPI reference.`
+              ? `Your 5-minute reservation expired, and pass tier "${tier?.name || "Selected Pass"}" reached maximum capacity before confirmation. If you already made a payment, please contact support with your UPI reference.`
               : `Ticket Sold Out: Pass tier "${tier?.name || "Selected Pass"}" has just reached maximum capacity (${tier?.total_capacity || 0} seats). Another attendee booked the last available ticket.`,
           };
         }
