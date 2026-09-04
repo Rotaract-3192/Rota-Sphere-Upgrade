@@ -1068,11 +1068,77 @@ export async function permanentDeleteEventAction(eventId: string): Promise<{ suc
       return { success: false, error: access.error };
     }
 
-    // Cascading deletes
-    await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapeSql(eventId)};`);
-    await executeSql(`DELETE FROM event_speakers WHERE event_id = ${escapeSql(eventId)};`);
-    await executeSql(`DELETE FROM event_sponsors WHERE event_id = ${escapeSql(eventId)};`);
-    await executeSql(`DELETE FROM saas_events WHERE id = ${escapeSql(eventId)};`);
+    const escapedId = escapeSql(eventId);
+
+    // 1. Delete associated refund records
+    await executeSql(`
+      DELETE FROM saas_refunds 
+      WHERE event_id = ${escapedId} 
+         OR order_id IN (SELECT id FROM saas_orders WHERE event_id = ${escapedId})
+         OR ticket_id IN (SELECT id FROM saas_tickets WHERE event_id = ${escapedId});
+    `);
+
+    // 2. Delete check-in logs
+    await executeSql(`
+      DELETE FROM check_in_logs 
+      WHERE event_id = ${escapedId} 
+         OR ticket_id IN (SELECT id FROM saas_tickets WHERE event_id = ${escapedId});
+    `);
+
+    // 3. Delete ticket transfer records
+    await executeSql(`
+      DELETE FROM ticket_transfers 
+      WHERE ticket_id IN (SELECT id FROM saas_tickets WHERE event_id = ${escapedId});
+    `);
+
+    // 4. Delete tickets
+    await executeSql(`
+      DELETE FROM saas_tickets 
+      WHERE event_id = ${escapedId}
+         OR ticket_tier_id IN (SELECT id FROM saas_ticket_tiers WHERE event_id = ${escapedId});
+    `);
+
+    // 5. Delete orders
+    await executeSql(`
+      DELETE FROM saas_orders 
+      WHERE event_id = ${escapedId};
+    `);
+
+    // 6. Delete waitlists
+    await executeSql(`
+      DELETE FROM event_waitlists 
+      WHERE event_id = ${escapedId}
+         OR ticket_tier_id IN (SELECT id FROM saas_ticket_tiers WHERE event_id = ${escapedId});
+    `);
+
+    // 7. Delete ticket inventory holds
+    await executeSql(`
+      DELETE FROM ticket_inventory_holds 
+      WHERE ticket_tier_id IN (SELECT id FROM saas_ticket_tiers WHERE event_id = ${escapedId});
+    `);
+
+    // 8. Delete coupons
+    await executeSql(`DELETE FROM saas_coupons WHERE event_id = ${escapedId};`);
+
+    // 9. Delete schedules, speakers, sponsors, custom questions
+    await executeSql(`DELETE FROM event_schedules WHERE event_id = ${escapedId};`);
+    await executeSql(`DELETE FROM event_speakers WHERE event_id = ${escapedId};`);
+    await executeSql(`DELETE FROM event_sponsors WHERE event_id = ${escapedId};`);
+    await executeSql(`DELETE FROM event_custom_questions WHERE event_id = ${escapedId};`);
+
+    // 10. Break self-referencing tier triggers then delete ticket tiers
+    await executeSql(`
+      UPDATE saas_ticket_tiers 
+      SET auto_activate_when_tier_sells_out = NULL 
+      WHERE event_id = ${escapedId};
+    `);
+    await executeSql(`DELETE FROM saas_ticket_tiers WHERE event_id = ${escapedId};`);
+
+    // 11. Finally delete the event itself
+    const { error: delErr } = await executeSql(`DELETE FROM saas_events WHERE id = ${escapedId};`);
+    if (delErr) {
+      return { success: false, error: delErr.message || "Failed to permanently delete event" };
+    }
 
     await logAuditAction({
       actorId: user.clerkId,
