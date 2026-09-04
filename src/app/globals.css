@@ -661,3 +661,23 @@ button, a, [role="button"] {
 .interactive-card:active {
   transform: scale(0.98);
 }
+
+/* ── Gate Scanner Laser Animation ── */
+@keyframes scannerSweep {
+  0% {
+    top: 14%;
+    opacity: 0.65;
+  }
+  50% {
+    top: 86%;
+    opacity: 1;
+  }
+  100% {
+    top: 14%;
+    opacity: 0.65;
+  }
+}
+
+.animate-scanner-laser {
+  animation: scannerSweep 2.2s ease-in-out infinite;
+}
