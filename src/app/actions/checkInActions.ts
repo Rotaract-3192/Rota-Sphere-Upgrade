@@ -18,13 +18,19 @@ export interface CheckInRequest {
 }
 
 export interface CheckInResponse {
-  result: "SUCCESS" | "DUPLICATE_SCAN" | "WRONG_EVENT" | "CANCELLED" | "REFUNDED" | "INVALID";
+  result: "SUCCESS" | "DUPLICATE_SCAN" | "WRONG_EVENT" | "PAYMENT_PENDING" | "CANCELLED" | "REFUNDED" | "INVALID";
   ticketId?: string;
   ticketCode?: string;
   attendeeName?: string;
   attendeeEmail?: string;
+  attendeePhone?: string;
+  memberType?: string;
+  clubName?: string;
+  zone?: string;
+  designation?: string;
   ticketTierName?: string;
   eventTitle?: string;
+  eventId?: string;
   message: string;
   scannedAt?: string;
   checkedInGate?: string;
@@ -57,6 +63,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         t.attendee_name, 
         t.attendee_email, 
         t.attendee_phone,
+        t.member_type,
+        t.club_name,
+        t.designation,
+        t.zone,
         t.qr_token, 
         t.status, 
         t.checked_in_at, 
@@ -108,6 +118,11 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
           event_id: ft.event_id,
           attendee_name: "Delegate Attendee",
           attendee_email: "delegate@rotasphere.org",
+          attendee_phone: "",
+          member_type: "Rotaract",
+          club_name: "",
+          zone: "",
+          designation: "",
           tier_name: ft.tier_name || "General Pass",
           event_title: "Rotaract District Event",
           status: ft.status === "ACTIVE" ? "CONFIRMED" : ft.status,
@@ -120,7 +135,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     if (!ticket) {
       return {
         result: "INVALID",
-        message: "Unrecognized QR code or ticket number. No matching pass in database.",
+        message: "Unrecognized QR code or ticket number. No matching pass found in database.",
       };
     }
 
@@ -128,37 +143,45 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     const tierName = ticket.tier_name || "Standard Pass";
     const eventTitle = ticket.event_title || "Event";
 
-    // 2. SECURITY: Require a specific event to be locked in. Never allow cross-event scanning.
-    if (!req.eventId || req.eventId === "all" || req.eventId === "default" || req.eventId === "") {
-      return {
-        result: "INVALID",
-        message: "Security: Please select a specific event before scanning. Cross-event scanning is not permitted.",
-      };
-    }
-
-    // Validate Event Filter — ticket must belong to the locked event
-    if (ticket.event_id && String(ticket.event_id).toLowerCase() !== String(req.eventId).toLowerCase()) {
-      return {
-        result: "WRONG_EVENT",
-        ticketId: ticket.id,
-        ticketCode: ticket.ticket_code,
-        attendeeName,
-        ticketTierName: tierName,
-        eventTitle,
-        message: `⛔ Pass is for "${eventTitle}" — not for this event. Cross-scanning is blocked.`,
-      };
+    // 2. Validate Event Filter (if an event is specifically locked)
+    if (
+      req.eventId &&
+      req.eventId !== "all" &&
+      req.eventId !== "ALL" &&
+      req.eventId !== "default" &&
+      req.eventId !== ""
+    ) {
+      if (ticket.event_id && String(ticket.event_id).toLowerCase() !== String(req.eventId).toLowerCase()) {
+        return {
+          result: "WRONG_EVENT",
+          ticketId: ticket.id,
+          ticketCode: ticket.ticket_code,
+          attendeeName,
+          ticketTierName: tierName,
+          eventTitle,
+          eventId: ticket.event_id,
+          message: `⛔ Pass is for "${eventTitle}" — not for this event.`,
+        };
+      }
     }
 
     // 3. Status checks
     if (ticket.status === "PENDING_VERIFICATION") {
       return {
-        result: "INVALID",
+        result: "PAYMENT_PENDING",
         ticketId: ticket.id,
         ticketCode: ticket.ticket_code,
         attendeeName,
+        attendeeEmail: ticket.attendee_email,
+        attendeePhone: ticket.attendee_phone,
+        memberType: ticket.member_type,
+        clubName: ticket.club_name,
+        zone: ticket.zone,
+        designation: ticket.designation,
         ticketTierName: tierName,
         eventTitle,
-        message: "⛔ PAYMENT PENDING VERIFICATION. This ticket has not been approved by the organizer yet.",
+        eventId: ticket.event_id,
+        message: "PAYMENT PENDING APPROVAL. Review attendee details or approve directly below.",
       };
     }
 
@@ -170,7 +193,8 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         attendeeName,
         ticketTierName: tierName,
         eventTitle,
-        message: "⛔ PAYMENT REJECTED. This pass was invalidated.",
+        eventId: ticket.event_id,
+        message: "⛔ PAYMENT REJECTED. This pass was invalidated by the organizers.",
       };
     }
 
@@ -182,7 +206,8 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         attendeeName,
         ticketTierName: tierName,
         eventTitle,
-        message: "Ticket was CANCELLED by organizer.",
+        eventId: ticket.event_id,
+        message: "Ticket was CANCELLED by the attendee or organizer.",
       };
     }
 
@@ -194,6 +219,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         attendeeName,
         ticketTierName: tierName,
         eventTitle,
+        eventId: ticket.event_id,
         message: "Ticket was REFUNDED and voided.",
       };
     }
@@ -210,11 +236,17 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         ticketCode: ticket.ticket_code,
         attendeeName,
         attendeeEmail: ticket.attendee_email,
+        attendeePhone: ticket.attendee_phone,
+        memberType: ticket.member_type,
+        clubName: ticket.club_name,
+        zone: ticket.zone,
+        designation: ticket.designation,
         ticketTierName: tierName,
         eventTitle,
+        eventId: ticket.event_id,
         scannedAt: formattedTime,
-        checkedInGate: ticket.checked_in_gate || "Gate 1",
-        message: `ALREADY SCANNED at ${formattedTime} at ${ticket.checked_in_gate || "Gate"}! Pass sharing prevented.`,
+        checkedInGate: ticket.checked_in_gate || "Main Gate",
+        message: `ALREADY SCANNED at ${formattedTime} (${ticket.checked_in_gate || "Gate"}). Pass re-use prevented.`,
       };
     }
 
@@ -228,7 +260,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         checked_in_by_user_id = ${escapeSql(scannerUserId)},
         updated_at = NOW()
       WHERE id = ${escapeSql(ticket.id)}
-        AND status IN ('CONFIRMED', 'ISSUED')
+        AND status IN ('CONFIRMED', 'ISSUED', 'VALID', 'ACTIVE')
       RETURNING id;
     `;
     const { data: updatedTicketRows } = await executeSql(updateSql);
@@ -236,7 +268,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     if (!updatedTicketRows || updatedTicketRows.length === 0) {
       return {
         result: "DUPLICATE_SCAN",
-        message: "Pass was just scanned concurrently at another gate or is in an invalid status.",
+        message: "Pass was just admitted concurrently at another checkpoint or is not confirmed.",
       };
     }
 
@@ -261,8 +293,14 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       ticketCode: ticket.ticket_code,
       attendeeName,
       attendeeEmail: ticket.attendee_email,
+      attendeePhone: ticket.attendee_phone,
+      memberType: ticket.member_type,
+      clubName: ticket.club_name,
+      zone: ticket.zone,
+      designation: ticket.designation,
       ticketTierName: tierName,
       eventTitle,
+      eventId: ticket.event_id,
       checkedInGate: gateName,
       message: "VALID ENTRY PASS — ACCESS GRANTED",
     };
@@ -274,6 +312,76 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
   }
 }
 
+/**
+ * Direct gate authorization for passes pending verification.
+ * Allows gate leads to confirm payment and admit attendees directly at the entrance.
+ */
+export async function approveAndCheckInTicketAction(params: {
+  ticketId: string;
+  gateName?: string;
+  scannerUserId?: string;
+}): Promise<CheckInResponse> {
+  try {
+    const cleanId = escapeSql(params.ticketId);
+    const gateName = params.gateName?.trim() || "Main Gate";
+    const scannerUserId = params.scannerUserId?.trim() || "gate-manager";
+
+    const updateSql = `
+      UPDATE saas_tickets
+      SET 
+        status = 'USED',
+        checked_in_at = NOW(),
+        checked_in_gate = ${escapeSql(gateName)},
+        checked_in_by_user_id = ${escapeSql(scannerUserId)},
+        updated_at = NOW()
+      WHERE id = ${cleanId}
+      RETURNING id, ticket_code, attendee_name, attendee_email, attendee_phone, member_type, club_name, zone, designation, event_id, ticket_tier_id;
+    `;
+    const { data: updatedRows, error } = await executeSql(updateSql);
+    if (error || !updatedRows || updatedRows.length === 0) {
+      return { result: "INVALID", message: "Failed to approve ticket. Ticket record was not found." };
+    }
+
+    const t = updatedRows[0];
+
+    // Also update order status if linked
+    await executeSql(`
+      UPDATE saas_orders
+      SET status = 'PAID', updated_at = NOW()
+      WHERE id = (SELECT order_id FROM saas_tickets WHERE id = ${cleanId});
+    `);
+
+    // Fetch event & tier titles
+    const { data: info } = await executeSql(`
+      SELECT e.title as event_title, tt.name as tier_name
+      FROM saas_events e
+      LEFT JOIN saas_ticket_tiers tt ON tt.id = ${escapeSql(t.ticket_tier_id)}
+      WHERE e.id = ${escapeSql(t.event_id)}
+      LIMIT 1;
+    `);
+
+    return {
+      result: "SUCCESS",
+      ticketId: t.id,
+      ticketCode: t.ticket_code,
+      attendeeName: t.attendee_name,
+      attendeeEmail: t.attendee_email,
+      attendeePhone: t.attendee_phone,
+      memberType: t.member_type,
+      clubName: t.club_name,
+      zone: t.zone,
+      designation: t.designation,
+      ticketTierName: info?.[0]?.tier_name || "General Pass",
+      eventTitle: info?.[0]?.event_title || "Event",
+      eventId: t.event_id,
+      checkedInGate: gateName,
+      message: "PASS APPROVED & ADMITTED SUCCESSFULLY",
+    };
+  } catch (err: any) {
+    return { result: "INVALID", message: `Error approving ticket: ${err?.message || err}` };
+  }
+}
+
 export async function getScannerEventsAction(): Promise<{
   events: Array<{ id: string; title: string; city: string; start_date: string }>;
 }> {
@@ -282,8 +390,8 @@ export async function getScannerEventsAction(): Promise<{
       SELECT id, title, city, start_date 
       FROM saas_events 
       WHERE (deleted_at IS NULL AND status != 'TRASHED')
-      ORDER BY start_date ASC 
-      LIMIT 20;
+      ORDER BY start_date DESC 
+      LIMIT 30;
     `);
     return { events: data || [] };
   } catch {

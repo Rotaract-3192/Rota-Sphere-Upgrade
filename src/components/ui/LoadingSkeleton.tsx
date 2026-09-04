@@ -454,59 +454,50 @@ export function CheckoutSkeleton() {
 
 /**
  * Gate Scanner Skeleton (for `/check-in`)
+ * 1:1 Pixel-Perfect match with the redesigned dark mobile-first gate scanner
  */
 export function GateScannerSkeleton() {
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in" aria-busy="true">
-      {/* Header */}
-      <div className="bg-[#121721] border border-gray-800/80 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Skeleton className="w-44 h-7 rounded-xl" />
-              <Skeleton className="w-24 h-5 rounded-full" />
+    <div className="w-full min-h-screen bg-[#0f1419] text-white flex flex-col justify-between py-4 px-3 sm:px-6 lg:px-8 select-none animate-fade-in" aria-busy="true">
+      <div className="max-w-4xl mx-auto w-full flex flex-col flex-1 space-y-4">
+        {/* Header Skeleton */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-3xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-9 h-9 rounded-xl bg-white/5" />
+            <div className="space-y-1">
+              <Skeleton className="w-28 h-4 rounded-md bg-white/10" />
+              <Skeleton className="w-20 h-3 rounded-full bg-white/5" />
             </div>
-            <Skeleton className="w-72 h-3.5 rounded-md" />
           </div>
+          <Skeleton className="w-36 h-9 rounded-xl bg-white/10" />
         </div>
-        <div className="flex items-center gap-3">
-          <Skeleton className="w-32 h-10 rounded-xl" />
-          <Skeleton className="w-36 h-10 rounded-xl" />
-        </div>
-      </div>
 
-      {/* Config Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#121721] border border-gray-800/80 p-4 rounded-3xl">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-1.5">
-            <Skeleton className="w-24 h-3 rounded-md" />
-            <Skeleton className="w-full h-10 rounded-xl" />
+        {/* Viewfinder Skeleton */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[420px] sm:min-h-[500px]">
+          <div className="relative w-full max-w-md aspect-[4/5] sm:aspect-square rounded-3xl bg-gray-950 border border-gray-800 overflow-hidden shadow-2xl flex flex-col items-center justify-center p-6">
+            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-2xl border-2 border-white/10 flex items-center justify-center">
+              <Skeleton className="w-12 h-12 rounded-xl bg-white/10" />
+            </div>
+            <div className="mt-8 flex gap-3">
+              <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+              <Skeleton className="w-10 h-10 rounded-full bg-white/10" />
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Main Scanner & Activity Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 bg-[#121721] border border-gray-800/80 rounded-3xl p-6 space-y-4">
-          <Skeleton className="w-full aspect-video rounded-2xl" />
-          <Skeleton className="w-full h-12 rounded-xl" />
         </div>
-        <div className="lg:col-span-5 bg-[#121721] border border-gray-800/80 rounded-3xl p-6 space-y-4">
-          <div className="flex justify-between items-center">
-            <Skeleton className="w-36 h-6 rounded-lg" />
-            <Skeleton className="w-20 h-4 rounded-md" />
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="w-full h-14 rounded-2xl" />
-            ))}
+
+        {/* Floating Bottom Bar Skeleton */}
+        <div className="w-full max-w-md mx-auto pb-4 pt-2">
+          <div className="bg-gray-900/95 border border-gray-800/90 rounded-2xl p-2.5 flex items-center justify-between shadow-2xl">
+            <Skeleton className="w-24 h-9 rounded-xl bg-white/10" />
+            <Skeleton className="w-28 h-9 rounded-xl bg-white/10" />
+            <Skeleton className="w-10 h-9 rounded-xl bg-white/10" />
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 /**
  * Event Map Explorer Skeleton (for Interactive Maps)
@@ -650,4 +641,5 @@ export function DistrictDirectorySkeleton() {
     </main>
   );
 }
+
 
