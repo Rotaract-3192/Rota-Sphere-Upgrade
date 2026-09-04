@@ -7,6 +7,7 @@ import {
   Search, Building, Mail, Sparkles, Filter, CheckCircle2, UserCheck
 } from "lucide-react";
 import { ClubRecord } from "@/app/actions/clubActions";
+import { matchesClubQuery } from "@/lib/utils/zoneResolver";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ClubsDirectoryClientProps {
@@ -31,14 +32,9 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
       if (selectedType !== "All" && !club.club_type?.toLowerCase().includes(selectedType.toLowerCase())) {
         return false;
       }
-      // Search query
+      // Search query with smart token & fuzzy matching
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = club.name.toLowerCase().includes(q);
-        const matchesPartner = club.partner_club?.toLowerCase().includes(q);
-        const matchesPresident = club.president_name?.toLowerCase().includes(q);
-        const matchesZone = club.zone?.toLowerCase().includes(q);
-        if (!matchesName && !matchesPartner && !matchesPresident && !matchesZone) {
+        if (!matchesClubQuery(searchQuery, club)) {
           return false;
         }
       }

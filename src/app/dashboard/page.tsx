@@ -12,7 +12,10 @@ export const metadata = {
 
 export const revalidate = 0; // Always fresh — orders change in real time
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: {
+  searchParams?: Promise<{ orgId?: string }>;
+}) {
+  const searchParams = props.searchParams ? await props.searchParams : {};
   const user = await getCurrentUser();
 
   if (!user) {
@@ -22,37 +25,46 @@ export default async function DashboardPage() {
   // Strict Role Gate: Allow organizers, admins, super_admins, OR users with APPROVED requests
   const reqRes = await getUserPendingOrganizerRequestAction();
   const hasApprovedRequest = reqRes.data?.status === "APPROVED";
-  const userRole = user.profile.role;
+  const userRole = user.profile?.role;
+  const isSuperAdmin =
+    userRole === "super_admin" ||
+    userRole === "admin" ||
+    user.email === "tech.rotaract3192@gmail.com";
   const isOrganizerOrAdmin =
     userRole === "organizer" ||
-    userRole === "admin" ||
-    userRole === "super_admin" ||
-    hasApprovedRequest ||
-    user.email === "tech.rotaract3192@gmail.com";
+    isSuperAdmin ||
+    hasApprovedRequest;
 
   if (!isOrganizerOrAdmin) {
     return <ApplyOrganizerClient user={user} existingRequest={reqRes.data} />;
   }
 
   const clerkUserId = user.clerkId;
-  const isSuperAdmin =
-    userRole === "super_admin" ||
-    user.email === "tech.rotaract3192@gmail.com";
-  const organizerCondition = isSuperAdmin
-    ? ""
-    : `AND (e.organizer_id = '${clerkUserId}' OR e.created_by_user_id = '${clerkUserId}')`;
 
-  // 1. Fetch THIS user's organization via membership table
-  const { data: memberData } = await executeSql(`
-    SELECT o.*
-    FROM organizations o
-    INNER JOIN organization_members m ON o.id = m.organization_id
-    WHERE m.user_id = '${clerkUserId}'
-    LIMIT 1;
-  `);
-  let organization = memberData?.[0] || null;
+  // 1. Resolve THIS user's active organization
+  let organization: any = null;
 
-  // If no membership row found, resolve from approved access request
+  // A. If Super Admin specified an organization via query param, resolve it
+  if (isSuperAdmin && searchParams?.orgId) {
+    const { data: requestedOrgData } = await executeSql(`
+      SELECT * FROM organizations WHERE id = '${searchParams.orgId}' LIMIT 1;
+    `);
+    organization = requestedOrgData?.[0] || null;
+  }
+
+  // B. Fetch THIS user's organization via membership table
+  if (!organization) {
+    const { data: memberData } = await executeSql(`
+      SELECT o.*
+      FROM organizations o
+      INNER JOIN organization_members m ON o.id = m.organization_id
+      WHERE m.user_id = '${clerkUserId}'
+      LIMIT 1;
+    `);
+    organization = memberData?.[0] || null;
+  }
+
+  // C. If no membership row found, resolve from approved access request
   if (!organization) {
     const { resolveClubOrganizationId } = await import("@/app/actions/eventActions");
     const orgIdFromHelper = await resolveClubOrganizationId({
@@ -73,12 +85,19 @@ export default async function DashboardPage() {
     }
   }
 
-  // Fallback: if user is super_admin or has no membership, fetch first org
-  const { data: fallbackOrgData } = !organization
-    ? await executeSql(`SELECT * FROM organizations ORDER BY created_at ASC LIMIT 1;`)
-    : { data: null };
-  const resolvedOrg = organization || fallbackOrgData?.[0] || null;
-  const orgId = resolvedOrg?.id;
+  // D. Fallback: Default to District 3192 Hub
+  if (!organization) {
+    const { data: districtOrgData } = await executeSql(`
+      SELECT * FROM organizations 
+      WHERE slug = 'district-3192-hub' OR id = '328ed943-f625-4fec-82a0-0c92dd7ec592'
+      ORDER BY created_at ASC LIMIT 1;
+    `);
+    organization = districtOrgData?.[0] || null;
+  }
+
+  // Final fallback if organizations table is completely fresh
+  const resolvedOrg = organization;
+  const orgId = resolvedOrg?.id || "328ed943-f625-4fec-82a0-0c92dd7ec592";
 
   // Ensure max_per_order and tags columns exist
   try {
@@ -88,7 +107,7 @@ export default async function DashboardPage() {
     `);
   } catch (_) {}
 
-  // 2. Fetch THIS organizer's events (strictly scoped to creator/organizer unless super_admin)
+  // 2. Fetch THIS organization's events strictly (district events in district hub, club events in club hub)
   const { data: eventsData } = await executeSql(`
     SELECT e.*,
       c.name as category_name,
@@ -117,18 +136,18 @@ export default async function DashboardPage() {
     FROM saas_events e
     LEFT JOIN event_categories c ON e.category_id = c.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-    WHERE 1=1 ${organizerCondition}
+    WHERE e.organization_id = '${orgId}'
     GROUP BY e.id, c.name
     ORDER BY e.created_at DESC;
   `);
   const events = eventsData || [];
 
-  // 3. Fetch orders for THIS organizer's events only
+  // 3. Fetch orders for THIS organization's events only (prevents cross-club UPI payment confusion)
   const { data: ordersData } = await executeSql(`
     SELECT o.*
     FROM saas_orders o
     INNER JOIN saas_events e ON o.event_id = e.id
-    WHERE 1=1 ${organizerCondition}
+    WHERE e.organization_id = '${orgId}'
     GROUP BY o.id
     ORDER BY
       CASE WHEN o.status = 'PENDING_VERIFICATION' THEN 0 ELSE 1 END,
@@ -137,7 +156,7 @@ export default async function DashboardPage() {
   `);
   const orders = ordersData || [];
 
-  // 4. Fetch tickets for THIS organizer's events only
+  // 4. Fetch tickets for THIS organization's events only
   const { data: ticketsData } = await executeSql(`
     SELECT t.*,
       o.status as order_status,
@@ -147,7 +166,7 @@ export default async function DashboardPage() {
     INNER JOIN saas_events e ON t.event_id = e.id
     LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
     LEFT JOIN saas_orders o ON t.order_id = o.id
-    WHERE 1=1 ${organizerCondition}
+    WHERE e.organization_id = '${orgId}'
     ORDER BY t.created_at DESC
     LIMIT 200;
   `);
@@ -163,6 +182,11 @@ export default async function DashboardPage() {
     : { data: [] };
   const coupons = couponsData || [];
 
+  // 6. If Super Admin, fetch clubs list to allow tenant switching if needed
+  const { data: allOrgsData } = isSuperAdmin
+    ? await executeSql(`SELECT id, name, slug, zone, club_type FROM organizations ORDER BY name ASC;`)
+    : { data: [] };
+
   return (
     <OrganizerDashboardClient
       user={user}
@@ -171,6 +195,7 @@ export default async function DashboardPage() {
       initialOrders={orders}
       initialTickets={tickets}
       initialCoupons={coupons}
+      allOrganizations={allOrgsData || []}
     />
   );
 }

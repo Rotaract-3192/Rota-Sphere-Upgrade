@@ -10,11 +10,15 @@ import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 const CLUB_ZONE_MAP = new Map<string, string>();
 const STANDARDIZED_CLUBS: Array<{ name: string; zone: string; partnerClub?: string }> = [];
 
-function cleanClubKey(str: string): string {
+export function cleanClubKey(str: string): string {
   return str
     .toLowerCase()
     .replace(/rotaract club of /gi, "")
     .replace(/rotary club of /gi, "")
+    .replace(/rotaract club /gi, "")
+    .replace(/rotary club /gi, "")
+    .replace(/rotaract /gi, "")
+    .replace(/rotary /gi, "")
     .replace(/rac /gi, "")
     .replace(/rc /gi, "")
     .replace(/[^a-z0-9]/gi, "");
@@ -35,9 +39,59 @@ for (const club of DISTRICT_3192_CLUBS) {
 }
 
 /**
- * Returns all 85 authentic District 3192 clubs with their official zones for UI selectors
+ * Universal smart matcher for club search inputs
+ * Matches whether the user enters "Rotaract Bangalore West", "Bangalore West",
+ * "RAC Bangalore West", or "Rotaract Club of Bangalore West".
  */
-export function getDistrictClubsWithZones(): Array<{ name: string; zone: string }> {
+export function matchesClubQuery(
+  rawQuery: string,
+  club: {
+    name: string;
+    zone?: string;
+    partnerClub?: string;
+    partner_club?: string;
+    president_name?: string;
+  }
+): boolean {
+  if (!rawQuery || !rawQuery.trim()) return true;
+  const q = rawQuery.toLowerCase().trim();
+  const name = (club.name || "").toLowerCase();
+  const zone = (club.zone || "").toLowerCase();
+  const partner = (club.partnerClub || club.partner_club || "").toLowerCase();
+  const president = (club.president_name || "").toLowerCase();
+
+  // 1. Direct substring match on raw strings
+  if (name.includes(q) || zone.includes(q) || partner.includes(q) || president.includes(q)) {
+    return true;
+  }
+
+  // 2. Normalized key match (strips noise words like "rotaract", "club", "of", punctuation, whitespace)
+  const cleanQ = cleanClubKey(q);
+  const cleanName = cleanClubKey(name);
+  const cleanPartner = cleanClubKey(partner);
+  if (cleanQ.length >= 3) {
+    if (cleanName.includes(cleanQ) || cleanQ.includes(cleanName) || cleanPartner.includes(cleanQ)) {
+      return true;
+    }
+  }
+
+  // 3. Token / all-words match: All significant words in the query exist in the club details
+  const stopWords = new Set(["of", "the", "and", "&", "in"]);
+  const queryTokens = q.split(/[\s,.-]+/).filter((t) => t.length > 0 && !stopWords.has(t));
+
+  if (queryTokens.length > 0) {
+    const combinedText = `${name} ${zone} ${partner} ${president}`.toLowerCase();
+    const allTokensFound = queryTokens.every((token) => combinedText.includes(token));
+    if (allTokensFound) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Returns all 85+ authentic District 3192 clubs with their official zones for UI selectors
+ */
+export function getDistrictClubsWithZones(): Array<{ name: string; zone: string; partnerClub?: string }> {
   return STANDARDIZED_CLUBS;
 }
 

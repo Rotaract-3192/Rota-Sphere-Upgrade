@@ -181,6 +181,16 @@ export const DISTRICT_3192_CLUBS: DistrictClub[] = [
     "presidentEmail": ""
   },
   {
+    "name": "Rotaract Club of Bangalore West",
+    "zone": "Arnava",
+    "clubType": "Community Based",
+    "clubEmail": "rotaractbangalorewest@gmail.com",
+    "partnerClub": "Bangalore West",
+    "presidentName": "",
+    "presidentPhone": "",
+    "presidentEmail": ""
+  },
+  {
     "name": "Rotaract Club of Bangalore Raj Mahal Vilas",
     "zone": "Sagara",
     "clubType": "Community Based",

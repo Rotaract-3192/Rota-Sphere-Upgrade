@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, ChevronDown, Check, X, Building, Globe, Sparkles } from "lucide-react";
-import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
+import { getDistrictClubsWithZones, getClubZone, matchesClubQuery } from "@/lib/utils/zoneResolver";
 
 const ALL_CLUBS = getDistrictClubsWithZones();
 
@@ -63,13 +63,7 @@ export function SearchableClubSelect({
   // Filter clubs based on search query
   const filteredClubs = useMemo(() => {
     if (!searchQuery.trim()) return ALL_CLUBS;
-    const q = searchQuery.toLowerCase().trim();
-    return ALL_CLUBS.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.zone.toLowerCase().includes(q) ||
-        c.name.replace(/rotaract club of /gi, "").toLowerCase().includes(q)
-    );
+    return ALL_CLUBS.filter((c) => matchesClubQuery(searchQuery, c));
   }, [searchQuery]);
 
   function handleSelectClub(clubName: string, clubZone: string) {

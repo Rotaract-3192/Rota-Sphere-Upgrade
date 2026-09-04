@@ -118,7 +118,8 @@ export default async function EventsPage({ searchParams }: PageProps) {
   if (clubId && (clubId.startsWith("org-") || clubId.length > 5)) {
     sql += ` AND (e.organization_id = '${escapeSql(clubId)}' OR o.name ILIKE '%${escapeSql(clubName || clubId)}%')`;
   } else if (clubName) {
-    sql += ` AND (o.name ILIKE '%${escapeSql(clubName)}%' OR e.title ILIKE '%${escapeSql(clubName)}%' OR e.summary ILIKE '%${escapeSql(clubName)}%')`;
+    const cleanTerm = clubName.replace(/rotaract club of /i, "").replace(/rotaract /i, "").trim();
+    sql += ` AND (o.name ILIKE '%${escapeSql(clubName)}%' OR o.name ILIKE '%${escapeSql(cleanTerm)}%' OR e.title ILIKE '%${escapeSql(clubName)}%' OR e.summary ILIKE '%${escapeSql(clubName)}%')`;
   } else if (clubSlug) {
     sql += ` AND (o.slug = '${escapeSql(clubSlug)}')`;
   }

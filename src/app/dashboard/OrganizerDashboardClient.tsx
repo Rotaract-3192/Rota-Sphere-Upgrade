@@ -74,6 +74,7 @@ interface OrganizerDashboardClientProps {
   initialOrders: any[];
   initialTickets: any[];
   initialCoupons: any[];
+  allOrganizations?: any[];
 }
 
 export function OrganizerDashboardClient({
@@ -83,11 +84,17 @@ export function OrganizerDashboardClient({
   initialOrders,
   initialTickets,
   initialCoupons,
+  allOrganizations = [],
 }: OrganizerDashboardClientProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "overview" | "events" | "tickets" | "attendees" | "orders" | "scanner" | "finance" | "settings" | "trash"
   >("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isDistrictHub =
+    organization?.id === "328ed943-f625-4fec-82a0-0c92dd7ec592" ||
+    organization?.slug === "district-3192-hub";
 
   const [events, setEvents] = useState(initialEvents);
   const [orders, setOrders] = useState(initialOrders);
@@ -296,7 +303,6 @@ export function OrganizerDashboardClient({
     }
   }
 
-  const router = useRouter();
 
   // ─── 3. TRASH BIN (30-DAY RETENTION) ────────────────────────────────────────
   async function handleTrashEvent(eventId: string, title: string) {
@@ -439,17 +445,74 @@ export function OrganizerDashboardClient({
                 </button>
               </div>
 
+              {/* Tenant Portal Scope Badge */}
+              <div className="px-3 pt-3 flex items-center justify-between">
+                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
+                  isDistrictHub
+                    ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                    : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                }`}>
+                  {isDistrictHub ? "🏛️ District Events Only" : "🏢 Club Scoped Hub"}
+                </span>
+
+                {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-[10px] font-bold text-blue-400 hover:text-white underline"
+                  >
+                    ← District Hub
+                  </Link>
+                )}
+              </div>
+
+              {/* Active Portal Switcher (Super Admin) */}
+              {(user?.profile?.role === "super_admin" ||
+                user?.email === "tech.rotaract3192@gmail.com") && allOrganizations.length > 0 && (
+                <div className="px-3 pt-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-1">
+                    SWITCH ACTIVE HUB
+                  </label>
+                  <select
+                    value={organization?.id || ""}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setMobileMenuOpen(false);
+                      if (!selectedId || selectedId === "328ed943-f625-4fec-82a0-0c92dd7ec592") {
+                        router.push("/dashboard");
+                      } else {
+                        router.push(`/dashboard?orgId=${selectedId}`);
+                      }
+                    }}
+                    className="w-full text-xs font-semibold bg-gray-800 text-white border border-gray-700 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer truncate"
+                  >
+                    <option value="328ed943-f625-4fec-82a0-0c92dd7ec592">
+                      🏛️ District 3192 Hub (District Events)
+                    </option>
+                    <optgroup label="Chartered District Clubs">
+                      {allOrganizations
+                        .filter((o: any) => o.id !== "328ed943-f625-4fec-82a0-0c92dd7ec592")
+                        .map((org: any) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </div>
+              )}
+
               {/* Super Admin Switcher (if applicable) */}
               {(user?.profile?.role === "super_admin" ||
                 user?.email === "tech.rotaract3192@gmail.com") && (
-                <div className="px-3 pt-3">
+                <div className="px-3 pt-2">
                   <Link
                     href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
                   >
                     <ShieldAlert size={14} className="text-amber-400" />
-                    <span>Super Admin Panel</span>
+                    <span>Super Admin Governance Panel</span>
                   </Link>
                 </div>
               )}
@@ -639,9 +702,64 @@ export function OrganizerDashboardClient({
             <h1 className="text-lg font-extrabold text-white tracking-tight mt-1 truncate">
               {organization?.name || "District 3192 Hub"}
             </h1>
-            <p className="text-xs text-gray-400">Organizer Portal</p>
 
-            {/* If SuperAdmin, show quick switcher banner */}
+            {/* Portal Scope Badge */}
+            <div className="flex items-center justify-between gap-1 pt-0.5">
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                isDistrictHub
+                  ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                  : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+              }`}>
+                {isDistrictHub ? "🏛️ District Events Only" : "🏢 Club Scoped Hub"}
+              </span>
+
+              {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+                <Link
+                  href="/dashboard"
+                  className="text-[10px] font-bold text-blue-400 hover:text-white underline"
+                  title="Switch back to District 3192 Hub"
+                >
+                  ← District Hub
+                </Link>
+              )}
+            </div>
+
+            {/* Active Portal Switcher (Super Admin) */}
+            {(user?.profile?.role === "super_admin" ||
+              user?.email === "tech.rotaract3192@gmail.com") && allOrganizations.length > 0 && (
+              <div className="pt-2">
+                <label className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-1">
+                  SWITCH ACTIVE HUB
+                </label>
+                <select
+                  value={organization?.id || ""}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (!selectedId || selectedId === "328ed943-f625-4fec-82a0-0c92dd7ec592") {
+                      router.push("/dashboard");
+                    } else {
+                      router.push(`/dashboard?orgId=${selectedId}`);
+                    }
+                  }}
+                  className="w-full text-xs font-semibold bg-gray-800 text-white border border-gray-700 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer truncate"
+                >
+                  <option value="328ed943-f625-4fec-82a0-0c92dd7ec592">
+                    🏛️ District 3192 Hub (District Events)
+                  </option>
+                  <optgroup label="Chartered District Clubs">
+                    {allOrganizations
+                      .filter((o: any) => o.id !== "328ed943-f625-4fec-82a0-0c92dd7ec592")
+                      .map((org: any) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                </select>
+              </div>
+            )}
+
+            {/* Super Admin Switcher banner */}
             {(user?.profile?.role === "super_admin" ||
               user?.email === "tech.rotaract3192@gmail.com") && (
               <Link
@@ -649,7 +767,7 @@ export function OrganizerDashboardClient({
                 className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
               >
                 <ShieldAlert size={14} className="text-amber-400" />
-                <span>Super Admin Panel</span>
+                <span>Super Admin Governance Panel</span>
               </Link>
             )}
           </div>

@@ -9,6 +9,7 @@ import {
 import { submitOrganizerAccessRequestAction } from "@/app/actions/adminActions";
 import { getDistrictClubsAction, ClubRecord } from "@/app/actions/clubActions";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
+import { matchesClubQuery } from "@/lib/utils/zoneResolver";
 
 interface ApplyOrganizerClientProps {
   user: any;
@@ -89,10 +90,7 @@ export function ApplyOrganizerClient({ user, existingRequest }: ApplyOrganizerCl
 
   const filteredClubs = useMemo(() => {
     if (!clubSearch.trim()) return clubs;
-    const q = clubSearch.toLowerCase();
-    return clubs.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.zone.toLowerCase().includes(q)
-    );
+    return clubs.filter((c) => matchesClubQuery(clubSearch, c));
   }, [clubs, clubSearch]);
 
   async function handleSubmit(e: React.FormEvent) {

@@ -109,6 +109,14 @@ function formatCountdown(diffMs: number): string {
   return `Opens in ${diffSecs}s`;
 }
 
+export function formatSecondsToTimer(totalSecs: number | null | undefined): string {
+  if (totalSecs === null || totalSecs === undefined) return "02:00";
+  const s = Math.max(0, totalSecs);
+  const mins = Math.floor(s / 60);
+  const secs = s % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Date()): TierStatusInfo {
   const cap = Number(tier.total_capacity) || 9999;
   const sold = Number(tier.sold_count) || 0;
@@ -334,9 +342,9 @@ export function CheckoutModal({
   const [isHoldExpired, setIsHoldExpired] = useState(false);
   const [isRenewingHold, setIsRenewingHold] = useState(false);
 
-  // Live 2-Minute Hold Timer
+  // Live 2-Minute (120-Second) Hold Timer - Runs on BOTH Ticket Booking screen and Payment screen
   useEffect(() => {
-    if (!holdExpiresAt || checkoutStep !== "UPI_PAYMENT" || completedOrder) {
+    if (!holdExpiresAt || completedOrder) {
       return;
     }
 
@@ -346,13 +354,15 @@ export function CheckoutModal({
       setHoldSecondsRemaining(secs);
       if (secs <= 0) {
         setIsHoldExpired(true);
+      } else {
+        setIsHoldExpired(false);
       }
     };
 
     updateTimer();
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
-  }, [holdExpiresAt, checkoutStep, completedOrder]);
+  }, [holdExpiresAt, completedOrder]);
 
   // Release hold if user navigates away, closes modal, or unmounts before order completion
   useEffect(() => {
@@ -422,6 +432,41 @@ export function CheckoutModal({
 
   const isFreeOrder = fees.totalPayable === 0;
 
+  // Automatically acquire 120-second hold as soon as ticket booking screen opens with selected tickets
+  useEffect(() => {
+    if (!isOpen || !userEmail || completedOrder || isFreeOrder || totalTicketCount === 0) {
+      return;
+    }
+
+    // Only acquire initial hold if we do not already have an active hold session
+    if (!holdSessionId) {
+      let isMounted = true;
+      reserveTicketHoldAction({
+        eventId: event.id,
+        selectedCounts,
+        holdDurationSeconds: 120,
+      })
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.success && res.holdSessionId) {
+            setHoldSessionId(res.holdSessionId);
+            setHoldExpiresAt(new Date(res.expiresAt!));
+            setHoldSecondsRemaining(res.remainingSeconds ?? 120);
+            setIsHoldExpired(false);
+          } else if (res.error) {
+            setErrorMessage(res.error);
+          }
+        })
+        .catch((e) => {
+          console.error("Failed to secure initial 120s hold:", e);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [isOpen, userEmail, event.id, completedOrder, isFreeOrder, totalTicketCount]);
+
   // Resolve target Organizer UPI ID & Payee Name
   const targetUpiId = (event as any).upi_id || "rotaractdistrict3192@okaxis";
   const targetPayeeName = (event as any).upi_payee_name || "District 3192 Rotaract";
@@ -481,6 +526,38 @@ export function CheckoutModal({
     const newCounts = { ...selectedCounts, [tierId]: next };
     setSelectedCounts(newCounts);
     setErrorMessage(null);
+
+    // Update active 120s hold with new ticket counts
+    const countSum = Object.values(newCounts).reduce((a, b) => a + b, 0);
+    if (!isFreeOrder && userEmail) {
+      if (countSum === 0) {
+        if (holdSessionId) {
+          releaseUserHoldAction(holdSessionId).catch(() => {});
+          setHoldSessionId(null);
+          setHoldExpiresAt(null);
+          setHoldSecondsRemaining(null);
+          setIsHoldExpired(false);
+        }
+      } else {
+        reserveTicketHoldAction({
+          eventId: event.id,
+          selectedCounts: newCounts,
+          holdDurationSeconds: 120,
+          existingSessionId: holdSessionId || undefined,
+        })
+          .then((res) => {
+            if (res.success && res.holdSessionId) {
+              setHoldSessionId(res.holdSessionId);
+              setHoldExpiresAt(new Date(res.expiresAt!));
+              setHoldSecondsRemaining(res.remainingSeconds ?? 120);
+              setIsHoldExpired(false);
+            } else if (res.error) {
+              setErrorMessage(res.error);
+            }
+          })
+          .catch((err) => console.error("Hold update error:", err));
+      }
+    }
 
     // Rebuild attendee slots while preserving what user typed
     const newAttendees: Array<{
@@ -782,12 +859,70 @@ export function CheckoutModal({
               </div>
             </div>
 
-            <button
-              onClick={handleCloseModal}
-              className="relative z-10 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-2 relative z-10">
+              {/* Header Live Timer Badge (Always visible across booking and payment) */}
+              {userEmail && !isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
+                <div
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black font-mono tracking-tight transition-all border ${
+                    isHoldExpired
+                      ? "bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse"
+                      : holdSecondsRemaining <= 30
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse"
+                      : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  }`}
+                  title={isHoldExpired ? "Hold Expired" : "120-Second Ticket Lock-In Timer"}
+                >
+                  <Clock size={13} className={!isHoldExpired ? "animate-pulse" : ""} />
+                  <span>{formatSecondsToTimer(holdSecondsRemaining)}</span>
+                  <span className="hidden sm:inline text-[9px] uppercase font-bold opacity-80">Lock</span>
+                </div>
+              )}
+
+              <button
+                onClick={handleCloseModal}
+                className="w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Sticky Lock-In Progress Sub-Bar (Visible across both Ticket Selection and Payment) */}
+        {checkoutStep !== "SUCCESS" && userEmail && !isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
+          <div className="bg-gray-950 border-b border-gray-800 px-4 sm:px-6 py-2 flex items-center justify-between text-xs shrink-0 select-none">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isHoldExpired ? "bg-rose-500" : holdSecondsRemaining <= 30 ? "bg-amber-500 animate-ping" : "bg-emerald-400 animate-pulse"}`} />
+              <span className="text-[11px] font-bold text-gray-300 truncate">
+                {isHoldExpired ? (
+                  <span className="text-rose-400 font-extrabold">120s Lock Expired — Passes returned to general pool</span>
+                ) : (
+                  <>
+                    <strong className="text-white font-black">{totalTicketCount} Pass{totalTicketCount > 1 ? "es" : ""} Locked</strong>
+                    <span className="hidden sm:inline text-gray-400"> (120s exclusive hold)</span>
+                  </>
+                )}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {!isHoldExpired ? (
+                <div className="flex items-center gap-1.5 font-mono font-black text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-0.5 rounded-lg shadow-xs">
+                  <Clock size={12} className="text-emerald-400 animate-pulse" />
+                  <span>{formatSecondsToTimer(holdSecondsRemaining)}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isRenewingHold}
+                  onClick={handleRenewHold}
+                  className="text-[11px] font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                >
+                  {isRenewingHold ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  <span>Re-lock 120s</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -889,8 +1024,7 @@ export function CheckoutModal({
               <div className="text-right shrink-0">
                 {!isHoldExpired ? (
                   <span className="font-mono text-base sm:text-lg font-black tracking-tight px-3 py-1.5 bg-white/90 dark:bg-black/50 rounded-xl border border-current shadow-xs block">
-                    {String(Math.floor((holdSecondsRemaining ?? 120) / 60)).padStart(2, "0")}:
-                    {String((holdSecondsRemaining ?? 120) % 60).padStart(2, "0")}
+                    {formatSecondsToTimer(holdSecondsRemaining)}
                   </span>
                 ) : (
                   <button
@@ -1150,6 +1284,78 @@ export function CheckoutModal({
               <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
                 <AlertCircle size={16} className="shrink-0" />
                 <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* 120-Second Live Ticket Lock-In Hero Card (Visible while booking tickets) */}
+            {!isFreeOrder && totalTicketCount > 0 && holdSecondsRemaining !== null && (
+              <div
+                className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-xs ${
+                  isHoldExpired
+                    ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+                    : holdSecondsRemaining <= 30
+                    ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 animate-pulse"
+                    : "bg-blue-50/70 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/80 text-blue-950 dark:text-blue-200"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
+                      isHoldExpired
+                        ? "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300"
+                        : holdSecondsRemaining <= 30
+                        ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300"
+                        : "bg-[#0758fc]/15 dark:bg-blue-900/60 text-[#0758fc] dark:text-blue-400"
+                    }`}
+                  >
+                    <Clock size={22} className={!isHoldExpired ? "animate-pulse" : ""} />
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-black uppercase tracking-wider">
+                        {isHoldExpired
+                          ? "120s Reservation Hold Expired"
+                          : holdSecondsRemaining <= 30
+                          ? "Hurry! 120s Lock Expiring Soon"
+                          : "120-Second Ticket Lock-in Active"}
+                      </span>
+                      {!isHoldExpired && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          <ShieldCheck size={11} /> Seats Held
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] opacity-85 leading-tight">
+                      {isHoldExpired
+                        ? "Your 120-second hold expired. Click 'Re-lock Passes' to reserve your tickets again."
+                        : `Your ${totalTicketCount} pass${totalTicketCount > 1 ? "es are" : " is"} locked for 120 seconds. Complete attendee details before the timer reaches 0:00!`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  {!isHoldExpired ? (
+                    <div className="flex flex-col items-end">
+                      <span className="font-mono text-base sm:text-xl font-black tracking-tight px-3 py-1.5 bg-white dark:bg-gray-900 rounded-xl border border-current shadow-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                        {formatSecondsToTimer(holdSecondsRemaining)}
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mt-0.5">
+                        Remaining
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isRenewingHold}
+                      onClick={handleRenewHold}
+                      className="text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
+                    >
+                      {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                      <span>Re-lock Passes</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1771,18 +1977,32 @@ export function CheckoutModal({
             <div className="pt-2">
               <button
                 type="button"
-                disabled={loading || totalTicketCount === 0 || !hasAnyBookableTier}
-                onClick={handleProceedToPayment}
-                className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                disabled={loading || totalTicketCount === 0 || !hasAnyBookableTier || isRenewingHold}
+                onClick={() => {
+                  if (isHoldExpired) {
+                    handleRenewHold();
+                  } else {
+                    handleProceedToPayment();
+                  }
+                }}
+                className={`w-full disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer ${
+                  isHoldExpired
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/25"
+                    : "bg-[#0758fc] hover:bg-[#054fe0] shadow-[#0758fc]/25"
+                }`}
               >
-                {loading ? (
+                {loading || isRenewingHold ? (
                   <><Loader2 size={18} className="animate-spin" /> Processing...</>
                 ) : !hasAnyBookableTier ? (
                   <>Passes Locked Until Release Time</>
                 ) : isFreeOrder ? (
                   <>Confirm Free Registration <ArrowRight size={16} /></>
+                ) : isHoldExpired ? (
+                  <><RefreshCw size={16} /> 120s Hold Expired — Re-lock Passes &amp; Continue</>
                 ) : (
-                  <>Proceed to Payment • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} /></>
+                  <>
+                    Proceed to Payment {!isFreeOrder && holdSecondsRemaining !== null && `(${formatSecondsToTimer(holdSecondsRemaining)})`} • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} />
+                  </>
                 )}
               </button>
             </div>
