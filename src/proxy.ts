@@ -21,6 +21,7 @@ const PROTECTED_PATTERNS = [
   /^\/tickets(\/.*)?$/,
   /^\/orders(\/.*)?$/,
   /^\/privacy-center(\/.*)?$/,
+  /^\/check-in(\/.*)?$/,
 ];
 
 function isProtectedPath(pathname: string): boolean {
@@ -35,7 +36,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  response.headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self), payment=(self), usb=()");
 
   // Only apply CSP in production.
 if (!isDev) {

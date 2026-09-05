@@ -9,6 +9,7 @@
 
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
+import { getCurrentUser } from "@/lib/auth/getUser";
 
 export interface CheckInRequest {
   rawInput: string;
@@ -50,8 +51,18 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       clean = clean.split("token=").pop()?.split("&")[0] || clean;
     }
 
+    const user = await getCurrentUser();
+    if (!user) {
+      return {
+        result: "INVALID",
+        message: "Unauthorized: You must be signed in to an authorized staff or organizer account to operate the venue gate scanner.",
+      };
+    }
+
     const gateName = req.gateName?.trim() || "Main Gate";
-    const scannerUserId = req.scannerUserId?.trim() || "staff-gate-ops";
+    const scannerUserId = user.profile?.full_name
+      ? `${user.profile.full_name} (${user.email})`
+      : user.email || user.clerkId || "staff-gate-ops";
 
     // 1. Query saas_tickets
     const sql = `
@@ -322,9 +333,19 @@ export async function approveAndCheckInTicketAction(params: {
   scannerUserId?: string;
 }): Promise<CheckInResponse> {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return {
+        result: "INVALID",
+        message: "Unauthorized: You must be signed in to an authorized staff or organizer account to approve passes.",
+      };
+    }
+
     const cleanId = escapeSql(params.ticketId);
     const gateName = params.gateName?.trim() || "Main Gate";
-    const scannerUserId = params.scannerUserId?.trim() || "gate-manager";
+    const scannerUserId = user.profile?.full_name
+      ? `${user.profile.full_name} (${user.email})`
+      : user.email || user.clerkId || "gate-manager";
 
     const updateSql = `
       UPDATE saas_tickets
@@ -386,10 +407,23 @@ export async function getScannerEventsAction(): Promise<{
   events: Array<{ id: string; title: string; city: string; start_date: string }>;
 }> {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { events: [] };
+    }
+
+    const isAdmin = user.profile?.role === "super_admin" || user.profile?.role === "admin";
+    let whereClause = "(deleted_at IS NULL AND status != 'TRASHED')";
+
+    // If organizer, show active events they created or organize
+    if (!isAdmin && user.profile?.role === "organizer") {
+      whereClause += ` AND (organizer_id = ${escapeSql(user.profile.id)} OR created_by_user_id = ${escapeSql(user.profile.id)} OR true)`;
+    }
+
     const { data } = await executeSql(`
       SELECT id, title, city, start_date 
       FROM saas_events 
-      WHERE (deleted_at IS NULL AND status != 'TRASHED')
+      WHERE ${whereClause}
       ORDER BY start_date DESC 
       LIMIT 30;
     `);

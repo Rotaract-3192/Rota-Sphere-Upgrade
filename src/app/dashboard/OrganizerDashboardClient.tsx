@@ -121,6 +121,7 @@ export function OrganizerDashboardClient({
   const [manualAttendeeEventId, setManualAttendeeEventId] = useState<string | undefined>(undefined);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [copiedScannerEventId, setCopiedScannerEventId] = useState<string | null>(null);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
   const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
 
@@ -1738,12 +1739,39 @@ export function OrganizerDashboardClient({
                       <h3 className="text-base font-bold text-gray-900 leading-tight">{evt.title}</h3>
                       <p className="text-xs text-gray-500 mt-0.5">{evt.city} · {new Date(evt.start_date).toLocaleDateString("en-IN")}</p>
                     </div>
-                    <Link
-                      href={`/check-in?eventId=${evt.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md hover:scale-[1.02]"
-                    >
-                      <QrCode size={15} /> Open Scanner for this Event
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <Link
+                        href={`/check-in?eventId=${evt.id}`}
+                        className="flex-1 inline-flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md hover:scale-[1.02]"
+                      >
+                        <QrCode size={15} /> Open Scanner
+                      </Link>
+                      <button
+                        onClick={() => {
+                          const url = `${window.location.origin}/check-in?eventId=${evt.id}`;
+                          navigator.clipboard.writeText(url);
+                          setCopiedScannerEventId(evt.id);
+                          showToast("Protected gate scanner link copied to clipboard!");
+                          setTimeout(() => setCopiedScannerEventId(null), 2500);
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer border border-gray-200"
+                        title="Copy direct gate link to share with volunteer check-in staff"
+                      >
+                        {copiedScannerEventId === evt.id ? (
+                          <>
+                            <CheckCircle2 size={14} className="text-emerald-600" /> Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} /> Copy Staff Link
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-gray-600 pt-0.5">
+                      <ShieldCheck size={12} className="text-blue-600 shrink-0" />
+                      <span>Protected link · Sign-in required for staff</span>
+                    </div>
                   </div>
                 ))}
               </div>

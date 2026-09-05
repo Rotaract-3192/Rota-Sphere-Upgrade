@@ -14,6 +14,7 @@ export default function robots(): MetadataRoute.Robots {
           "/dashboard",
           "/dashboard/*",
           "/api/*",
+          "/check-in",
           "/check-in/*",
           "/checkout/*",
           "/sign-in/*",
@@ -23,12 +24,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: ["/admin/", "/dashboard/", "/api/"],
+        disallow: ["/admin/", "/dashboard/", "/api/", "/check-in/", "/check-in"],
       },
       {
         userAgent: ["ChatGPT-User", "GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended", "Applebot"],
         allow: ["/", "/events/", "/clubs/", "/gallery/", "/about", "/district"],
-        disallow: ["/admin/", "/dashboard/", "/api/"],
+        disallow: ["/admin/", "/dashboard/", "/api/", "/check-in/", "/check-in"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

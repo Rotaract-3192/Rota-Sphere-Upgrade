@@ -49,7 +49,6 @@ const SITEMAP_SECTIONS = [
     color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
     links: [
       { label: "Organizer Dashboard & Event Studio", href: "/dashboard" },
-      { label: "Venue Gate QR Check-in Scanner", href: "/check-in" },
       { label: "Super Admin Governance Console", href: "/admin" },
       { label: "Organizer Broadcast Notifications", href: "/dashboard/broadcast" },
     ],
