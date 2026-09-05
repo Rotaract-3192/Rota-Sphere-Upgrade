@@ -282,7 +282,7 @@ function CheckInScannerContent() {
         setRecentScans((prev) => [
           {
             name: res.attendeeName || "Attendee",
-            time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }),
             tier: res.ticketTierName || "Pass",
             club: res.clubName,
             zone: res.zone,
@@ -344,7 +344,7 @@ function CheckInScannerContent() {
       setRecentScans((prev) =>
         prev.map((s) =>
           s.ticketId === ticketId
-            ? { ...s, result: "SUCCESS", time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }
+            ? { ...s, result: "SUCCESS", time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) }
             : s
         )
       );

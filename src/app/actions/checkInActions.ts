@@ -10,6 +10,7 @@
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
 import { getCurrentUser } from "@/lib/auth/getUser";
+import { formatCheckedInTime } from "@/lib/utils/dateTimeUtils";
 
 export interface CheckInRequest {
   rawInput: string;
@@ -237,9 +238,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
 
     // 4. Duplicate Check
     if (ticket.status === "USED" || ticket.status === "CHECKED_IN") {
-      const formattedTime = ticket.checked_in_at
-        ? new Date(ticket.checked_in_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        : "earlier today";
+      const formattedTime = formatCheckedInTime(ticket.checked_in_at);
 
       return {
         result: "DUPLICATE_SCAN",

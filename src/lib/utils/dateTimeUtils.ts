@@ -264,3 +264,51 @@ export function formatEventTimeDisplay(dateVal: Date | string | number, tzStr?: 
     timeZone,
   });
 }
+
+/**
+ * Safely parses any UTC timestamp representation (including PostgreSQL string timestamps)
+ * into a valid Date instance.
+ */
+export function parseUtcTimestamp(input: string | Date | number | null | undefined): Date | null {
+  if (!input) return null;
+  if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+  let str = String(input).trim();
+  // If string does not specify timezone offset (+/-HH:MM) or Z, append Z since database NOW() / UTC timestamp was stored
+  if (!str.endsWith("Z") && !/[+-]\d{2}(:\d{2})?$/.test(str)) {
+    str = str.replace(" ", "T") + "Z";
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Formats check-in timestamp into human-readable Indian Standard Time (IST).
+ * E.g., "01:03:04 pm" (today) or "4 Sept, 01:03:04 pm" (previous date).
+ */
+export function formatCheckedInTime(dateInput: string | Date | number | null | undefined, targetTz = "Asia/Kolkata"): string {
+  const d = parseUtcTimestamp(dateInput);
+  if (!d) return "earlier today";
+
+  const nowStr = new Date().toLocaleDateString("en-IN", { timeZone: targetTz });
+  const checkInDateStr = d.toLocaleDateString("en-IN", { timeZone: targetTz });
+
+  const timeStr = d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: targetTz,
+  });
+
+  if (nowStr === checkInDateStr) {
+    return timeStr;
+  } else {
+    const datePart = d.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      timeZone: targetTz,
+    });
+    return `${datePart}, ${timeStr}`;
+  }
+}
+

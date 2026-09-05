@@ -40,6 +40,7 @@ import {
 import { motion } from "framer-motion";
 import { transferUserTicketAction, requestTicketRefundAction, resubmitUpiTransactionAction } from "@/app/actions/attendeeActions";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
+import { formatCheckedInTime } from "@/lib/utils/dateTimeUtils";
 
 interface UserTicketsClientProps {
   initialTickets: any[];
@@ -647,7 +648,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                         </span>
                       </div>
                       <p className="text-[11px] text-emerald-800 leading-relaxed">
-                        This pass was verified and admitted at the venue entrance{ticket.checked_in_gate ? ` (${ticket.checked_in_gate})` : ""}{ticket.checked_in_at ? ` on ${new Date(ticket.checked_in_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}` : ""}. Enjoy your event experience!
+                        This pass was verified and admitted at the venue entrance{ticket.checked_in_gate ? ` (${ticket.checked_in_gate})` : ""}{ticket.checked_in_at ? ` at ${formatCheckedInTime(ticket.checked_in_at)}` : ""}. Enjoy your event experience!
                       </p>
                     </div>
                   )}

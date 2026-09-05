@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/db/supabaseAdmin";
 import { logger } from "@/lib/logger/logger";
 import crypto from "crypto";
 import type { CheckInResult, SaasTicket } from "@/types/saas";
+import { formatCheckedInTime } from "@/lib/utils/dateTimeUtils";
 
 export function generateSecureTicketToken(ticketId: string, eventId: string): string {
   const secret = process.env.JWT_SECRET ?? "rotasphere-secret-token-key-2026";
@@ -77,7 +78,7 @@ export async function processTicketCheckIn(params: VerifyCheckInParams): Promise
     // 3. Check for Duplicate Scan
     if (ticket.status === "USED") {
       await logCheckIn(ticket.id, params.eventId, params.scannerUserId, params.gateName, "DUPLICATE_SCAN", params.deviceInfo);
-      const checkedInTime = ticket.checked_in_at ? new Date(ticket.checked_in_at).toLocaleTimeString("en-IN") : "earlier";
+      const checkedInTime = formatCheckedInTime(ticket.checked_in_at);
       return {
         result: "DUPLICATE_SCAN",
         ticket,
