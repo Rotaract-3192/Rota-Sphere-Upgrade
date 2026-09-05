@@ -764,12 +764,34 @@ export function CheckoutModal({
     }
 
     for (let i = 0; i < attendees.length; i++) {
-      if (!attendees[i].name.trim() || !attendees[i].email.trim()) {
+      const att = attendees[i];
+      if (!att.name.trim() || !att.email.trim()) {
         setErrorMessage(`Please fill out Name and Email for Attendee #${i + 1}`);
         return;
       }
+
+      const memberType = att.memberType || "Rotaract";
+      if (memberType === "Rotaract") {
+        const hasClub = att.clubName === "custom"
+          ? Boolean(att.customClubName?.trim())
+          : Boolean(att.clubName?.trim());
+        if (!hasClub) {
+          setErrorMessage(
+            `Please select or enter the Rotaract Club for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
+          );
+          return;
+        }
+      } else if (memberType === "Rotary") {
+        if (!att.clubName?.trim()) {
+          setErrorMessage(
+            `Please enter the Rotary Club Name for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
+          );
+          return;
+        }
+      }
+
       for (const q of customQuestions) {
-        if (q.is_required && !attendees[i].customAnswers?.[q.id]?.toString().trim()) {
+        if (q.is_required && !att.customAnswers?.[q.id]?.toString().trim()) {
           setErrorMessage(`Please answer "${q.question_text}" for Attendee #${i + 1}`);
           return;
         }
@@ -1846,12 +1868,18 @@ export function CheckoutModal({
                         {/* 4. Club Name & Zone Resolution */}
                         <div className="space-y-2 p-3 bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-200/80 dark:border-gray-700">
                           {att.memberType === "Rotary" ? (
-                            <div className="space-y-1">
-                              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotary Club Name
-                              </label>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotary Club Name <span className="text-rose-500 font-extrabold">*</span>
+                                </label>
+                                <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                                  Required for Rotarians
+                                </span>
+                              </div>
                               <input
                                 type="text"
+                                required
                                 placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
                                 value={att.clubName}
                                 onChange={(e) => {
@@ -1883,19 +1911,25 @@ export function CheckoutModal({
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotaract Club
+                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotaract Club <span className="text-rose-500 font-extrabold">*</span>
                                 </label>
-                                {att.zone && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                                    Zone: {att.zone}
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                                    Required for Rotaractors
                                   </span>
-                                )}
+                                  {att.zone && (
+                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                      Zone: {att.zone}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               <SearchableClubSelect
                                 value={att.clubName}
                                 customValue={att.customClubName}
                                 zone={att.zone}
+                                required={true}
                                 onChange={(clubName, clubZone, isCustom) => {
                                   const updated = [...attendees];
                                   updated[idx].clubName = clubName;

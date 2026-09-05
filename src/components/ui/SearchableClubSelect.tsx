@@ -181,6 +181,7 @@ export function SearchableClubSelect({
         <input
           ref={inputRef}
           type="text"
+          required={required}
           placeholder={placeholder}
           value={searchQuery}
           onChange={(e) => {

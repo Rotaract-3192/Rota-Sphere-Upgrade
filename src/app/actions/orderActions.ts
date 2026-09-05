@@ -606,6 +606,29 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       }
     }
 
+    // Validate that Rotaract and Rotary attendees have specified their Club Name
+    for (let i = 0; i < input.attendees.length; i++) {
+      const att = input.attendees[i];
+      const memberType = att.memberType || "Rotaract";
+      if (memberType === "Rotaract") {
+        const club = att.clubName?.trim();
+        if (!club || club === "custom") {
+          return {
+            success: false,
+            error: `Rotaract Club is required for Attendee #${i + 1} (${att.name || "Delegate"}). Please specify your Rotaract Club.`,
+          };
+        }
+      } else if (memberType === "Rotary") {
+        const club = att.clubName?.trim();
+        if (!club) {
+          return {
+            success: false,
+            error: `Rotary Club Name is required for Attendee #${i + 1} (${att.name || "Rotarian"}). Please specify your Rotary Club.`,
+          };
+        }
+      }
+    }
+
     const countPerTier: Record<string, number> = {};
     for (const att of input.attendees) {
       countPerTier[att.ticketTierId] = (countPerTier[att.ticketTierId] || 0) + 1;
@@ -1352,6 +1375,18 @@ export async function createManualAttendeeAction(
     const tier = tierRows?.[0];
     if (!tier) {
       return { success: false, error: "Selected ticket tier was not found." };
+    }
+
+    if (input.memberType === "Rotaract") {
+      const club = input.clubName?.trim();
+      if (!club || club === "custom") {
+        return { success: false, error: "Rotaract Club is required for Rotaract attendees." };
+      }
+    } else if (input.memberType === "Rotary") {
+      const club = input.clubName?.trim();
+      if (!club) {
+        return { success: false, error: "Rotary Club Name is required for Rotary attendees." };
+      }
     }
 
     // Atomically reserve seat capacity

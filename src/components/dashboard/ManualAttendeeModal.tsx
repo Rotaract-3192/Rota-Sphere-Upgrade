@@ -161,6 +161,19 @@ export function ManualAttendeeModal({
       return;
     }
 
+    if (memberType === "Rotaract") {
+      const club = selectedClub === "custom" ? customClubName.trim() : selectedClub.trim();
+      if (!club) {
+        setErrorMessage("Rotaract Club is required for Rotaract members.");
+        return;
+      }
+    } else if (memberType === "Rotary") {
+      if (!selectedClub.trim()) {
+        setErrorMessage("Rotary Club Name is required for Rotary members.");
+        return;
+      }
+    }
+
     // Validate required custom questions
     for (const q of customQuestions) {
       if (q.is_required && !customAnswers[q.id]?.toString().trim()) {
@@ -493,10 +506,18 @@ export function ManualAttendeeModal({
 
                 {/* Club Details Based on Affiliation */}
                 {memberType === "Rotary" ? (
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Rotary Club Name</label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
+                        Rotary Club Name <span className="text-rose-500 font-extrabold">*</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                        Required
+                      </span>
+                    </div>
                     <input
                       type="text"
+                      required
                       placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
                       value={selectedClub === "Non-Rotaract Guest" ? "" : selectedClub}
                       onChange={(e) => setSelectedClub(e.target.value)}
@@ -516,11 +537,19 @@ export function ManualAttendeeModal({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">Search District 3192 Club</label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
+                        Search District 3192 Club <span className="text-rose-500 font-extrabold">*</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                        Required
+                      </span>
+                    </div>
                     <SearchableClubSelect
                       value={selectedClub}
                       customValue={customClubName}
                       zone={zone}
+                      required={true}
                       onChange={(clubName, clubZone, isCustom) => {
                         setSelectedClub(clubName);
                         setZone(clubZone);
