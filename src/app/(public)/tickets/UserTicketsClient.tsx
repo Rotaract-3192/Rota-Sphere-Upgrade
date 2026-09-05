@@ -294,9 +294,10 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       ctx.fillText(`🎟 ${tierName.toUpperCase()}`, 110, cardBoxY + 153);
 
       // Verified Status Badge
+      const isTicketCheckedIn = ticket.status === "USED" || ticket.status === "CHECKED_IN";
       ctx.fillStyle = "#059669";
       ctx.font = "bold 14px sans-serif";
-      ctx.fillText("● CONFIRMED & ADMIT READY", 310, cardBoxY + 153);
+      ctx.fillText(isTicketCheckedIn ? "● CHECKED IN · ADMITTED" : "● CONFIRMED & ADMIT READY", 310, cardBoxY + 153);
 
       // Pass ID text
       ctx.fillStyle = "#64748b";
@@ -360,7 +361,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
       ctx.fillStyle = "#059669";
       ctx.font = "bold 13px sans-serif";
-      ctx.fillText("● SINGLE ENTRY GATE PASS", 860, 530);
+      ctx.fillText(isTicketCheckedIn ? "● ADMITTED AT VENUE" : "● SINGLE ENTRY GATE PASS", 860, 530);
 
       // Bottom Security Footer
       ctx.fillStyle = "#94a3b8";
@@ -546,12 +547,14 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
           {displayedTickets.map((ticket) => {
             const event = ticket.saas_events;
             const tier = ticket.saas_ticket_tiers;
-            const isApproved = ticket.status === "ISSUED" || ticket.status === "CONFIRMED";
-            const isUsed = ticket.status === "USED";
+            const isCheckedIn = ticket.status === "USED" || ticket.status === "CHECKED_IN";
+            const isConfirmed = ticket.status === "ISSUED" || ticket.status === "CONFIRMED";
+            const isApproved = isConfirmed || isCheckedIn;
+            const isUsed = isCheckedIn;
             const isRefundRequested = ticket.status === "REFUND_REQUESTED";
-            const isPendingVerification = ticket.status === "PENDING_VERIFICATION" || ticket.status === "PENDING" || !isApproved;
             const isPaymentRejected = ticket.status === "PAYMENT_REJECTED";
-            const isCancelled = ticket.status === "CANCELLED" || ticket.status === "REFUNDED" || isPaymentRejected;
+            const isPendingVerification = (ticket.status === "PENDING_VERIFICATION" || ticket.status === "PENDING") && !isApproved;
+            const isCancelled = ticket.status === "CANCELLED" || ticket.status === "REFUNDED";
             const isDownloading = downloadingId === ticket.id;
             const qrDataUrl = qrDataMap[ticket.id];
 
@@ -582,12 +585,13 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     </div>
 
                     <span
-                      className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${!isApproved && !isPaymentRejected
-                          ? "bg-amber-50 text-amber-800 border-amber-300 font-extrabold"
-                          : isPaymentRejected
-                            ? "bg-rose-50 text-rose-700 border-rose-200 font-extrabold"
-                            : isUsed
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                      className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
+                        isCheckedIn
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold"
+                          : isPendingVerification
+                            ? "bg-amber-50 text-amber-800 border-amber-300 font-extrabold"
+                            : isPaymentRejected
+                              ? "bg-rose-50 text-rose-700 border-rose-200 font-extrabold"
                               : isRefundRequested
                                 ? "bg-purple-50 text-purple-700 border-purple-200 font-extrabold"
                                 : isCancelled
@@ -595,7 +599,17 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                                   : "bg-emerald-50 text-emerald-700 border-emerald-200"
                         }`}
                     >
-                      ● {!isApproved && !isPaymentRejected ? "PENDING UPI APPROVAL" : isPaymentRejected ? "PAYMENT REJECTED" : isRefundRequested ? "REFUND PENDING" : ticket.status}
+                      ● {isCheckedIn
+                          ? "CHECKED IN"
+                          : isPendingVerification
+                            ? "PENDING UPI APPROVAL"
+                            : isPaymentRejected
+                              ? "PAYMENT REJECTED"
+                              : isRefundRequested
+                                ? "REFUND PENDING"
+                                : isCancelled
+                                  ? (ticket.status === "REFUNDED" ? "REFUNDED" : "CANCELLED")
+                                  : "CONFIRMED"}
                     </span>
                   </div>
 
@@ -620,8 +634,26 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                     </div>
                   </div>
 
+                  {/* Checked-In Verified Banner */}
+                  {isCheckedIn && (
+                    <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-1.5 text-xs text-emerald-900">
+                      <div className="flex items-center justify-between font-extrabold">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                          <span className="text-emerald-950 font-black">Gate Entry Verified · Checked In</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Admitted
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 leading-relaxed">
+                        This pass was verified and admitted at the venue entrance{ticket.checked_in_gate ? ` (${ticket.checked_in_gate})` : ""}{ticket.checked_in_at ? ` on ${new Date(ticket.checked_in_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}` : ""}. Enjoy your event experience!
+                      </p>
+                    </div>
+                  )}
+
                   {/* Pending UPI Verification Banner */}
-                  {!isApproved && !isPaymentRejected && (
+                  {isPendingVerification && !isPaymentRejected && (
                     <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2 text-xs text-amber-900">
                       <div className="flex items-center justify-between font-extrabold">
                         <div className="flex items-center gap-1.5">
@@ -715,6 +747,12 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                           </div>
                         )}
 
+                        {isCheckedIn && (
+                          <div className="absolute -bottom-2 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs tracking-wider z-10">
+                            Admitted
+                          </div>
+                        )}
+
                         {/* Hover Zoom Hint */}
                         <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <Maximize2 size={18} />
@@ -729,7 +767,11 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                       <button
                         onClick={() => handleDownloadTicket(ticket)}
                         disabled={isDownloading}
-                        className="flex-1 flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md shadow-[#0758fc]/20 cursor-pointer active:scale-95 disabled:opacity-50"
+                        className={`flex-1 flex items-center justify-center gap-2 text-white font-extrabold text-xs py-3 px-4 rounded-2xl transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50 ${
+                          isCheckedIn
+                            ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                            : "bg-[#0758fc] hover:bg-[#054fe0] shadow-[#0758fc]/20"
+                        }`}
                       >
                         {isDownloading ? (
                           <>
@@ -737,7 +779,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
                           </>
                         ) : (
                           <>
-                            <Download size={15} /> Download Pass
+                            <Download size={15} /> {isCheckedIn ? "Download Pass Badge" : "Download Pass"}
                           </>
                         )}
                       </button>
@@ -801,8 +843,14 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
             className="w-full bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl text-center text-gray-900 animate-in zoom-in-95 mx-auto"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                GATE SCANNER PASS
+              <span className={`text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full border ${
+                qrModalTicket.status === "USED" || qrModalTicket.status === "CHECKED_IN"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-black"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+              }`}>
+                {qrModalTicket.status === "USED" || qrModalTicket.status === "CHECKED_IN"
+                  ? "✓ CHECKED IN · ADMITTED"
+                  : "GATE SCANNER PASS"}
               </span>
               <button
                 onClick={() => setQrModalTicket(null)}
@@ -831,13 +879,19 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
               <p className="text-xs text-gray-500">{qrModalTicket.saas_events?.title}</p>
             </div>
 
-            <p className="text-[11px] text-gray-400 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-              Hold this screen up to the gate volunteer or scanner checkpoint for instant entry validation.
+            <p className="text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+              {qrModalTicket.status === "USED" || qrModalTicket.status === "CHECKED_IN"
+                ? "✓ This pass has been validated and admitted at the venue entrance."
+                : "Hold this screen up to the gate volunteer or scanner checkpoint for instant entry validation."}
             </p>
 
             <button
               onClick={() => handleDownloadTicket(qrModalTicket)}
-              className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              className={`w-full text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                qrModalTicket.status === "USED" || qrModalTicket.status === "CHECKED_IN"
+                  ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                  : "bg-[#0758fc] hover:bg-[#054fe0] shadow-[#0758fc]/20"
+              }`}
             >
               <Download size={14} /> Download Pass Badge
             </button>
