@@ -167,6 +167,7 @@ export function CreateEventWizardModal({
   const [locationDeliveryType, setLocationDeliveryType] = useState<"IN_PERSON" | "ONLINE" | "HYBRID">("IN_PERSON");
   const [upiId, setUpiId] = useState("");
   const [upiPayeeName, setUpiPayeeName] = useState(defaultClubName || "");
+  const hasUserEditedPayeeRef = useRef(false);
 
   // Ticket Tiers & Eligibility
   const [capacity, setCapacity] = useState(100);
@@ -179,8 +180,8 @@ export function CreateEventWizardModal({
       id?: string;
       name: string;
       tierType: TicketTierType;
-      price: number;
-      totalCapacity: number;
+      price: number | string;
+      totalCapacity: number | string;
       description?: string;
       allowNonRotaract?: boolean;
       allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
@@ -195,7 +196,7 @@ export function CreateEventWizardModal({
     {
       name: "",
       tierType: "REGULAR",
-      price: 0,
+      price: "",
       totalCapacity: 100,
       description: "",
       allowNonRotaract: true,
@@ -336,15 +337,11 @@ export function CreateEventWizardModal({
       );
     } else {
       setUpiId("");
-      setUpiPayeeName(defaultClubName || "");
+      if (!hasUserEditedPayeeRef.current) {
+        setUpiPayeeName(defaultClubName || "");
+      }
     }
   }, [eventToEdit, defaultClubName]);
-
-  useEffect(() => {
-    if (!eventToEdit && !upiPayeeName && defaultClubName) {
-      setUpiPayeeName(defaultClubName);
-    }
-  }, [defaultClubName, eventToEdit, upiPayeeName]);
 
   // Auto-sync overall event capacity with the sum of ticket pass tier seats
   useEffect(() => {
@@ -425,7 +422,7 @@ export function CreateEventWizardModal({
     setPriceModel(model);
     if (model === "FREE") {
       setTicketTiers((prev) =>
-        prev.map((t) => ({ ...t, price: 0 }))
+        prev.map((t) => ({ ...t, price: "" }))
       );
     } else {
       // Switching to PAID: Preserve existing tiers, do NOT wipe user configuration!
@@ -470,7 +467,7 @@ export function CreateEventWizardModal({
         // If price is 0, give it a default paid price (e.g. 199 for early bird, 499 for regular)
         return prev.map((t) => {
           const currentP = Number(t.price) || 0;
-          let newP = currentP;
+          let newP: number | string = currentP;
           if (newP <= 0) {
             newP = t.tierType === "EARLY_BIRD" || /early/i.test(t.name) ? 199 : 499;
           }
@@ -484,7 +481,7 @@ export function CreateEventWizardModal({
   }
 
   function addNewTier() {
-    const defaultPrice = priceModel === "FREE" ? 0 : 199;
+    const defaultPrice = priceModel === "FREE" ? "" : 199;
     setTicketTiers([
       ...ticketTiers,
       {
@@ -777,7 +774,7 @@ export function CreateEventWizardModal({
 
         let tierFinalPrice = 0;
         if (effectivePriceModel === "PAID") {
-          tierFinalPrice = Number(t.price) > 0 ? Number(t.price) : 199;
+          tierFinalPrice = !isNaN(Number(t.price)) && Number(t.price) >= 0 ? Number(t.price) : 0;
         }
 
         return {
@@ -786,7 +783,7 @@ export function CreateEventWizardModal({
           description: t.description?.trim(),
           tierType: t.tierType,
           price: tierFinalPrice,
-          totalCapacity: Number(t.totalCapacity) || 100,
+          totalCapacity: Number(t.totalCapacity) > 0 ? Number(t.totalCapacity) : 100,
           allowNonRotaract: t.allowNonRotaract !== false,
           allowedAudience: t.allowedAudience || "ALL",
           salesStart: salesStartISO,
@@ -1606,23 +1603,33 @@ export function CreateEventWizardModal({
                               type="number"
                               min="0"
                               step="1"
-                              value={priceModel === "FREE" ? 0 : tier.price}
+                              value={tier.price ?? ""}
                               onChange={(e) => {
-                                const newPrice = parseFloat(e.target.value) || 0;
-                                if (newPrice > 0 && priceModel === "FREE") {
+                                const raw = e.target.value;
+                                if (raw === "") {
+                                  updateTierField(idx, "price", "");
+                                  return;
+                                }
+                                // Strip leading zeros so typing e.g. "10" doesn't produce "010"
+                                const cleanVal =
+                                  raw.length > 1 && raw.startsWith("0") && !raw.startsWith("0.")
+                                    ? raw.replace(/^0+/, "") || "0"
+                                    : raw;
+                                const num = parseFloat(cleanVal);
+                                if (!isNaN(num) && num > 0 && priceModel === "FREE") {
                                   setPriceModel("PAID");
                                 }
-                                updateTierField(idx, "price", newPrice);
+                                updateTierField(idx, "price", cleanVal);
                               }}
-                              placeholder="0 for Free"
+                              placeholder={priceModel === "FREE" ? "0 (Free Event)" : "0 for Free"}
                               className={`w-full border rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-gray-900 outline-none transition-all ${
-                                priceModel === "FREE"
+                                priceModel === "FREE" && (!tier.price || Number(tier.price) === 0)
                                   ? "bg-gray-100/80 border-gray-200 text-gray-600 focus:bg-white focus:border-[#0758fc]"
                                   : "bg-gray-50 border-gray-200 focus:bg-white focus:border-[#0758fc]"
                               }`}
                             />
                           </div>
-                          {priceModel === "FREE" ? (
+                          {priceModel === "FREE" || !tier.price || Number(tier.price) === 0 ? (
                             <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Free Event (₹0)</span>
                           ) : (
                             <span className="text-[10px] text-[#0758fc] font-bold mt-1 block">Paid Pass (₹{tier.price})</span>
@@ -1638,8 +1645,19 @@ export function CreateEventWizardModal({
                             type="number"
                             min="1"
                             required
-                            value={tier.totalCapacity}
-                            onChange={(e) => updateTierField(idx, "totalCapacity", parseInt(e.target.value) || 100)}
+                            value={tier.totalCapacity ?? ""}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === "") {
+                                updateTierField(idx, "totalCapacity", "");
+                                return;
+                              }
+                              const cleanVal =
+                                raw.length > 1 && raw.startsWith("0")
+                                  ? raw.replace(/^0+/, "") || "1"
+                                  : raw;
+                              updateTierField(idx, "totalCapacity", cleanVal);
+                            }}
                             placeholder="100"
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 outline-none focus:bg-white focus:border-[#0758fc]"
                           />
@@ -2143,7 +2161,10 @@ export function CreateEventWizardModal({
                       type="text"
                       required
                       value={upiPayeeName}
-                      onChange={(e) => setUpiPayeeName(e.target.value)}
+                      onChange={(e) => {
+                        hasUserEditedPayeeRef.current = true;
+                        setUpiPayeeName(e.target.value);
+                      }}
                       placeholder="e.g. Rotaract Club of Bengaluru"
                       className="w-full bg-white border border-gray-200 rounded-full px-5 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#0758fc] shadow-sm"
                     />
