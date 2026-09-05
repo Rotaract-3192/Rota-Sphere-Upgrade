@@ -10,24 +10,17 @@ export const dynamic = "force-dynamic";
 // Helper to serve an optimized brand fallback image if event has no banner
 async function getFallbackImageBuffer(): Promise<Buffer | null> {
   try {
-    const candidates = [
-      path.join(process.cwd(), "public", "brand-logo.png"),
-      path.join(process.cwd(), "public", "logo.png"),
-      path.join(process.cwd(), "public", "icon.png"),
-    ];
-
-    for (const filePath of candidates) {
-      if (fs.existsSync(filePath)) {
-        const rawBuffer = await fs.promises.readFile(filePath);
-        const processed = await sharp(rawBuffer)
-          .resize(1200, 630, {
-            fit: "contain",
-            background: { r: 7, g: 12, b: 24, alpha: 1 }, // Brand dark background #070c18
-          })
-          .jpeg({ quality: 82, mozjpeg: true })
-          .toBuffer();
-        return processed;
-      }
+    const logoPath = path.join(process.cwd(), "public", "brand-logo.png");
+    if (fs.existsSync(/*turbopackIgnore: true*/ logoPath)) {
+      const rawBuffer = await fs.promises.readFile(/*turbopackIgnore: true*/ logoPath);
+      const processed = await sharp(rawBuffer)
+        .resize(1200, 630, {
+          fit: "contain",
+          background: { r: 7, g: 12, b: 24, alpha: 1 }, // Brand dark background #070c18
+        })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+      return processed;
     }
   } catch (err) {
     console.error("[FallbackImage Error]:", err);

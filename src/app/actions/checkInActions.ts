@@ -79,6 +79,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         t.club_name,
         t.designation,
         t.zone,
+        t.custom_answers,
         t.qr_token, 
         t.status, 
         t.checked_in_at, 
@@ -151,9 +152,41 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       };
     }
 
-    const attendeeName = ticket.attendee_name || "Attendee";
+    let customAnswers: any = {};
+    if (ticket.custom_answers) {
+      if (typeof ticket.custom_answers === "string") {
+        try {
+          customAnswers = JSON.parse(ticket.custom_answers);
+        } catch {}
+      } else if (typeof ticket.custom_answers === "object") {
+        customAnswers = ticket.custom_answers;
+      }
+    }
+
+    const attendeeName = ticket.attendee_name || customAnswers.name || customAnswers.full_name || "Attendee";
     const tierName = ticket.tier_name || "Standard Pass";
     const eventTitle = ticket.event_title || "Event";
+
+    const clubName =
+      (ticket.club_name && ticket.club_name.trim()) ||
+      (customAnswers.club_name && String(customAnswers.club_name).trim()) ||
+      (customAnswers.club && String(customAnswers.club).trim()) ||
+      (customAnswers["Club Name"] && String(customAnswers["Club Name"]).trim()) ||
+      (customAnswers["Rotaract Club"] && String(customAnswers["Rotaract Club"]).trim()) ||
+      "";
+
+    const designation =
+      (ticket.designation && ticket.designation.trim()) ||
+      (customAnswers.designation && String(customAnswers.designation).trim()) ||
+      (customAnswers.role && String(customAnswers.role).trim()) ||
+      (customAnswers.position && String(customAnswers.position).trim()) ||
+      (customAnswers["Designation"] && String(customAnswers["Designation"]).trim()) ||
+      (customAnswers["Role"] && String(customAnswers["Role"]).trim()) ||
+      (ticket.member_type && ticket.member_type.trim()) ||
+      "";
+
+    const memberType = ticket.member_type || customAnswers.member_type || "Rotaract";
+    const zone = ticket.zone || customAnswers.zone || "";
 
     // 2. Validate Event Filter (if an event is specifically locked)
     if (
@@ -169,6 +202,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
           ticketId: ticket.id,
           ticketCode: ticket.ticket_code,
           attendeeName,
+          clubName,
+          designation,
+          memberType,
+          zone,
           ticketTierName: tierName,
           eventTitle,
           eventId: ticket.event_id,
@@ -186,10 +223,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         attendeeName,
         attendeeEmail: ticket.attendee_email,
         attendeePhone: ticket.attendee_phone,
-        memberType: ticket.member_type,
-        clubName: ticket.club_name,
-        zone: ticket.zone,
-        designation: ticket.designation,
+        memberType,
+        clubName,
+        zone,
+        designation,
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
@@ -203,6 +240,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         ticketId: ticket.id,
         ticketCode: ticket.ticket_code,
         attendeeName,
+        clubName,
+        designation,
+        memberType,
+        zone,
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
@@ -216,6 +257,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         ticketId: ticket.id,
         ticketCode: ticket.ticket_code,
         attendeeName,
+        clubName,
+        designation,
+        memberType,
+        zone,
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
@@ -229,6 +274,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         ticketId: ticket.id,
         ticketCode: ticket.ticket_code,
         attendeeName,
+        clubName,
+        designation,
+        memberType,
+        zone,
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
@@ -247,10 +296,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         attendeeName,
         attendeeEmail: ticket.attendee_email,
         attendeePhone: ticket.attendee_phone,
-        memberType: ticket.member_type,
-        clubName: ticket.club_name,
-        zone: ticket.zone,
-        designation: ticket.designation,
+        memberType,
+        clubName,
+        zone,
+        designation,
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
@@ -304,10 +353,10 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       attendeeName,
       attendeeEmail: ticket.attendee_email,
       attendeePhone: ticket.attendee_phone,
-      memberType: ticket.member_type,
-      clubName: ticket.club_name,
-      zone: ticket.zone,
-      designation: ticket.designation,
+      memberType,
+      clubName,
+      zone,
+      designation,
       ticketTierName: tierName,
       eventTitle,
       eventId: ticket.event_id,
@@ -355,7 +404,7 @@ export async function approveAndCheckInTicketAction(params: {
         checked_in_by_user_id = ${escapeSql(scannerUserId)},
         updated_at = NOW()
       WHERE id = ${cleanId}
-      RETURNING id, ticket_code, attendee_name, attendee_email, attendee_phone, member_type, club_name, zone, designation, event_id, ticket_tier_id;
+      RETURNING id, ticket_code, attendee_name, attendee_email, attendee_phone, member_type, club_name, zone, designation, custom_answers, event_id, ticket_tier_id;
     `;
     const { data: updatedRows, error } = await executeSql(updateSql);
     if (error || !updatedRows || updatedRows.length === 0) {
@@ -380,17 +429,46 @@ export async function approveAndCheckInTicketAction(params: {
       LIMIT 1;
     `);
 
+    let customAnswers: any = {};
+    if (t.custom_answers) {
+      if (typeof t.custom_answers === "string") {
+        try {
+          customAnswers = JSON.parse(t.custom_answers);
+        } catch {}
+      } else if (typeof t.custom_answers === "object") {
+        customAnswers = t.custom_answers;
+      }
+    }
+
+    const clubName =
+      (t.club_name && t.club_name.trim()) ||
+      (customAnswers.club_name && String(customAnswers.club_name).trim()) ||
+      (customAnswers.club && String(customAnswers.club).trim()) ||
+      (customAnswers["Club Name"] && String(customAnswers["Club Name"]).trim()) ||
+      (customAnswers["Rotaract Club"] && String(customAnswers["Rotaract Club"]).trim()) ||
+      "";
+
+    const designation =
+      (t.designation && t.designation.trim()) ||
+      (customAnswers.designation && String(customAnswers.designation).trim()) ||
+      (customAnswers.role && String(customAnswers.role).trim()) ||
+      (customAnswers.position && String(customAnswers.position).trim()) ||
+      (customAnswers["Designation"] && String(customAnswers["Designation"]).trim()) ||
+      (customAnswers["Role"] && String(customAnswers["Role"]).trim()) ||
+      (t.member_type && t.member_type.trim()) ||
+      "";
+
     return {
       result: "SUCCESS",
       ticketId: t.id,
       ticketCode: t.ticket_code,
-      attendeeName: t.attendee_name,
+      attendeeName: t.attendee_name || customAnswers.name || "Attendee",
       attendeeEmail: t.attendee_email,
       attendeePhone: t.attendee_phone,
-      memberType: t.member_type,
-      clubName: t.club_name,
-      zone: t.zone,
-      designation: t.designation,
+      memberType: t.member_type || customAnswers.member_type || "Rotaract",
+      clubName,
+      zone: t.zone || customAnswers.zone || "",
+      designation,
       ticketTierName: info?.[0]?.tier_name || "General Pass",
       eventTitle: info?.[0]?.event_title || "Event",
       eventId: t.event_id,

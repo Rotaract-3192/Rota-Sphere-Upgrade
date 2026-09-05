@@ -41,6 +41,8 @@ import {
   Sparkles,
   Info,
   ShieldAlert,
+  Award,
+  Ticket,
 } from "lucide-react";
 import Link from "next/link";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -164,8 +166,6 @@ function CheckInScannerContent() {
 
   // Scan state
   const [scanResult, setScanResult] = useState<CheckInResponse | null>(null);
-  const [autoClearProgress, setAutoClearProgress] = useState<number>(100);
-  const autoClearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [recentScans, setRecentScans] = useState<
     Array<{
@@ -173,6 +173,7 @@ function CheckInScannerContent() {
       time: string;
       tier: string;
       club?: string;
+      designation?: string;
       zone?: string;
       result: string;
       code: string;
@@ -205,27 +206,9 @@ function CheckInScannerContent() {
   // Verified counts
   const admittedCount = recentScans.filter((s) => s.result === "SUCCESS").length;
 
-  // Clear auto-reset timer helper
-  const clearAutoReset = useCallback(() => {
-    if (autoClearTimerRef.current) {
-      clearInterval(autoClearTimerRef.current);
-      autoClearTimerRef.current = null;
-    }
-  }, []);
-
-  // Dismiss scan result card
-  const handleDismissResult = useCallback(() => {
-    clearAutoReset();
-    setScanResult(null);
-    setAutoClearProgress(100);
-    lastScannedTokenRef.current = null;
-    isProcessingRef.current = false;
-  }, [clearAutoReset]);
-
-  // Cleanup timers & scanner on unmount
+  // Cleanup scanner on unmount
   useEffect(() => {
     return () => {
-      if (autoClearTimerRef.current) clearInterval(autoClearTimerRef.current);
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current
           .stop()
@@ -238,6 +221,7 @@ function CheckInScannerContent() {
       }
     };
   }, []);
+
 
   // Main ticket verification logic
   const handleVerify = useCallback(
@@ -257,8 +241,16 @@ function CheckInScannerContent() {
       lastScanTimestampRef.current = now;
       isProcessingRef.current = true;
 
+      // Immediately pause scanner hardware stream so it halts until "Scan Next" is clicked
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        try {
+          scannerRef.current.pause(true);
+        } catch (err) {
+          console.warn("Could not pause scanner:", err);
+        }
+      }
+
       setLoading(true);
-      clearAutoReset();
 
       try {
         const res = await checkInTicketAction({
@@ -285,6 +277,7 @@ function CheckInScannerContent() {
             time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }),
             tier: res.ticketTierName || "Pass",
             club: res.clubName,
+            designation: res.designation,
             zone: res.zone,
             result: res.result,
             code: res.ticketCode || clean,
@@ -293,33 +286,17 @@ function CheckInScannerContent() {
           ...prev.slice(0, 24),
         ]);
 
-        // Auto-dismiss successful scans after 2.6s so gate flows continuously
-        if (res.result === "SUCCESS") {
-          let progress = 100;
-          const stepMs = 50;
-          const totalMs = 2600;
-          const decrement = (stepMs / totalMs) * 100;
-
-          autoClearTimerRef.current = setInterval(() => {
-            progress -= decrement;
-            setAutoClearProgress(Math.max(0, progress));
-            if (progress <= 0) {
-              handleDismissResult();
-            }
-          }, stepMs);
-        }
+        // Scanner remains paused until user explicitly clicks "Scan Next Ticket"
       } catch (err: any) {
         setLoading(false);
         setScanResult({
           result: "INVALID",
           message: err?.message || "Scanner error occurred.",
         });
-        setTimeout(() => {
-          isProcessingRef.current = false;
-        }, 1200);
+        isProcessingRef.current = true; // Keep locked until dismissed
       }
     },
-    [selectedEventId, gateName, soundEnabled, clearAutoReset, handleDismissResult]
+    [selectedEventId, gateName, soundEnabled]
   );
 
   const handleVerifyRef = useRef(handleVerify);
@@ -348,18 +325,7 @@ function CheckInScannerContent() {
             : s
         )
       );
-
-      let progress = 100;
-      const stepMs = 50;
-      const totalMs = 2500;
-      const decrement = (stepMs / totalMs) * 100;
-      autoClearTimerRef.current = setInterval(() => {
-        progress -= decrement;
-        setAutoClearProgress(Math.max(0, progress));
-        if (progress <= 0) {
-          handleDismissResult();
-        }
-      }, stepMs);
+      // Scanner remains paused until operator clicks "Scan Next Ticket"
     } catch {
       setApprovingTicketId(null);
     }
@@ -560,6 +526,43 @@ function CheckInScannerContent() {
       e.target.value = "";
     }
   }
+
+  // Resume camera & ready scanner for next ticket when staff presses "Scan Next"
+  const handleScanNext = useCallback(async () => {
+    setScanResult(null);
+    lastScannedTokenRef.current = null;
+    isProcessingRef.current = false;
+
+    const scanner = scannerRef.current;
+    if (scanner) {
+      try {
+        const state = scanner.getState();
+        // State 3 is PAUSED in html5-qrcode
+        if (state === 3) {
+          scanner.resume();
+          return;
+        }
+      } catch (err) {
+        console.warn("Scanner resume warning:", err);
+      }
+    }
+
+    if (!cameraActive) {
+      await startCamera();
+    }
+  }, [cameraActive, startCamera]);
+
+  // Press Space or Enter on keyboard to immediately scan the next ticket
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (scanResult && (e.code === "Space" || e.code === "Enter")) {
+        e.preventDefault();
+        handleScanNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [scanResult, handleScanNext]);
 
   return (
     <div className="w-full min-h-[calc(100vh-70px)] bg-[#0f1419] text-white flex flex-col justify-between py-4 px-3 sm:px-6 lg:px-8 font-sans select-none">
@@ -804,161 +807,176 @@ function CheckInScannerContent() {
 
           {/* ── 3. SCAN RESULT CARD OVERLAYS ──────────────────────────────── */}
           {scanResult && (
-            <div className="absolute inset-0 bg-gray-950/95 backdrop-blur-md p-6 flex flex-col items-center justify-center text-center z-30 animate-in zoom-in-95">
+            <div className="absolute inset-0 bg-gray-950/95 backdrop-blur-md p-4 sm:p-6 flex flex-col items-center justify-center text-center z-30 animate-in zoom-in-95 overflow-y-auto">
               
-              {/* SUCCESS (Access Granted) */}
-              {scanResult.result === "SUCCESS" && (
-                <div className="space-y-3 max-w-md w-full animate-in fade-in-50">
-                  <div className="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border-2 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-                    <CheckCircle2 size={48} className="animate-in zoom-in-50 duration-200" />
-                  </div>
-                  
-                  <span className="text-xs font-black tracking-widest text-emerald-400 uppercase block">
-                    ✓ ACCESS GRANTED
-                  </span>
-                  
-                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                    {scanResult.attendeeName}
-                  </h2>
-
-                  {/* Pass Tier & Club Badges */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                    <span className="text-xs font-extrabold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-3.5 py-1.5 rounded-full">
-                      {scanResult.ticketTierName || "Entry Pass"}
+              <div className="max-w-md w-full my-auto space-y-4 animate-in fade-in-50">
+                
+                {/* ── STATUS BADGE & ICON ── */}
+                {scanResult.result === "SUCCESS" && (
+                  <div className="space-y-2">
+                    <div className="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border-2 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                      <CheckCircle2 size={48} className="animate-in zoom-in-50 duration-200" />
+                    </div>
+                    <span className="text-xs font-black tracking-widest text-emerald-400 uppercase block">
+                      ✓ ACCESS GRANTED
                     </span>
-                    {scanResult.clubName && (
-                      <span className="text-xs font-bold text-blue-300 bg-blue-950/80 border border-blue-700/60 px-3 py-1.5 rounded-full flex items-center gap-1">
-                        <Building size={12} />
-                        {scanResult.clubName}
-                        {scanResult.zone && <span className="text-blue-400 font-mono">({scanResult.zone})</span>}
+                  </div>
+                )}
+
+                {scanResult.result === "DUPLICATE_SCAN" && (
+                  <div className="space-y-2">
+                    <div className="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border-2 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                      <AlertTriangle size={44} />
+                    </div>
+                    <span className="text-xs font-black tracking-widest text-amber-400 uppercase block">
+                      ⚠ ALREADY CHECKED IN (DUPLICATE)
+                    </span>
+                  </div>
+                )}
+
+                {scanResult.result === "PAYMENT_PENDING" && (
+                  <div className="space-y-2">
+                    <div className="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border-2 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.25)]">
+                      <Clock size={44} />
+                    </div>
+                    <span className="text-xs font-black tracking-widest text-amber-400 uppercase block">
+                      ⏱ PAYMENT PENDING APPROVAL
+                    </span>
+                  </div>
+                )}
+
+                {scanResult.result === "WRONG_EVENT" && (
+                  <div className="space-y-2">
+                    <div className="w-20 h-20 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center mx-auto border-2 border-orange-500/50">
+                      <Building size={44} />
+                    </div>
+                    <span className="text-xs font-black tracking-widest text-orange-400 uppercase block">
+                      WRONG EVENT VENUE
+                    </span>
+                  </div>
+                )}
+
+                {(scanResult.result === "INVALID" || scanResult.result === "CANCELLED" || scanResult.result === "REFUNDED") && (
+                  <div className="space-y-2">
+                    <div className="w-20 h-20 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto border-2 border-rose-500/50 shadow-[0_0_30px_rgba(244,33,46,0.3)]">
+                      <XCircle size={44} />
+                    </div>
+                    <span className="text-xs font-black tracking-widest text-rose-400 uppercase block">
+                      {scanResult.result === "INVALID" ? "INVALID PASS" : `${scanResult.result} PASS`}
+                    </span>
+                  </div>
+                )}
+
+                {/* ── ATTENDEE FULL NAME ── */}
+                <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                  {scanResult.attendeeName || "Attendee"}
+                </h2>
+
+                {/* ── ATTENDEE PROFILE CARD: CLUB & DESIGNATION / ROLE ── */}
+                <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl p-4 text-left space-y-3 shadow-xl">
+                  
+                  {/* CLUB ROW */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <Building size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider block">
+                        Rotaract Club / Organization
+                      </span>
+                      <span className="text-sm sm:text-base font-bold text-white flex items-center gap-1.5 flex-wrap">
+                        <span>{scanResult.clubName || "Non-Rotaract / General Delegate"}</span>
+                        {scanResult.zone && (
+                          <span className="text-[10px] font-mono font-extrabold bg-blue-950 text-blue-300 border border-blue-800/80 px-2 py-0.5 rounded-md">
+                            {scanResult.zone}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* DESIGNATION / ROLE ROW */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <Award size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider block">
+                        Designation / Role
+                      </span>
+                      <span className="text-sm sm:text-base font-extrabold text-amber-300">
+                        {scanResult.designation || scanResult.memberType || "Delegate / Attendee"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* TICKET TIER & CODE */}
+                  <div className="pt-2.5 border-t border-gray-800/80 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-extrabold">
+                      <Ticket size={14} />
+                      <span>{scanResult.ticketTierName || "Standard Pass"}</span>
+                    </div>
+                    {scanResult.ticketCode && (
+                      <span className="font-mono text-gray-300 text-xs bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 font-bold">
+                        {scanResult.ticketCode}
                       </span>
                     )}
                   </div>
 
-                  <div className="pt-2 text-gray-400 text-xs font-mono">
-                    {scanResult.ticketCode && <span>Pass: {scanResult.ticketCode}</span>}
-                    {scanResult.eventTitle && <p className="text-[11px] text-gray-500 mt-0.5">{scanResult.eventTitle}</p>}
-                  </div>
+                  {/* DUPLICATE EXTRA DETAILS */}
+                  {scanResult.result === "DUPLICATE_SCAN" && (
+                    <div className="bg-amber-950/70 border border-amber-800 rounded-xl p-3 text-xs text-amber-200 space-y-1">
+                      <p className="font-bold flex items-center gap-1.5">
+                        <Clock size={14} />
+                        {scanResult.scannedAt ? `First admitted at ${scanResult.scannedAt}` : "Previously scanned today"}
+                      </p>
+                      <p className="text-[11px] text-amber-400/80">Checkpoint: {scanResult.checkedInGate || "Gate Checkpoint"}</p>
+                      <p className="text-[11px] text-gray-400 pt-0.5">Pass re-use or screenshot sharing is blocked.</p>
+                    </div>
+                  )}
 
-                  {/* Auto-Dismiss Progress Bar */}
-                  <div className="w-48 mx-auto bg-gray-800 rounded-full h-1 mt-4 overflow-hidden">
-                    <div
-                      className="bg-emerald-400 h-full transition-all duration-75"
-                      style={{ width: `${autoClearProgress}%` }}
-                    />
-                  </div>
+                  {/* STATUS REASON FOR SPECIAL / ERROR STATES */}
+                  {scanResult.message && scanResult.result !== "SUCCESS" && scanResult.result !== "DUPLICATE_SCAN" && (
+                    <div className={`rounded-xl p-3 text-xs font-semibold ${
+                      scanResult.result === "PAYMENT_PENDING"
+                        ? "bg-amber-950/60 border border-amber-800 text-amber-200"
+                        : "bg-rose-950/60 border border-rose-800 text-rose-200"
+                    }`}>
+                      {scanResult.message}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* DUPLICATE SCAN (Pass Sharing Prevention) */}
-              {scanResult.result === "DUPLICATE_SCAN" && (
-                <div className="space-y-3 max-w-md w-full animate-in fade-in-50">
-                  <div className="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border-2 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                    <AlertTriangle size={44} />
-                  </div>
-
-                  <span className="text-xs font-black tracking-widest text-amber-400 uppercase block">
-                    ⚠ ALREADY CHECKED IN
-                  </span>
-
-                  <h2 className="text-2xl font-black text-white leading-tight">
-                    {scanResult.attendeeName || "Attendee"}
-                  </h2>
-
-                  <div className="bg-amber-950/60 border border-amber-800/80 rounded-2xl p-3.5 max-w-sm mx-auto text-left space-y-1">
-                    <p className="text-xs text-amber-200 font-bold flex items-center gap-1.5">
-                      <Clock size={14} className="shrink-0" />
-                      {scanResult.scannedAt ? `First admitted at ${scanResult.scannedAt}` : "Already scanned earlier today"}
-                    </p>
-                    <p className="text-[11px] text-amber-400/80">
-                      Checkpoint: {scanResult.checkedInGate || "Gate Checkpoint"}
-                    </p>
-                    <p className="text-[11px] text-gray-400 pt-1">
-                      Pass re-use or screenshot sharing is blocked.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* PAYMENT PENDING APPROVAL */}
-              {scanResult.result === "PAYMENT_PENDING" && (
-                <div className="space-y-3 max-w-md w-full animate-in fade-in-50">
-                  <div className="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border-2 border-amber-500/50">
-                    <Clock size={44} />
-                  </div>
-
-                  <span className="text-xs font-black tracking-widest text-amber-400 uppercase block">
-                    PAYMENT PENDING APPROVAL
-                  </span>
-
-                  <h2 className="text-2xl font-black text-white leading-tight">
-                    {scanResult.attendeeName}
-                  </h2>
-
-                  <p className="text-xs text-amber-300 max-w-xs mx-auto">
-                    Attendee booked via UPI. Verification is pending.
-                  </p>
-
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-                    {scanResult.ticketId && (
-                      <button
-                        onClick={() => handleApproveTicket(scanResult.ticketId!)}
-                        disabled={approvingTicketId === scanResult.ticketId}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-gray-950 font-black text-xs px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-lg shadow-emerald-500/20"
-                      >
-                        {approvingTicketId === scanResult.ticketId ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Check size={14} />
-                        )}
-                        Approve & Admit Attendee
-                      </button>
+                {/* APPROVE ACTION FOR PAYMENT PENDING */}
+                {scanResult.result === "PAYMENT_PENDING" && scanResult.ticketId && (
+                  <button
+                    onClick={() => handleApproveTicket(scanResult.ticketId!)}
+                    disabled={approvingTicketId === scanResult.ticketId}
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-black text-sm py-3.5 px-6 rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/20"
+                  >
+                    {approvingTicketId === scanResult.ticketId ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Check size={16} />
                     )}
-                  </div>
+                    Approve & Admit Attendee
+                  </button>
+                )}
+
+                {/* ── SCAN NEXT TICKET BUTTON ── */}
+                <div className="w-full pt-2 space-y-2">
+                  <button
+                    onClick={handleScanNext}
+                    className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white text-base font-black py-4 px-6 rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 shadow-xl shadow-[#0758fc]/40"
+                  >
+                    <RotateCcw size={18} />
+                    <span>Scan Next Ticket</span>
+                  </button>
+                  <p className="text-[11px] text-gray-400">
+                    Scanner paused • Press <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-300 font-mono text-[10px]">Space</kbd> or <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-300 font-mono text-[10px]">Enter</kbd> to open scanner
+                  </p>
                 </div>
-              )}
-
-              {/* WRONG EVENT */}
-              {scanResult.result === "WRONG_EVENT" && (
-                <div className="space-y-3 max-w-md w-full animate-in fade-in-50">
-                  <div className="w-20 h-20 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center mx-auto border-2 border-orange-500/50">
-                    <Building size={44} />
-                  </div>
-
-                  <span className="text-xs font-black tracking-widest text-orange-400 uppercase block">
-                    WRONG EVENT VENUE
-                  </span>
-
-                  <h2 className="text-xl font-black text-white">{scanResult.attendeeName}</h2>
-                  <p className="text-xs text-orange-300 max-w-xs mx-auto">{scanResult.message}</p>
-                </div>
-              )}
-
-              {/* INVALID / CANCELLED / REFUNDED */}
-              {(scanResult.result === "INVALID" || scanResult.result === "CANCELLED" || scanResult.result === "REFUNDED") && (
-                <div className="space-y-3 max-w-md w-full animate-in fade-in-50">
-                  <div className="w-20 h-20 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto border-2 border-rose-500/50 shadow-[0_0_30px_rgba(244,33,46,0.3)]">
-                    <XCircle size={44} />
-                  </div>
-
-                  <span className="text-xs font-black tracking-widest text-rose-400 uppercase block">
-                    {scanResult.result === "INVALID" ? "INVALID PASS" : `${scanResult.result} PASS`}
-                  </span>
-
-                  <h2 className="text-xl font-black text-white">
-                    {scanResult.attendeeName || "Access Denied"}
-                  </h2>
-                  <p className="text-xs text-rose-300 max-w-xs mx-auto">{scanResult.message}</p>
-                </div>
-              )}
-
-              {/* Dismiss / Scan Next Action */}
-              <button
-                onClick={handleDismissResult}
-                className="mt-6 bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-7 py-2.5 rounded-full border border-white/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95 shadow-md"
-              >
-                <RotateCcw size={14} /> Scan Next Pass
-              </button>
+              </div>
             </div>
           )}
         </main>
@@ -1142,6 +1160,11 @@ function CheckInScannerContent() {
                       />
                       <div className="min-w-0">
                         <p className="font-bold text-white truncate">{s.name}</p>
+                        {(s.club || s.designation) && (
+                          <p className="text-[11px] text-blue-400 font-medium truncate mt-0.5">
+                            {s.designation ? `${s.designation} • ` : ""}{s.club}
+                          </p>
+                        )}
                         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 font-mono">
                           <span>{s.code}</span>
                           <span>•</span>
