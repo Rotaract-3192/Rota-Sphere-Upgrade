@@ -166,7 +166,7 @@ export function CreateEventWizardModal({
   const [hostingClub, setHostingClub] = useState(defaultClubName || "");
   const [locationDeliveryType, setLocationDeliveryType] = useState<"IN_PERSON" | "ONLINE" | "HYBRID">("IN_PERSON");
   const [upiId, setUpiId] = useState("");
-  const [upiPayeeName, setUpiPayeeName] = useState("");
+  const [upiPayeeName, setUpiPayeeName] = useState(defaultClubName || "");
 
   // Ticket Tiers & Eligibility
   const [capacity, setCapacity] = useState(100);
@@ -256,7 +256,22 @@ export function CreateEventWizardModal({
       if (eventToEdit.country) setCountry(eventToEdit.country);
       if (eventToEdit.address) setStreetAddress(eventToEdit.address);
       if (eventToEdit.online_meeting_url) setOnlineMeetingUrl(eventToEdit.online_meeting_url);
-      if (eventToEdit.upi_id) setUpiId(eventToEdit.upi_id);
+
+      // UPI Settings
+      const loadedUpi = eventToEdit.upi_id || eventToEdit.upiId || "";
+      setUpiId(loadedUpi);
+
+      const loadedPayee =
+        eventToEdit.upi_payee_name ||
+        eventToEdit.upiPayeeName ||
+        eventToEdit.payee_name ||
+        eventToEdit.org_name ||
+        eventToEdit.organization_name ||
+        eventToEdit.organizations?.name ||
+        defaultClubName ||
+        "";
+      setUpiPayeeName(loadedPayee);
+
       if (eventToEdit.category_name) {
         setCategory(eventToEdit.category_name);
       } else if (eventToEdit.category) {
@@ -319,8 +334,17 @@ export function CreateEventWizardModal({
           ? "HYBRID"
           : "IN_PERSON"
       );
+    } else {
+      setUpiId("");
+      setUpiPayeeName(defaultClubName || "");
     }
   }, [eventToEdit, defaultClubName]);
+
+  useEffect(() => {
+    if (!eventToEdit && !upiPayeeName && defaultClubName) {
+      setUpiPayeeName(defaultClubName);
+    }
+  }, [defaultClubName, eventToEdit, upiPayeeName]);
 
   // Auto-sync overall event capacity with the sum of ticket pass tier seats
   useEffect(() => {
@@ -664,6 +688,19 @@ export function CreateEventWizardModal({
         return;
       }
     }
+    if (currentStep === 3) {
+      const isPaid = priceModel === "PAID" || ticketTiers.some((t) => Number(t.price) > 0);
+      if (isPaid) {
+        if (!upiId.trim()) {
+          setErrorMessage("Please enter an official UPI ID / VPA for receiving ticket payments");
+          return;
+        }
+        if (!upiPayeeName.trim()) {
+          setErrorMessage("Please enter the Payee Account Name matching your UPI bank account");
+          return;
+        }
+      }
+    }
     if (currentStep === 4 && locationDeliveryType !== "ONLINE" && !venueName.trim()) {
       setErrorMessage("Please enter the venue name");
       return;
@@ -758,6 +795,10 @@ export function CreateEventWizardModal({
         };
       });
 
+      const finalUpiId = upiId.trim();
+      const finalUpiPayeeName =
+        upiPayeeName.trim() || hostingClub.trim() || defaultClubName || "District 3192 Rotaract";
+
       const payload: CreateEventInput = {
         organizationId: defaultOrganizationId,
         hostingClub: hostingClub.trim() || undefined,
@@ -787,8 +828,8 @@ export function CreateEventWizardModal({
         notifyAllMembers,
         contactEmail,
         contactPhone,
-        upiId: upiId.trim(),
-        upiPayeeName: upiPayeeName.trim(),
+        upiId: finalUpiId || undefined,
+        upiPayeeName: finalUpiPayeeName,
         category,
         tags: finalTags,
         ticketTiers: formattedTicketTiers,

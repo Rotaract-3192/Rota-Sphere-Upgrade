@@ -99,11 +99,13 @@ export default async function DashboardPage(props: {
   const resolvedOrg = organization;
   const orgId = resolvedOrg?.id || "328ed943-f625-4fec-82a0-0c92dd7ec592";
 
-  // Ensure max_per_order and tags columns exist
+  // Ensure max_per_order, tags, and upi columns exist
   try {
     await executeSql(`
       ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
       ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+      ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
+      ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(255);
     `);
   } catch (_) {}
 

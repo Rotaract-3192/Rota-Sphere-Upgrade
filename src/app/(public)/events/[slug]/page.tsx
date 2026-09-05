@@ -66,12 +66,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     `Official event pass and registration for ${event.title.trim()} hosted by ${hostingClub} in District 3192.`;
 
   // Construct absolute, crawler-compatible image URL (NO data: URIs!)
-  // Scrapers like WhatsApp, Telegram, Twitterbot, and Facebook strictly require http/https URLs.
-  let ogImageUrl = `${baseUrl}/api/events/${cleanSlug}/image`;
-  if (event.cover_image_url && (event.cover_image_url.startsWith("http://") || event.cover_image_url.startsWith("https://"))) {
-    ogImageUrl = event.cover_image_url;
-  }
-  const dynamicOgImage = `${baseUrl}/events/${cleanSlug}/opengraph-image`;
+  // Scrapers like WhatsApp, Telegram, Twitterbot, and Facebook strictly require http/https URLs with extensions and dimensions.
+  const ogImageUrl = `${baseUrl}/api/events/${encodeURIComponent(cleanSlug)}/image.jpg`;
   const eventUrl = `${baseUrl}/events/${slug}`;
 
   return {
@@ -100,15 +96,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [
         {
           url: ogImageUrl,
+          secureUrl: ogImageUrl,
+          type: "image/jpeg",
           width: 1200,
           height: 630,
           alt: event.title,
-        },
-        {
-          url: dynamicOgImage,
-          width: 1200,
-          height: 630,
-          alt: `${event.title} - Official Pass Registration`,
         },
       ],
     },

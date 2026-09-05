@@ -433,8 +433,8 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.refundPolicy)},
         ${escapeSql(input.contactEmail || user.email)},
         ${escapeSql(input.contactPhone)},
-        ${escapeSql(input.upiId || "rotaractdistrict3192@okaxis")},
-        ${escapeSql(input.upiPayeeName || "District 3192 Rotaract")},
+        ${escapeSql(input.upiId?.trim() || "rotaractdistrict3192@okaxis")},
+        ${escapeSql(input.upiPayeeName?.trim() || input.hostingClub?.trim() || "District 3192 Rotaract")},
         ${input.tags && input.tags.length > 0 ? `ARRAY[${input.tags.map((t) => escapeSql(t)).join(",")}]::text[]` : `ARRAY[]::text[]`}
       )
       RETURNING id, slug;
@@ -787,9 +787,14 @@ export async function updateEventAction(
     if (input.allowNonRotaract !== undefined) updates.push(`allow_non_rotaract = ${input.allowNonRotaract ? "TRUE" : "FALSE"}`);
     if (input.googleMapsUrl !== undefined) updates.push(`google_maps_url = ${escapeSql(input.googleMapsUrl)}`);
     if (input.contactEmail !== undefined) updates.push(`contact_email = ${escapeSql(input.contactEmail)}`);
-    if (input.contactPhone !== undefined) updates.push(`contact_phone = ${escapeSql(input.contactPhone)}`);
-    if (input.upiId !== undefined) updates.push(`upi_id = ${escapeSql(input.upiId)}`);
-    if (input.upiPayeeName !== undefined) updates.push(`upi_payee_name = ${escapeSql(input.upiPayeeName)}`);
+    if (input.upiId !== undefined) {
+      const cleanUpi = input.upiId?.trim();
+      updates.push(`upi_id = ${cleanUpi ? escapeSql(cleanUpi) : "NULL"}`);
+    }
+    if (input.upiPayeeName !== undefined) {
+      const cleanPayee = input.upiPayeeName?.trim();
+      updates.push(`upi_payee_name = ${cleanPayee ? escapeSql(cleanPayee) : "NULL"}`);
+    }
 
     if (input.hostingClub || input.clubName || input.organizationId) {
       const orgId = await resolveClubOrganizationId({
@@ -822,14 +827,23 @@ export async function updateEventAction(
 
     if (updates.length > 0) {
       try {
-        await executeSql(`ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`);
+        await executeSql(`
+          ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
+          ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(255);
+          ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+        `);
       } catch (_) {}
 
-      await executeSql(`
+      const { error: updateErr } = await executeSql(`
         UPDATE saas_events
         SET ${updates.join(", ")}
         WHERE id = ${escapeSql(eventId)};
       `);
+
+      if (updateErr) {
+        logger.error("updateEventAction saas_events update error", { error: updateErr });
+        return { success: false, error: updateErr?.message || "Failed to update event" };
+      }
     }
 
     // Update Ticket Tiers if provided

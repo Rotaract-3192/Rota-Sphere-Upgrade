@@ -25,6 +25,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/events/:slug/image.jpg",
+        destination: "/api/events/:slug/image",
+      },
+      {
+        source: "/events/:slug/opengraph-image",
+        destination: "/api/events/:slug/image",
+      },
+      {
+        source: "/events/:slug/opengraph-image-:hash",
+        destination: "/api/events/:slug/image",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -126,6 +126,8 @@ export interface SaasEvent {
   refund_policy: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  upi_id?: string | null;
+  upi_payee_name?: string | null;
   social_links: Record<string, string>;
   created_at: string;
   updated_at: string;
