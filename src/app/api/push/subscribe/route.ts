@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { getCurrentUser } from "@/lib/auth/getUser";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user?.clerkId) {

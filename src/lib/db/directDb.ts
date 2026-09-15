@@ -7,19 +7,10 @@
  * No hardcoded fallbacks for secrets.
  */
 
-const HOST = process.env.DIRECT_DB_HOST || "db.rotaract3192.org";
-const BASIC_USER = process.env.DIRECT_DB_USER || "rotaract-admin";
-const BASIC_PASS = process.env.DIRECT_DB_PASS;
-
-if (!BASIC_PASS && process.env.NODE_ENV !== "test") {
-  throw new Error(
-    "[directDb] DIRECT_DB_PASS environment variable is not set. " +
-    "Set it in .env.local (never commit secrets to source code)."
-  );
-}
-
 function getAuthHeader(): string {
-  return `Basic ${Buffer.from(`${BASIC_USER}:${BASIC_PASS}`).toString("base64")}`;
+  const user = process.env.DIRECT_DB_USER || "rotaract-admin";
+  const pass = process.env.DIRECT_DB_PASS || "";
+  return `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`;
 }
 
 /**
@@ -47,8 +38,23 @@ export function escapeSqlLike(val: string | null | undefined): string {
 }
 
 export async function executeSql<T = any>(sql: string): Promise<{ data: T[] | null; error: any }> {
+  const host = process.env.DIRECT_DB_HOST || "db.rotaract3192.org";
+  const pass = process.env.DIRECT_DB_PASS;
+
+  if (!pass) {
+    if (process.env.NODE_ENV === "test") {
+      return { data: [] as T[], error: null };
+    }
+    const err = new Error(
+      "[directDb] DIRECT_DB_PASS environment variable is not set. " +
+      "Set it in .env.local or container runtime environment."
+    );
+    console.error(err.message);
+    return { data: null, error: { message: err.message } };
+  }
+
   try {
-    const res = await fetch(`https://${HOST}/api/platform/pg-meta/default/query`, {
+    const res = await fetch(`https://${host}/api/platform/pg-meta/default/query`, {
       method: "POST",
       headers: {
         Authorization: getAuthHeader(),

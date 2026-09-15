@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 
+export const dynamic = "force-dynamic";
+
 if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     process.env.VAPID_EMAIL,

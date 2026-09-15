@@ -17,6 +17,8 @@ import { supabaseAdmin } from "@/lib/db/supabaseAdmin";
 import { logger } from "@/lib/logger/logger";
 import type { UserRole } from "@/types/database";
 
+export const dynamic = "force-dynamic";
+
 interface ClerkUserEvent {
   type: string;
   data: {
