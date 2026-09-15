@@ -111,7 +111,7 @@ export function EventDashboardClient({
     tierType: "REGULAR",
     allowedAudience: "ALL",
     isBulkSlab: false,
-    bulkSlabSize: 10,
+    bulkSlabSize: 15,
     maxPerOrder: 10,
   });
 
@@ -277,6 +277,7 @@ export function EventDashboardClient({
           t.id === editingTier.id
             ? {
                 ...t,
+                id: editingTier.id,
                 name: tierForm.name,
                 description: tierForm.description,
                 price: Number(tierForm.price) || 0,
@@ -284,8 +285,10 @@ export function EventDashboardClient({
                 tierType: tierForm.isBulkSlab ? "BULK" : tierForm.tierType,
                 allowedAudience: tierForm.allowedAudience,
                 isBulkSlab: tierForm.isBulkSlab,
-                bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 10 : null,
-                maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 10 : Number(tierForm.maxPerOrder) || 10,
+                bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
+                bulk_slab_size: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
+                maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
+                max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
               }
             : t
         )
@@ -299,8 +302,10 @@ export function EventDashboardClient({
             tierType: tierForm.isBulkSlab ? "BULK" : tierForm.tierType,
             allowedAudience: tierForm.allowedAudience,
             isBulkSlab: tierForm.isBulkSlab,
-            bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 10 : null,
-            maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 10 : Number(tierForm.maxPerOrder) || 10,
+            bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
+            bulk_slab_size: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
+            maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
+            max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
           },
         ];
 
@@ -315,8 +320,8 @@ export function EventDashboardClient({
         tierType: t.tier_type || t.tierType || "REGULAR",
         allowedAudience: t.allowed_audience || t.allowedAudience || "ALL",
         isBulkSlab: Boolean(t.is_bulk_slab || t.isBulkSlab),
-        bulkSlabSize: t.bulk_slab_size || t.bulkSlabSize,
-        maxPerOrder: t.max_per_order || t.maxPerOrder || 10,
+        bulkSlabSize: t.bulkSlabSize !== undefined ? t.bulkSlabSize : (t.bulk_slab_size != null ? Number(t.bulk_slab_size) : null),
+        maxPerOrder: t.maxPerOrder || t.max_per_order || 10,
       })),
     });
     setActionLoadingId(null);
@@ -1147,6 +1152,7 @@ export function EventDashboardClient({
                         type="button"
                         onClick={() => {
                           setEditingTier(t);
+                          const isBulk = Boolean(t.is_bulk_slab || t.tier_type === "BULK");
                           setTierForm({
                             name: t.name || "",
                             description: t.description || "",
@@ -1154,8 +1160,12 @@ export function EventDashboardClient({
                             totalCapacity: Number(t.total_capacity) || 100,
                             tierType: t.tier_type || "REGULAR",
                             allowedAudience: t.allowed_audience || "ALL",
-                            isBulkSlab: Boolean(t.is_bulk_slab),
-                            bulkSlabSize: t.bulk_slab_size != null ? Number(t.bulk_slab_size) : 10,
+                            isBulkSlab: isBulk,
+                            bulkSlabSize: t.bulk_slab_size != null 
+                              ? Number(t.bulk_slab_size) 
+                              : (t.bulkSlabSize != null 
+                                  ? Number(t.bulkSlabSize) 
+                                  : (t.max_per_order && Number(t.max_per_order) > 1 ? Number(t.max_per_order) : 15)),
                             maxPerOrder: t.max_per_order || 10,
                           });
                           setTierModalOpen(true);
@@ -1489,8 +1499,25 @@ export function EventDashboardClient({
                     <input
                       type="number"
                       min="2"
-                      value={tierForm.bulkSlabSize}
-                      onChange={(e) => setTierForm({ ...tierForm, bulkSlabSize: Number(e.target.value) || 10 })}
+                      max="200"
+                      value={tierForm.bulkSlabSize ?? 15}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "") {
+                          setTierForm({ ...tierForm, bulkSlabSize: "" as any });
+                          return;
+                        }
+                        const val = parseInt(raw, 10);
+                        setTierForm({ ...tierForm, bulkSlabSize: isNaN(val) ? 15 : val });
+                      }}
+                      onBlur={() => {
+                        const val = Number(tierForm.bulkSlabSize);
+                        if (!val || isNaN(val) || val < 2) {
+                          setTierForm({ ...tierForm, bulkSlabSize: 15 });
+                        } else if (val > 200) {
+                          setTierForm({ ...tierForm, bulkSlabSize: 200 });
+                        }
+                      }}
                       className="w-full bg-white dark:bg-gray-800 border border-purple-300 dark:border-purple-700 rounded-xl px-3 py-2 text-xs"
                     />
                   </div>

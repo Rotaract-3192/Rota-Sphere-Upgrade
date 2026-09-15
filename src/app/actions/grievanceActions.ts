@@ -58,6 +58,7 @@ async function ensureGrievanceTable(): Promise<void> {
       ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
       ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
       ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+      ALTER TABLE privacy_complaints DROP CONSTRAINT IF EXISTS privacy_complaints_category_check;
     `);
   } catch (e) {
     console.warn("Grievance table check note:", e);
@@ -150,11 +151,13 @@ export async function submitGrievanceAction(input: SubmitGrievanceInput): Promis
       });
     } catch {}
 
-    revalidatePath("/admin");
-    revalidatePath("/disputes");
-    revalidatePath("/dispute-resolution");
-    revalidatePath("/privacy-center");
-    revalidatePath("/contact");
+    try {
+      revalidatePath("/admin");
+      revalidatePath("/disputes");
+      revalidatePath("/dispute-resolution");
+      revalidatePath("/privacy-center");
+      revalidatePath("/contact");
+    } catch {}
 
     return {
       success: true,

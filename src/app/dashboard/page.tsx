@@ -99,10 +99,12 @@ export default async function DashboardPage(props: {
   const resolvedOrg = organization;
   const orgId = resolvedOrg?.id || "328ed943-f625-4fec-82a0-0c92dd7ec592";
 
-  // Ensure max_per_order, tags, and upi columns exist
+  // Ensure max_per_order, tags, upi, and bulk slab columns exist
   try {
     await executeSql(`
       ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
       ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
       ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_id VARCHAR(255);
       ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(255);
@@ -130,7 +132,9 @@ export default async function DashboardPage(props: {
             'allowed_audience', t.allowed_audience,
             'is_active', t.is_active,
             'is_visible', t.is_visible,
-            'max_per_order', COALESCE(t.max_per_order, 10)
+            'max_per_order', COALESCE(t.max_per_order, 10),
+            'is_bulk_slab', COALESCE(t.is_bulk_slab, false),
+            'bulk_slab_size', t.bulk_slab_size
           )
         ) FILTER (WHERE t.id IS NOT NULL),
         '[]'

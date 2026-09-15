@@ -141,7 +141,8 @@ export async function ServerEventGrid(props: EventGridProps) {
               'sales_start', t.sales_start,
               'sales_end', t.sales_end,
               'is_active', t.is_active,
-              'is_bulk_slab', t.is_bulk_slab
+              'is_bulk_slab', COALESCE(t.is_bulk_slab, false),
+              'bulk_slab_size', t.bulk_slab_size
             )
           ) FILTER (WHERE t.id IS NOT NULL),
           '[]'

@@ -112,6 +112,10 @@ ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address text;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_agent text;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}';
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE audit_logs DROP CONSTRAINT IF EXISTS fk_audit_logs_actor;
+ALTER TABLE audit_logs ALTER COLUMN actor_id TYPE text;
+ALTER TABLE audit_logs ALTER COLUMN table_name DROP NOT NULL;
+ALTER TABLE audit_logs ALTER COLUMN record_id DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
@@ -206,6 +210,7 @@ ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS resolution text;
 ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
 ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 ALTER TABLE privacy_complaints ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE privacy_complaints DROP CONSTRAINT IF EXISTS privacy_complaints_category_check;
 
 CREATE INDEX IF NOT EXISTS idx_privacy_complaints_status ON privacy_complaints(status);
 CREATE INDEX IF NOT EXISTS idx_privacy_complaints_user ON privacy_complaints(user_email);

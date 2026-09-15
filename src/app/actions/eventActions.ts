@@ -469,7 +469,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
-        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null ? Number(tier.bulkSlabSize) : 15) : null;
+        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
         const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
 
@@ -513,7 +513,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             TRUE,
             TRUE,
             ${isBulk ? "TRUE" : "FALSE"},
-            ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"}
+            ${bulkSlabSize != null ? Number(bulkSlabSize) : "NULL"}
           )
           RETURNING id;
         `;
@@ -710,7 +710,9 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             allowed_audience,
             benefits,
             is_active,
-            is_visible
+            is_visible,
+            is_bulk_slab,
+            bulk_slab_size
           ) VALUES (
             ${escapeSql(newEventId)},
             ${escapeSql(t.name)},
@@ -727,7 +729,9 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             ${escapeSql(t.allowed_audience || "ALL")},
             '${benefitsJson}'::jsonb,
             TRUE,
-            TRUE
+            TRUE,
+            ${Boolean(t.is_bulk_slab || t.tier_type === "BULK") ? "TRUE" : "FALSE"},
+            ${t.bulk_slab_size != null ? Number(t.bulk_slab_size) : "NULL"}
           );
         `);
       }
@@ -873,6 +877,8 @@ export async function updateEventAction(
           ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_end DROP NOT NULL;
           ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_start DROP NOT NULL;
           ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
         `);
       } catch (_) {}
 
@@ -894,9 +900,7 @@ export async function updateEventAction(
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
-        // Bug fix: Use explicit null/undefined check so a saved value of 5 doesn't get
-        // overridden by the default. || 15 would coerce 0 to 15 — use nullish coalescing instead.
-        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null ? Number(tier.bulkSlabSize) : 15) : null;
+        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
         const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
 
@@ -924,7 +928,7 @@ export async function updateEventAction(
               is_active = TRUE,
               is_visible = TRUE,
               is_bulk_slab = ${isBulk ? "TRUE" : "FALSE"},
-              bulk_slab_size = ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"},
+              bulk_slab_size = ${bulkSlabSize != null ? Number(bulkSlabSize) : "NULL"},
               updated_at = NOW()
             WHERE id = ${escapeSql(match.id)};
           `);
@@ -976,7 +980,7 @@ export async function updateEventAction(
               TRUE,
               TRUE,
               ${isBulk ? "TRUE" : "FALSE"},
-              ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"}
+              ${bulkSlabSize != null ? Number(bulkSlabSize) : "NULL"}
             )
             RETURNING id;
           `);

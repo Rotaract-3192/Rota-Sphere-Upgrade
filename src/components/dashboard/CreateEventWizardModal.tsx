@@ -320,9 +320,14 @@ export function CreateEventWizardModal({
               salesStartTime: t.sales_start ? formatTimeStringToInput(t.sales_start, tz) : "09:00",
               salesEndDate: t.sales_end ? formatDateStringToInput(t.sales_end, tz) : "",
               salesEndTime: t.sales_end ? formatTimeStringToInput(t.sales_end, tz) : "23:59",
-              maxPerOrder: t.max_per_order ? Number(t.max_per_order) : 10,
-              isBulkSlab: Boolean(t.is_bulk_slab || t.tier_type === "BULK"),
-              bulkSlabSize: t.bulk_slab_size != null ? Number(t.bulk_slab_size) : 15,
+              isBulkSlab: Boolean(t.is_bulk_slab || t.isBulkSlab || t.tier_type === "BULK" || t.tierType === "BULK"),
+              bulkSlabSize: t.bulk_slab_size != null
+                ? Number(t.bulk_slab_size)
+                : (t.bulkSlabSize != null
+                    ? Number(t.bulkSlabSize)
+                    : (Boolean(t.is_bulk_slab || t.tier_type === "BULK") && t.max_per_order && Number(t.max_per_order) > 1
+                        ? Number(t.max_per_order)
+                        : 15)),
             };
           })
         );
@@ -784,7 +789,8 @@ export function CreateEventWizardModal({
         }
 
         const isBulk = Boolean(t.isBulkSlab || t.tierType === "BULK");
-        const bulkSlabSize = isBulk ? (Number(t.bulkSlabSize) || 15) : null;
+        const parsedBulkSlab = Number(t.bulkSlabSize);
+        const bulkSlabSize = isBulk ? (!isNaN(parsedBulkSlab) && parsedBulkSlab >= 2 ? parsedBulkSlab : 15) : null;
 
         return {
           id: t.id,
@@ -1818,10 +1824,23 @@ export function CreateEventWizardModal({
                                   type="number"
                                   min={2}
                                   max={200}
-                                  value={tier.bulkSlabSize ?? 15}
+                                  value={tier.bulkSlabSize !== undefined ? tier.bulkSlabSize : 15}
                                   onChange={(e) => {
-                                    const val = parseInt(e.target.value) || 2;
-                                    updateTierField(idx, "bulkSlabSize", val);
+                                    const raw = e.target.value;
+                                    if (raw === "") {
+                                      updateTierField(idx, "bulkSlabSize", "");
+                                      return;
+                                    }
+                                    const parsed = parseInt(raw, 10);
+                                    updateTierField(idx, "bulkSlabSize", isNaN(parsed) ? "" : parsed);
+                                  }}
+                                  onBlur={() => {
+                                    const current = Number(tier.bulkSlabSize);
+                                    if (!current || isNaN(current) || current < 2) {
+                                      updateTierField(idx, "bulkSlabSize", 15);
+                                    } else if (current > 200) {
+                                      updateTierField(idx, "bulkSlabSize", 200);
+                                    }
                                   }}
                                   className="w-20 bg-white dark:bg-gray-900 border border-indigo-300 dark:border-indigo-700 rounded-lg px-2.5 py-1 text-xs font-bold text-indigo-900 dark:text-indigo-200 outline-none focus:ring-2 focus:ring-indigo-400 text-center"
                                 />
@@ -1830,9 +1849,9 @@ export function CreateEventWizardModal({
                               <span className="text-xs text-indigo-900 dark:text-indigo-200 font-medium">
                                 Total per Group Pass:{" "}
                                 <span className="font-extrabold text-indigo-950 dark:text-white">
-                                  ₹{((Number(tier.price) || 0) * (Number(tier.bulkSlabSize) || 15)).toLocaleString("en-IN")}
+                                  ₹{((Number(tier.price) || 0) * (Number(tier.bulkSlabSize) > 0 ? Number(tier.bulkSlabSize) : 15)).toLocaleString("en-IN")}
                                 </span>{" "}
-                                <span className="text-[11px] text-indigo-700 dark:text-indigo-300">(₹{Number(tier.price) || 0} × {Number(tier.bulkSlabSize) || 15} delegates)</span>
+                                <span className="text-[11px] text-indigo-700 dark:text-indigo-300">(₹{Number(tier.price) || 0} × {Number(tier.bulkSlabSize) > 0 ? Number(tier.bulkSlabSize) : 15} delegates)</span>
                               </span>
                             </div>
                           )}

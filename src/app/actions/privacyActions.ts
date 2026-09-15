@@ -84,8 +84,16 @@ export async function submitPrivacyRequestAction(input: {
       RETURNING request_number;
     `);
 
-    const requestNumber = data?.[0]?.request_number;
-    await auditPrivacyRequest(user.clerkId, user.email!, input.requestType, requestNumber);
+    const generatedReqNumber = `PR-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const requestNumber = data?.[0]?.request_number || generatedReqNumber;
+    try {
+      await auditPrivacyRequest(user.clerkId, user.email!, input.requestType, requestNumber);
+    } catch {}
+
+    try {
+      revalidatePath("/admin");
+      revalidatePath("/privacy-center");
+    } catch {}
 
     return { success: true, requestNumber };
   } catch (err: unknown) {
@@ -181,8 +189,10 @@ export async function submitPrivacyComplaintAction(input: {
       });
     } catch {}
 
-    revalidatePath("/admin");
-    revalidatePath("/privacy-center");
+    try {
+      revalidatePath("/admin");
+      revalidatePath("/privacy-center");
+    } catch {}
 
     return { success: true, complaintNumber };
   } catch (err: unknown) {
