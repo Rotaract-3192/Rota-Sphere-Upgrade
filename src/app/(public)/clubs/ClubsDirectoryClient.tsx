@@ -136,21 +136,13 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
           </button>
         </div>
       ) : (
-        <motion.div 
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {filteredClubs.map((club) => {
             const isInstitution = club.club_type?.toLowerCase().includes("institution");
             return (
-              <motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.2 }}
+              <div
                 key={club.id || club.name}
-                className="bg-white dark:bg-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between group active:scale-[0.99]"
+                className="bg-white dark:bg-[#0c1322] border border-gray-200/90 dark:border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-xl hover:border-[#0758fc]/40 dark:hover:border-[#0758fc]/40 transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between group"
               >
                 <div className="space-y-4">
                   {/* Zone and Type Badges */}
@@ -165,30 +157,30 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
 
                   {/* Club Name */}
                   <div>
-                    <h3 className="font-extrabold text-base sm:text-lg text-gray-900 leading-snug group-hover:text-[#0758fc] transition-colors">
+                    <h3 className="font-extrabold text-base sm:text-lg text-gray-900 dark:text-white leading-snug group-hover:text-[#0758fc] transition-colors">
                       {club.name}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
                       <MapPin size={13} className="text-gray-400 shrink-0" />
-                      <span>District 3192 · {club.partner_club ? `Sponsored by Rotary ${club.partner_club}` : "Rotaract District 3192"}</span>
+                      <span className="truncate">District 3192 · {club.partner_club ? `Sponsored by Rotary ${club.partner_club}` : "Rotaract District 3192"}</span>
                     </div>
                   </div>
 
                   {/* Details Strip */}
-                  <div className="pt-2 space-y-1.5 text-xs text-gray-600 border-t border-gray-100">
+                  <div className="pt-2 space-y-1.5 text-xs text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-800">
                     {club.partner_club && (
-                      <p className="text-[11px] text-gray-500">
-                        <span className="font-bold text-gray-700">Partner Rotary:</span> {club.partner_club}
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        <span className="font-bold text-gray-700 dark:text-gray-300">Partner Rotary:</span> {club.partner_club}
                       </p>
                     )}
                     {club.president_name && (
-                      <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
                         <UserCheck size={12} className="text-gray-400" />
-                        <span className="font-bold text-gray-700">President:</span> {club.president_name}
+                        <span className="font-bold text-gray-700 dark:text-gray-300">President:</span> {club.president_name}
                       </p>
                     )}
                     {club.contact_email && (
-                      <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1 truncate">
                         <Mail size={12} className="text-gray-400 shrink-0" />
                         <a href={`mailto:${club.contact_email}`} className="text-[#0758fc] hover:underline truncate">
                           {club.contact_email}
@@ -199,8 +191,8 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                  <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                     <Calendar size={14} className="text-gray-400" />
                     <span>{club.event_count || 0} Events</span>
                   </span>
@@ -212,10 +204,10 @@ export function ClubsDirectoryClient({ initialClubs }: ClubsDirectoryClientProps
                     View Events <ArrowRight size={13} />
                   </Link>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
 
       {/* ── Organizer Bottom Callout ── */}

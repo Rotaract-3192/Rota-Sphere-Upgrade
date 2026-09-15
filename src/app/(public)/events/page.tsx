@@ -81,6 +81,8 @@ export default async function EventsPage({ searchParams }: PageProps) {
       o.name as organization_name,
       o.slug as organization_slug,
       o.zone as organization_zone,
+      cat.name as category_name,
+      cat.slug as category_slug,
       COALESCE(
         json_agg(
           json_build_object(
@@ -92,7 +94,9 @@ export default async function EventsPage({ searchParams }: PageProps) {
             'reserved_count', t.reserved_count,
             'sales_start', t.sales_start,
             'sales_end', t.sales_end,
-            'is_active', t.is_active
+            'is_active', t.is_active,
+            'is_bulk_slab', t.is_bulk_slab,
+            'bulk_slab_size', t.bulk_slab_size
           )
         ) FILTER (WHERE t.id IS NOT NULL),
         '[]'
@@ -135,7 +139,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
     )`;
   }
 
-  sql += ` GROUP BY e.id, o.name, o.slug, o.zone ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC;`;
+  sql += ` GROUP BY e.id, o.name, o.slug, o.zone, cat.name, cat.slug ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC;`;
 
   const { data: events } = await executeSql(sql);
 
@@ -149,7 +153,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
   `);
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-20">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-20 transition-colors">
       {/* ── HERO DISCOVERY BANNER ────────────────────────────────────── */}
       <section className="bg-gray-900 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-6 relative z-10">

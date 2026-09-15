@@ -989,7 +989,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       {qrModalTicket && (
         <div
           onClick={() => setQrModalTicket(null)}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pb-20 sm:pb-4 animate-in fade-in-50"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1057,7 +1057,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       {transferModalOpen && selectedTicket && (
         <div
           onClick={() => setTransferModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pb-20 sm:pb-4 animate-in fade-in-50"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1159,7 +1159,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       {refundModalOpen && selectedTicket && (
         <div
           onClick={() => setRefundModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pb-20 sm:pb-4 animate-in fade-in-50"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1241,7 +1241,7 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
       {utrModalOpen && utrTicket && (
         <div
           onClick={() => setUtrModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-50"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pb-20 sm:pb-4 animate-in fade-in-50"
         >
           <div
             onClick={(e) => e.stopPropagation()}

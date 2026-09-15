@@ -19,22 +19,23 @@ export function Skeleton({ className = "" }: { className?: string }) {
  * 1:1 Pixel-Perfect match with `src/components/events/EventCard.tsx`
  * (aspect-[4/3] rounded-2xl photo container, top-left badge, top-right heart, bottom price/date pill, title line, and location & CTA row)
  */
-export function EventCardSkeleton({ variant = "light" }: { variant?: "dark" | "light" }) {
-  const isDark = variant === "dark";
-
+export function EventCardSkeleton() {
   return (
-    <article className="group flex flex-col gap-3 relative animate-fade-in" aria-busy="true">
-      {/* Photo Aspect Ratio Container */}
-      <div className={`relative w-full aspect-[4/3] rounded-2xl overflow-hidden border ${
-        isDark ? "bg-gray-900 border-white/10" : "bg-gray-100 dark:bg-gray-900 border-gray-200/80 dark:border-white/10"
-      } shadow-xs`}>
-        {/* Shimmer Image Placeholder */}
+    <article className="group relative flex flex-col justify-between h-full rounded-3xl bg-white dark:bg-[#0c1322] border border-gray-200/90 dark:border-gray-800/90 shadow-sm overflow-hidden animate-fade-in" aria-busy="true">
+      {/* Poster Aspect Ratio Container */}
+      <div className="relative w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-900">
         <Skeleton className="w-full h-full rounded-none" />
 
-        {/* Top-left Verified Badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-          <Skeleton className="w-3 h-3 rounded-full" />
-          <Skeleton className="w-12 h-2.5 rounded-full" />
+        {/* Top-left Badges */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <div className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 flex items-center gap-1">
+            <Skeleton className="w-3 h-3 rounded-full" />
+            <Skeleton className="w-14 h-2.5 rounded-full" />
+          </div>
+          <div className="bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 flex items-center gap-1">
+            <Skeleton className="w-2 h-2 rounded-full" />
+            <Skeleton className="w-10 h-2 rounded-full" />
+          </div>
         </div>
 
         {/* Top-right Heart Button */}
@@ -44,26 +45,40 @@ export function EventCardSkeleton({ variant = "light" }: { variant?: "dark" | "l
 
         {/* Bottom Floating Price & Date Tag */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-          <Skeleton className="w-16 h-6 rounded-lg" />
-          <Skeleton className="w-24 h-5 rounded-md" />
+          <Skeleton className="w-20 h-6 rounded-lg" />
+          <Skeleton className="w-24 h-5 rounded-lg" />
         </div>
       </div>
 
-      {/* Title & Metadata below photo */}
-      <div className="flex flex-col gap-2 focus:outline-hidden">
-        {/* Title line */}
+      {/* Body & Metadata */}
+      <div className="p-4 sm:p-5 flex flex-col flex-1 gap-2.5">
+        {/* Organizer */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="w-32 h-3.5 rounded-md" />
+        </div>
+
+        {/* Title */}
         <Skeleton className="w-4/5 h-5 rounded-md" />
 
-        {/* Location & CTA row */}
-        <div className="flex items-center justify-between pt-0.5">
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="w-3.5 h-3.5 rounded-full" />
-            <Skeleton className="w-24 h-3.5 rounded-md" />
+        {/* Summary snippet */}
+        <div className="space-y-1.5 pt-0.5">
+          <Skeleton className="w-full h-3.5 rounded-md" />
+          <Skeleton className="w-3/4 h-3.5 rounded-md" />
+        </div>
+
+        {/* Venue & Time */}
+        <div className="space-y-1.5 pt-1">
+          <Skeleton className="w-2/3 h-3.5 rounded-md" />
+          <Skeleton className="w-1/2 h-3.5 rounded-md" />
+        </div>
+
+        {/* Footer with CTA */}
+        <div className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
+          <div className="space-y-1">
+            <Skeleton className="w-12 h-2.5 rounded-sm" />
+            <Skeleton className="w-16 h-5 rounded-md" />
           </div>
-          <div className="flex items-center gap-1">
-            <Skeleton className="w-14 h-3.5 rounded-md" />
-            <Skeleton className="w-3 h-3 rounded-full" />
-          </div>
+          <Skeleton className="w-24 h-9 rounded-xl" />
         </div>
       </div>
     </article>

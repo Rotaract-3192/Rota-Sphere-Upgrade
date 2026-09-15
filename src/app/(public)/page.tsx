@@ -15,7 +15,7 @@ import { CategoryStrip } from "@/components/events/CategoryStrip";
 import { ContactForm } from "@/components/events/ContactForm";
 import {
   Sparkles, Calendar, MapPin, Award, ArrowRight,
-  Phone, Mail, ShieldCheck, Ticket, Users, QrCode,
+  Phone, Mail, Ticket, Users, QrCode, Search, Zap, CheckCircle2,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -111,9 +111,36 @@ async function getMapEvents() {
   }
 }
 
+async function getFeaturedHeroEvent() {
+  try {
+    const { data } = await executeSql(`
+      SELECT e.id, e.title, e.slug, e.summary, e.description, e.cover_image_url, e.thumbnail_url, e.venue_name, e.city, e.start_date, e.event_type,
+        o.name as organization_name,
+        cat.name as category_name,
+        COALESCE(
+          (SELECT MIN(price) FROM saas_ticket_tiers WHERE event_id = e.id AND is_active = true),
+          0
+        ) as min_price,
+        EXISTS (
+          SELECT 1 FROM saas_ticket_tiers WHERE event_id = e.id AND (is_bulk_slab = true OR name ILIKE '%bulk%')
+        ) as has_bulk_slab
+      FROM saas_events e
+      LEFT JOIN organizations o ON e.organization_id = o.id
+      LEFT JOIN event_categories cat ON e.category_id = cat.id
+      WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+      ORDER BY (CASE WHEN e.slug = 'vibe-rotaract-freshers-party' THEN 0 WHEN e.slug = 'project-jatayu-30' THEN 1 ELSE 2 END), e.start_date DESC
+      LIMIT 1;
+    `);
+    return data && data[0] ? data[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
   const stats = await getPlatformStats();
   const mapEvents = await getMapEvents();
+  const heroEvent = await getFeaturedHeroEvent();
 
   const statItems = [
     { icon: Users, value: stats.clubs > 0 ? `${stats.clubs}` : "—", label: "Registered Clubs" },
@@ -126,59 +153,213 @@ export default async function HomePage() {
     <div className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen font-sans transition-colors">
 
       {/* ── 1. HERO SECTION ─────────────────────────────────────────────── */}
-      <section className="relative bg-gray-900 text-white overflow-hidden">
-        {/* Background image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"
-            alt="District 3192 Events"
-            fill
-            priority
-            className="object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/60" />
-        </div>
+      <section className="relative bg-[#060b17] text-white overflow-hidden py-14 sm:py-20 lg:py-24 border-b border-gray-800/80">
+        {/* Radiant Ambient Mesh Glows */}
+        <div className="absolute -top-40 -right-40 w-96 h-96 sm:w-[580px] sm:h-[580px] bg-gradient-to-br from-[#0758fc]/30 via-indigo-600/20 to-purple-600/10 rounded-full blur-[130px] pointer-events-none" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 sm:w-[520px] sm:h-[520px] bg-gradient-to-tr from-blue-600/20 via-sky-500/15 to-transparent rounded-full blur-[110px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-          <div className="max-w-2xl space-y-6">
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-white">
-              Experience <span className="text-[#0758fc]">Starts Here.</span>
-            </h1>
+        {/* Subtle dot matrix texture overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-60" />
 
-            <p className="text-base sm:text-lg text-gray-300 leading-relaxed">
-              From flagship conventions to leadership sessions, fellowships and unforgettable experiences — find it all in one place.
-            </p>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            
+            {/* ── LEFT: Headline, Search & Direct Discovery ── */}
+            <div className="lg:col-span-7 space-y-6 text-left">
+              {/* Beacon badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-xs font-extrabold text-blue-400 backdrop-blur-md shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0758fc]" />
+                </span>
+                <span>District 3192 Official Pass Engine</span>
+                <span className="text-gray-500">•</span>
+                <span className="text-gray-300 font-medium">85 Chartered Clubs</span>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                href="/events"
-                className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-sm px-7 py-3.5 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/30 hover:scale-105"
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-6xl lg:text-[62px] font-black tracking-tight leading-[1.08] text-white">
+                Experience <br className="hidden sm:inline" />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-200 to-sky-300">
+                  Starts Here.
+                </span>
+              </h1>
+
+              {/* Subheading */}
+              <p className="text-sm sm:text-base lg:text-lg text-gray-300/95 leading-relaxed max-w-xl font-normal">
+                Discover and secure official delegate passes for flagship conferences, youth summits, cultural fests, and sports tournaments across District 3192.
+              </p>
+
+              {/* Instant Quick Search Discovery Form */}
+              <form
+                action="/events"
+                method="GET"
+                className="max-w-xl flex items-center bg-white/10 hover:bg-white/[0.13] focus-within:bg-white/[0.16] border border-white/20 focus-within:border-[#0758fc] rounded-2xl p-1.5 transition-all shadow-2xl backdrop-blur-md"
               >
-                Explore Flagship Events
-              </Link>
-              <Link
-                href="/clubs"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm px-7 py-3.5 rounded-2xl transition-all backdrop-blur-sm"
-              >
-                Discover Clubs
-              </Link>
+                <Search size={18} className="text-gray-400 ml-3 shrink-0" />
+                <input
+                  type="text"
+                  name="q"
+                  placeholder="Search events, fests, or host clubs..."
+                  className="w-full bg-transparent px-3 py-2.5 text-xs sm:text-sm text-white placeholder-gray-400 outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md shrink-0 cursor-pointer active:scale-95"
+                >
+                  Find Passes
+                </button>
+              </form>
+
+              {/* Popular Category Shortcuts */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-gray-400">Trending:</span>
+                <Link
+                  href="/events"
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 transition-colors"
+                >
+                  🌴 Freshers &amp; Socials
+                </Link>
+                <Link
+                  href="/events"
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 transition-colors"
+                >
+                  🦅 Treks &amp; Eco
+                </Link>
+                <Link
+                  href="/clubs"
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 transition-colors"
+                >
+                  🏛️ 85 Clubs Directory
+                </Link>
+              </div>
+
+              {/* Trust Bar (Clean - zero artificial badges) */}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-3 border-t border-white/10 text-xs text-gray-400">
+                <div className="flex items-center gap-1.5">
+                  <Zap size={14} className="text-[#60a5fa]" />
+                  <span>Instant QR Gate Pass</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <QrCode size={14} className="text-emerald-400" />
+                  <span>100% Direct UPI &amp; Verification</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Ticket size={14} className="text-amber-400" />
+                  <span>Group &amp; Club Bulk Slabs</span>
+                </div>
+              </div>
             </div>
 
-            {/* Trust indicators */}
-            <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/10">
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <ShieldCheck size={14} className="text-emerald-400" />
-                <span>Verified by District 3192</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <QrCode size={14} className="text-[#0758fc]" />
-                <span>Instant QR Gate Pass</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <Ticket size={14} className="text-amber-400" />
-                <span>UPI Payments Accepted</span>
-              </div>
+            {/* ── RIGHT: Hero Featured Event Showcase Pass ── */}
+            <div className="lg:col-span-5 flex justify-center lg:justify-end">
+              {heroEvent ? (
+                <div className="relative w-full max-w-md group">
+                  {/* Outer Radiant Glow */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 rounded-3xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
+
+                  {/* Card Container */}
+                  <div className="relative bg-[#0c1427]/95 border border-white/15 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl flex flex-col">
+                    
+                    {/* Poster */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-900">
+                      {heroEvent.cover_image_url || heroEvent.thumbnail_url ? (
+                        <Image
+                          src={heroEvent.cover_image_url || heroEvent.thumbnail_url}
+                          alt={heroEvent.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 420px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-sm font-black text-gray-500">
+                          RotaSphere 3192
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/30 to-black/40" />
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                        <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-white border border-white/20 shadow-xs">
+                          <Sparkles size={11} className="text-amber-400" />
+                          Featured Flagship
+                        </span>
+                        <span className="flex items-center gap-1 bg-emerald-500/90 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs">
+                          ● Open for Booking
+                        </span>
+                      </div>
+
+                      {/* Bottom Floating Price & Date */}
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white z-10">
+                        <span className="text-xs font-mono font-extrabold bg-[#0758fc]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-blue-400/40 shadow-sm">
+                          {Number(heroEvent.min_price) === 0 ? "Free Entry" : `From ₹${Number(heroEvent.min_price).toLocaleString("en-IN")}`}
+                        </span>
+                        <span className="text-[11px] font-bold text-gray-200 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/15">
+                          <Calendar size={12} className="text-amber-400" />
+                          {new Date(heroEvent.start_date).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            timeZone: "Asia/Kolkata",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content Details */}
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0758fc] shrink-0" />
+                        <span className="truncate">{heroEvent.organization_name || "Rotaract District 3192"}</span>
+                      </div>
+
+                      <h3 className="text-lg font-black text-white leading-snug group-hover:text-blue-400 transition-colors line-clamp-1">
+                        {heroEvent.title}
+                      </h3>
+
+                      <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
+                        {heroEvent.summary || "Join fellow Rotaractors and guests for this featured flagship district event."}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-1 text-xs text-gray-400">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <MapPin size={13} className="text-[#0758fc] shrink-0" />
+                          <span className="truncate font-medium">{heroEvent.venue_name || heroEvent.city || "Bengaluru"}</span>
+                        </div>
+                        {heroEvent.has_bulk_slab && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-300 bg-purple-950/60 border border-purple-800 px-2 py-0.5 rounded-md shrink-0">
+                            <Users size={10} /> Bulk Deals
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action Button */}
+                      <Link
+                        href={`/events/${heroEvent.slug}`}
+                        className="w-full mt-2 py-3 rounded-xl bg-[#0758fc] hover:bg-[#054fe0] active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 transition-all cursor-pointer"
+                      >
+                        <span>Book Delegate Pass</span>
+                        <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative w-full max-w-md bg-[#0c1427]/90 border border-white/15 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
+                  <Ticket size={44} className="mx-auto text-[#0758fc]" />
+                  <h3 className="text-lg font-black text-white">Explore Upcoming Passes</h3>
+                  <p className="text-xs text-gray-400">Browse official conferences, summits, and workshops.</p>
+                  <Link
+                    href="/events"
+                    className="inline-block px-6 py-3 rounded-xl bg-[#0758fc] text-white font-extrabold text-xs"
+                  >
+                    View All Events
+                  </Link>
+                </div>
+              )}
             </div>
+
           </div>
         </div>
       </section>

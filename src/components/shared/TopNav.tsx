@@ -107,7 +107,7 @@ export function TopNav() {
                   <motion.div
                     layoutId="activeNavIndicator"
                     className="absolute bottom-0 inset-x-3 h-0.5 bg-[#0758fc] rounded-full"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                   />
                 )}
               </Link>

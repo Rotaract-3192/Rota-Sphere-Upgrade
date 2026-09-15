@@ -450,15 +450,20 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
     // 3. Atomically lock and reserve inventory for each requested tier
     for (const [tierId, count] of tierEntries) {
       const cleanTierId = escapeSql(tierId);
+      const { data: tierData } = await executeSql(`
+        SELECT is_bulk_slab, bulk_slab_size FROM saas_ticket_tiers WHERE id = ${cleanTierId} LIMIT 1;
+      `);
+      const slabSize = (tierData?.[0]?.is_bulk_slab && tierData?.[0]?.bulk_slab_size) ? Number(tierData[0].bulk_slab_size) : 1;
+      const effectiveSeats = count * slabSize;
 
       // Concurrency-safe atomic check & increment of reserved_count:
       const { data: updateRes, error: updateErr } = await executeSql(`
         UPDATE saas_ticket_tiers
-        SET reserved_count = reserved_count + ${count}
+        SET reserved_count = reserved_count + ${effectiveSeats}
         WHERE id = ${cleanTierId}
           AND event_id = ${cleanEventId}
           AND is_active = true
-          AND (total_capacity <= 0 OR (sold_count + reserved_count + ${count}) <= total_capacity)
+          AND (total_capacity <= 0 OR (sold_count + reserved_count + ${effectiveSeats}) <= total_capacity)
         RETURNING id, name, total_capacity, sold_count, reserved_count;
       `);
 
@@ -495,7 +500,7 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
         };
       }
 
-      reservedTierRecords.push({ tierId, count });
+      reservedTierRecords.push({ tierId, count: effectiveSeats });
     }
 
     // 4. Insert hold records into ticket_inventory_holds
@@ -575,6 +580,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const { data: tiers } = await executeSql(`
       SELECT 
         id, name, price, total_capacity, sold_count, reserved_count, is_active, allow_non_rotaract, allowed_audience, sales_start, sales_end, max_per_order,
+        is_bulk_slab, bulk_slab_size,
         NOW() as server_now,
         (sales_start IS NOT NULL AND NOW() < sales_start) as is_too_early,
         (sales_end IS NOT NULL AND NOW() > sales_end) as is_too_late
@@ -610,6 +616,10 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     // Validate that Rotaract and Rotary attendees have specified their Club Name
     for (let i = 0; i < input.attendees.length; i++) {
       const att = input.attendees[i];
+      const tier = tierMap.get(att.ticketTierId);
+      if (tier?.is_bulk_slab && !att.clubName?.trim()) {
+        att.clubName = input.attendees[0]?.clubName?.trim() || "Rotaract District 3192";
+      }
       const memberType = att.memberType || "Rotaract";
       if (memberType === "Rotaract") {
         const club = att.clubName?.trim();
@@ -643,15 +653,17 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
         return { success: false, error: "One or more selected ticket tiers are no longer active" };
       }
 
-      // Single-ticket / per-order quantity restriction check
-      const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
-      if (requestedCount > maxAllowed) {
+      // Single-ticket / per-order quantity restriction check (accounting for bulk slabs)
+      const slabSize = tier.is_bulk_slab && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
+      const orderQuantity = tier.is_bulk_slab ? Math.ceil(requestedCount / slabSize) : requestedCount;
+      const maxAllowed = tier.is_bulk_slab ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 10);
+      if (orderQuantity > maxAllowed) {
         return {
           success: false,
           error:
             maxAllowed === 1
-              ? `You can only purchase 1 ticket for "${tier.name}". Please select only 1 ticket.`
-              : `You can only purchase a maximum of ${maxAllowed} tickets for "${tier.name}".`,
+              ? `You can only purchase 1 booking for "${tier.name}".`
+              : `You can only purchase a maximum of ${maxAllowed} for "${tier.name}".`,
         };
       }
 
@@ -950,8 +962,17 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     // 7. Generate Tickets
     const generatedTickets = [];
+    const bulkGroupIds = new Map<string, string>();
     for (let i = 0; i < input.attendees.length; i++) {
       const attendee = input.attendees[i];
+      const matchedTier = tierMap.get(attendee.ticketTierId);
+      let bulkGroupId: string | null = null;
+      if (matchedTier?.is_bulk_slab) {
+        if (!bulkGroupIds.has(attendee.ticketTierId)) {
+          bulkGroupIds.set(attendee.ticketTierId, crypto.randomUUID());
+        }
+        bulkGroupId = bulkGroupIds.get(attendee.ticketTierId) || null;
+      }
       const ticketCode = `TKT-${orderNumber.slice(-6)}-${i + 1}`;
       const qrToken = generateSecureTicketToken(ticketCode, input.eventId);
 
@@ -977,6 +998,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           qr_token,
           status,
           payment_proof_url,
+          bulk_order_group_id,
           custom_answers
         ) VALUES (
           ${escapeSql(ticketCode)},
@@ -994,6 +1016,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           ${escapeSql(qrToken)},
           ${escapeSql(ticketStatus)},
           ${escapeSql(input.paymentProofUrl || null)},
+          ${bulkGroupId ? escapeSql(bulkGroupId) : "NULL"},
           ${escapeSql(JSON.stringify({
             ...(attendee.customAnswers || {}),
             member_type: resolvedMemberType,

@@ -34,6 +34,7 @@ import {
   Trash2,
   Building,
   User,
+  Users,
   Briefcase,
   Award,
   RefreshCw,
@@ -69,6 +70,7 @@ interface CheckoutModalProps {
   userEmail?: string;
   userName?: string;
   initialServerTime?: string;
+  initialSelectedTierId?: string;
 }
 
 interface TierStatusInfo {
@@ -205,6 +207,7 @@ export function CheckoutModal({
   userEmail,
   userName,
   initialServerTime,
+  initialSelectedTierId,
 }: CheckoutModalProps) {
   // Tamper-proof, server-synchronized monotonic time
   const currentTime = useServerSyncedTime(initialServerTime);
@@ -219,12 +222,53 @@ export function CheckoutModal({
 
   const [selectedCounts, setSelectedCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
+    if (initialSelectedTierId) {
+      const target = tiers.find((t) => t.id === initialSelectedTierId);
+      if (target && getTierScheduleStatus(target).canBook) {
+        initial[target.id] = 1;
+        return initial;
+      }
+    }
     const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
     if (firstBookable) {
       initial[firstBookable.id] = 1;
     }
     return initial;
   });
+
+  // Support pre-selecting a tier when opening modal and properly initialize attendee slots
+  useEffect(() => {
+    if (isOpen) {
+      let targetTier: SaasTicketTier | undefined;
+      if (initialSelectedTierId) {
+        targetTier = currentTiers.find((t) => t.id === initialSelectedTierId);
+      }
+      if (!targetTier || !getTierScheduleStatus(targetTier, currentTime).canBook) {
+        targetTier = currentTiers.find((t) => getTierScheduleStatus(t, currentTime).canBook);
+      }
+
+      if (targetTier && getTierScheduleStatus(targetTier, currentTime).canBook) {
+        setSelectedCounts({ [targetTier.id]: 1 });
+        const slabSize = targetTier.is_bulk_slab && targetTier.bulk_slab_size ? Number(targetTier.bulk_slab_size) : 1;
+        const initialSlots = [];
+        for (let i = 0; i < slabSize; i++) {
+          initialSlots.push({
+            tierId: targetTier.id,
+            name: i === 0 ? userName || "" : "",
+            email: i === 0 ? userEmail || "" : "",
+            phone: "",
+            memberType: "Rotaract" as const,
+            clubName: "",
+            customClubName: "",
+            designation: "",
+            zone: "",
+            customAnswers: {},
+          });
+        }
+        setAttendees(initialSlots);
+      }
+    }
+  }, [isOpen, initialSelectedTierId]);
 
   // Clamp any pre-selected quantities to tier max_per_order limits
   useEffect(() => {
@@ -233,7 +277,7 @@ export function CheckoutModal({
         let changed = false;
         const updated = { ...prev };
         currentTiers.forEach((t) => {
-          const max = t.max_per_order ? Number(t.max_per_order) : 10;
+          const max = t.is_bulk_slab ? 5 : (t.max_per_order ? Number(t.max_per_order) : 10);
           if (updated[t.id] && updated[t.id] > max) {
             updated[t.id] = max;
             changed = true;
@@ -256,15 +300,18 @@ export function CheckoutModal({
     }
   }, []);
 
-  // Tier Staggering & Categorization (Early Bird -> General Release Dropdown -> VIP)
-  const earlyBirdTiers = currentTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
-  const generalTiers = currentTiers.filter(
+  // Tier Staggering & Categorization (Bulk Slabs -> Early Bird -> General Release Dropdown -> VIP)
+  const bulkTiers = currentTiers.filter((t) => t.is_bulk_slab === true || t.tier_type === "BULK");
+  const regularTiers = currentTiers.filter((t) => !t.is_bulk_slab && t.tier_type !== "BULK");
+
+  const earlyBirdTiers = regularTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = regularTiers.filter(
     (t) =>
       (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD"
   );
-  const otherTiers = currentTiers.filter(
+  const otherTiers = regularTiers.filter(
     (t) =>
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD" &&
@@ -471,8 +518,9 @@ export function CheckoutModal({
   let totalTicketCount = 0;
   currentTiers.forEach((t) => {
     const count = selectedCounts[t.id] || 0;
-    subtotal += Number(t.price) * count;
-    totalTicketCount += count;
+    const slabMultiplier = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
+    subtotal += Number(t.price) * slabMultiplier * count;
+    totalTicketCount += count * slabMultiplier;
   });
 
   const discountAmount = couponApplied ? (subtotal * discountPercent) / 100 : 0;
@@ -625,22 +673,23 @@ export function CheckoutModal({
       return;
     }
 
+    const slabSize = targetTier.is_bulk_slab && targetTier.bulk_slab_size ? Number(targetTier.bulk_slab_size) : 1;
     const cap = Number(targetTier.total_capacity) || 9999;
     const sold = Number(targetTier.sold_count) || 0;
     const reserved = Number(targetTier.reserved_count) || 0;
-    const othersReserved = Math.max(0, reserved - current);
-    const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-    const tierMax = targetTier.max_per_order ? Number(targetTier.max_per_order) : 10;
+    const othersReserved = Math.max(0, reserved - (current * slabSize));
+    const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
+    const tierMax = targetTier.is_bulk_slab ? 5 : (targetTier.max_per_order ? Number(targetTier.max_per_order) : 10);
     const maxAllowed = Math.min(tierMax, maxAvailableForUser);
 
     if (delta > 0 && current >= maxAllowed) {
       if (current >= maxAvailableForUser && maxAvailableForUser < tierMax) {
-        setErrorMessage(`No more seats available for "${targetTier.name}". Other passes are booked or locked in checkout.`);
+        setErrorMessage(`No more slots available for "${targetTier.name}".`);
       } else {
         setErrorMessage(
           tierMax === 1
-            ? `"${targetTier.name}" is strictly limited to 1 ticket per booking.`
-            : `You can only select up to ${tierMax} tickets for "${targetTier.name}".`
+            ? `"${targetTier.name}" is strictly limited to 1 per booking.`
+            : `You can only select up to ${tierMax} for "${targetTier.name}".`
         );
       }
       return;
@@ -676,12 +725,15 @@ export function CheckoutModal({
     let prevIndex = 0;
     currentTiers.forEach((t) => {
       const count = newCounts[t.id] || 0;
-      for (let i = 0; i < count; i++) {
+      const tSlabSize = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
+      const totalAttendeesForTier = count * tSlabSize;
+      for (let i = 0; i < totalAttendeesForTier; i++) {
         const existing = attendees[prevIndex];
+        const isBuyerSlot = prevIndex === 0;
         newAttendees.push({
           tierId: t.id,
-          name: existing?.name || "",
-          email: existing?.email || "",
+          name: existing?.name || (isBuyerSlot ? userName || "" : ""),
+          email: existing?.email || (isBuyerSlot ? userEmail || "" : ""),
           phone: existing?.phone || "",
           memberType: existing?.memberType || "Rotaract",
           clubName: existing?.clubName || "",
@@ -699,8 +751,8 @@ export function CheckoutModal({
         : [
             {
               tierId: currentTiers[0]?.id || "",
-              name: "",
-              email: "",
+              name: userName || "",
+              email: userEmail || "",
               phone: "",
               memberType: "Rotaract",
               clubName: "",
@@ -763,6 +815,17 @@ export function CheckoutModal({
       }
     }
 
+    // Validate duplicate emails
+    const emailSet = new Set<string>();
+    for (let i = 0; i < attendees.length; i++) {
+      const email = attendees[i].email.trim().toLowerCase();
+      if (email && emailSet.has(email)) {
+        setErrorMessage(`Duplicate email detected: "${email}". Each attendee must have a unique email address.`);
+        return;
+      }
+      if (email) emailSet.add(email);
+    }
+
     for (let i = 0; i < attendees.length; i++) {
       const att = attendees[i];
       if (!att.name.trim() || !att.email.trim()) {
@@ -770,23 +833,31 @@ export function CheckoutModal({
         return;
       }
 
-      const memberType = att.memberType || "Rotaract";
-      if (memberType === "Rotaract") {
-        const hasClub = att.clubName === "custom"
-          ? Boolean(att.customClubName?.trim())
-          : Boolean(att.clubName?.trim());
-        if (!hasClub) {
-          setErrorMessage(
-            `Please select or enter the Rotaract Club for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
-          );
-          return;
-        }
-      } else if (memberType === "Rotary") {
+      const matchedTier = currentTiers.find((t) => t.id === att.tierId);
+      // For bulk slab group members (attendees 2..N), club affiliation is automatically inherited!
+      if (matchedTier?.is_bulk_slab && i > 0) {
         if (!att.clubName?.trim()) {
-          setErrorMessage(
-            `Please enter the Rotary Club Name for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
-          );
-          return;
+          att.clubName = attendees[0]?.clubName || "Rotaract District 3192";
+        }
+      } else {
+        const memberType = att.memberType || "Rotaract";
+        if (memberType === "Rotaract") {
+          const hasClub = att.clubName === "custom"
+            ? Boolean(att.customClubName?.trim())
+            : Boolean(att.clubName?.trim());
+          if (!hasClub) {
+            setErrorMessage(
+              `Please select or enter the Rotaract Club for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
+            );
+            return;
+          }
+        } else if (memberType === "Rotary") {
+          if (!att.clubName?.trim()) {
+            setErrorMessage(
+              `Please enter the Rotary Club Name for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
+            );
+            return;
+          }
         }
       }
 
@@ -1418,6 +1489,86 @@ export function CheckoutModal({
                 Select Entry Passes &amp; Time Slabs
               </span>
               <div className="space-y-3">
+                {/* 0. Group & Bulk Passes */}
+                {bulkTiers.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                      <Users size={11} /> 👥 Group &amp; Bulk Passes
+                    </span>
+                    <div className="space-y-2">
+                      {bulkTiers.map((tier) => {
+                        const count = selectedCounts[tier.id] || 0;
+                        const status = getTierScheduleStatus(tier, currentTime, count);
+                        const slabSize = tier.bulk_slab_size || 1;
+                        const totalPrice = Number(tier.price) * slabSize;
+                        const cap = Number(tier.total_capacity) || 9999;
+                        const sold = Number(tier.sold_count) || 0;
+                        const reserved = Number(tier.reserved_count) || 0;
+                        const othersReserved = Math.max(0, reserved - (count * slabSize));
+                        const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
+                        const maxAllowed = Math.min(5, maxAvailableForUser);
+                        return (
+                          <div
+                            key={tier.id}
+                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                              count > 0
+                                ? "border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/40 shadow-xs"
+                                : !status.canBook
+                                ? "border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 opacity-75"
+                                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
+                                  👥 Group of {slabSize}
+                                </span>
+                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+                                  {status.badgeText}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                                Generates {slabSize} attendee entry passes
+                              </p>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                                  {totalPrice === 0 ? "Free Entry" : `₹${totalPrice.toLocaleString("en-IN")}`}
+                                </span>
+                                {Number(tier.price) > 0 && (
+                                  <span className="text-[11px] text-gray-400 font-normal">
+                                    (₹{Number(tier.price).toLocaleString("en-IN")}/person)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, -1)}
+                                disabled={count === 0}
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, 1)}
+                                disabled={!status.canBook || count >= maxAllowed}
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* 1. Early Bird Tiers */}
                 {earlyBirdTiers.length > 0 && (
                   <div className="space-y-2">
@@ -1730,7 +1881,7 @@ export function CheckoutModal({
                   </span>
                 </div>
 
-                <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-[52vh] sm:max-h-[58vh] overflow-y-auto pr-1 sm:pr-2">
                   {attendees.map((att, idx) => {
                     const matchedTier = tiers.find((t) => t.id === att.tierId);
                     return (
@@ -1738,7 +1889,7 @@ export function CheckoutModal({
                         {/* Card Header */}
                         <div className="flex items-center justify-between border-b border-gray-200/70 dark:border-gray-700/70 pb-2.5">
                           <span className="text-xs font-black uppercase text-[#0758fc] dark:text-blue-400 tracking-wider flex items-center gap-1.5">
-                            <User size={14} /> Attendee #{idx + 1}
+                            <User size={14} /> Attendee #{idx + 1} {matchedTier?.is_bulk_slab && idx > 0 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">(Group Delegate)</span>}
                           </span>
                           {matchedTier && (
                             <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
@@ -1797,158 +1948,188 @@ export function CheckoutModal({
                           />
                         </div>
 
-                        {/* 3. Rotary Affiliation */}
-                        {(() => {
-                          const selectedTier = tiers.find((t) => t.id === att.tierId);
-                          const isNonRotaractAllowed =
-                            event.allow_non_rotaract !== false &&
-                            selectedTier?.allow_non_rotaract !== false &&
-                            selectedTier?.allowed_audience !== "ROTARACT_ONLY";
-
-                          return (
-                            <div className="space-y-1.5 pt-1">
-                              <div className="flex items-center justify-between">
-                                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                  Affiliation Category *
-                                </label>
-                                {!isNonRotaractAllowed && (
-                                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
-                                    🛡️ Rotaract &amp; Rotary Exclusive
-                                  </span>
-                                )}
-                              </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
-                                  const isSelected = (att.memberType || "Rotaract") === type;
-                                  const isDisabled = type === "Non-Rotaract" && !isNonRotaractAllowed;
-
-                                  return (
-                                    <button
-                                      key={type}
-                                      type="button"
-                                      disabled={isDisabled}
-                                      onClick={() => {
-                                        if (isDisabled) return;
-                                        const updated = [...attendees];
-                                        updated[idx].memberType = type;
-                                        if (type === "Non-Rotaract") {
-                                          updated[idx].clubName = "Non-Rotaract Guest";
-                                          updated[idx].zone = "General / Guest";
-                                        } else if (type === "Rotary") {
-                                          updated[idx].clubName = "";
-                                          updated[idx].zone = "Rotary International";
-                                        } else {
-                                          updated[idx].clubName = "";
-                                          updated[idx].zone = "";
-                                        }
-                                        setAttendees(updated);
-                                      }}
-                                      title={isDisabled ? "This event / ticket is restricted to Rotaract & Rotary members" : undefined}
-                                      className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center active:scale-95 ${
-                                        isDisabled
-                                          ? "opacity-40 bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                                          : isSelected
-                                          ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs cursor-pointer"
-                                          : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800 cursor-pointer"
-                                      }`}
-                                    >
-                                      {type === "Rotaract"
-                                        ? "● Rotaract"
-                                        : type === "Rotary"
-                                        ? "● Rotary"
-                                        : "● Non-Rotarian"}
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                        {/* 3 & 4. Rotary Affiliation & Club Selection */}
+                        {matchedTier?.is_bulk_slab && idx > 0 && !att.customAnswers?._showCustomAffiliation ? (
+                          <div className="flex items-center justify-between p-3.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-2xl border border-blue-200/80 dark:border-blue-800/60 text-xs">
+                            <div className="space-y-0.5">
+                              <p className="font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <Building size={13} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
+                                {att.clubName || attendees[0]?.clubName || "Rotaract District 3192"}
+                              </p>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                Club affiliation inherited from Attendee #1
+                              </p>
                             </div>
-                          );
-                        })()}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...attendees];
+                                updated[idx].customAnswers = {
+                                  ...(updated[idx].customAnswers || {}),
+                                  _showCustomAffiliation: true,
+                                };
+                                setAttendees(updated);
+                              }}
+                              className="text-[11px] font-bold text-[#0758fc] dark:text-blue-400 hover:underline px-2 py-1 rounded-lg hover:bg-blue-100/60 dark:hover:bg-blue-900/60 cursor-pointer"
+                            >
+                              Edit Club
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {(() => {
+                              const selectedTier = tiers.find((t) => t.id === att.tierId);
+                              const isNonRotaractAllowed =
+                                event.allow_non_rotaract !== false &&
+                                selectedTier?.allow_non_rotaract !== false &&
+                                selectedTier?.allowed_audience !== "ROTARACT_ONLY";
 
-                        {/* 4. Club Name & Zone Resolution */}
-                        <div className="space-y-2 p-3 bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-200/80 dark:border-gray-700">
-                          {att.memberType === "Rotary" ? (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotary Club Name <span className="text-rose-500 font-extrabold">*</span>
-                                </label>
-                                <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
-                                  Required for Rotarians
-                                </span>
-                              </div>
-                              <input
-                                type="text"
-                                required
-                                placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
-                                value={att.clubName}
-                                onChange={(e) => {
-                                  const updated = [...attendees];
-                                  updated[idx].clubName = e.target.value;
-                                  setAttendees(updated);
-                                }}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
-                              />
-                            </div>
-                          ) : att.memberType === "Non-Rotaract" ? (
-                            <div className="space-y-1">
-                              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Organization / College / Company (Optional)
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
-                                value={att.clubName === "Non-Rotaract Guest" ? "" : att.clubName}
-                                onChange={(e) => {
-                                  const updated = [...attendees];
-                                  updated[idx].clubName = e.target.value || "Non-Rotaract Guest";
-                                  setAttendees(updated);
-                                }}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                  <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotaract Club <span className="text-rose-500 font-extrabold">*</span>
-                                </label>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
-                                    Required for Rotaractors
-                                  </span>
-                                  {att.zone && (
-                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                                      Zone: {att.zone}
-                                    </span>
-                                  )}
+                              return (
+                                <div className="space-y-1.5 pt-1">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                      Affiliation Category *
+                                    </label>
+                                    {!isNonRotaractAllowed && (
+                                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+                                        🛡️ Rotaract &amp; Rotary Exclusive
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {(["Rotaract", "Rotary", "Non-Rotaract"] as const).map((type) => {
+                                      const isSelected = (att.memberType || "Rotaract") === type;
+                                      const isDisabled = type === "Non-Rotaract" && !isNonRotaractAllowed;
+
+                                      return (
+                                        <button
+                                          key={type}
+                                          type="button"
+                                          disabled={isDisabled}
+                                          onClick={() => {
+                                            if (isDisabled) return;
+                                            const updated = [...attendees];
+                                            updated[idx].memberType = type;
+                                            if (type === "Non-Rotaract") {
+                                              updated[idx].clubName = "Non-Rotaract Guest";
+                                              updated[idx].zone = "General / Guest";
+                                            } else if (type === "Rotary") {
+                                              updated[idx].clubName = "";
+                                              updated[idx].zone = "Rotary International";
+                                            } else {
+                                              updated[idx].clubName = "";
+                                              updated[idx].zone = "";
+                                            }
+                                            setAttendees(updated);
+                                          }}
+                                          title={isDisabled ? "This event / ticket is restricted to Rotaract & Rotary members" : undefined}
+                                          className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center active:scale-95 ${
+                                            isDisabled
+                                              ? "opacity-40 bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                                              : isSelected
+                                              ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs cursor-pointer"
+                                              : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100/80 dark:hover:bg-gray-800 cursor-pointer"
+                                          }`}
+                                        >
+                                          {type === "Rotaract"
+                                            ? "● Rotaract"
+                                            : type === "Rotary"
+                                            ? "● Rotary"
+                                            : "● Non-Rotarian"}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                              </div>
+                              );
+                            })()}
 
-                              <SearchableClubSelect
-                                value={att.clubName}
-                                customValue={att.customClubName}
-                                zone={att.zone}
-                                required={true}
-                                onChange={(clubName, clubZone, isCustom) => {
-                                  const updated = [...attendees];
-                                  updated[idx].clubName = clubName;
-                                  updated[idx].zone = clubZone;
-                                  if (!isCustom && clubName !== "custom") {
-                                    updated[idx].customClubName = "";
-                                  }
-                                  setAttendees(updated);
-                                }}
-                                onCustomChange={(customVal) => {
-                                  const updated = [...attendees];
-                                  updated[idx].customClubName = customVal;
-                                  setAttendees(updated);
-                                }}
-                                placeholder="Type to search District 3192 clubs (e.g. Koramangala, Bangalore)..."
-                              />
+                            {/* 4. Club Name & Zone Resolution */}
+                            <div className="space-y-2 p-3 bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-200/80 dark:border-gray-700">
+                              {att.memberType === "Rotary" ? (
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                      <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotary Club Name <span className="text-rose-500 font-extrabold">*</span>
+                                    </label>
+                                    <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                                      Required for Rotarians
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
+                                    value={att.clubName}
+                                    onChange={(e) => {
+                                      const updated = [...attendees];
+                                      updated[idx].clubName = e.target.value;
+                                      setAttendees(updated);
+                                    }}
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
+                                  />
+                                </div>
+                              ) : att.memberType === "Non-Rotaract" ? (
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                    <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Organization / College / Company (Optional)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
+                                    value={att.clubName === "Non-Rotaract Guest" ? "" : att.clubName}
+                                    onChange={(e) => {
+                                      const updated = [...attendees];
+                                      updated[idx].clubName = e.target.value || "Non-Rotaract Guest";
+                                      setAttendees(updated);
+                                    }}
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                      <Building size={13} className="text-[#0758fc] dark:text-blue-400" /> Rotaract Club <span className="text-rose-500 font-extrabold">*</span>
+                                    </label>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                                        Required for Rotaractors
+                                      </span>
+                                      {att.zone && (
+                                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                          Zone: {att.zone}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <SearchableClubSelect
+                                    value={att.clubName}
+                                    customValue={att.customClubName}
+                                    zone={att.zone}
+                                    required={true}
+                                    onChange={(clubName, clubZone, isCustom) => {
+                                      const updated = [...attendees];
+                                      updated[idx].clubName = clubName;
+                                      updated[idx].zone = clubZone;
+                                      if (!isCustom && clubName !== "custom") {
+                                        updated[idx].customClubName = "";
+                                      }
+                                      setAttendees(updated);
+                                    }}
+                                    onCustomChange={(customVal) => {
+                                      const updated = [...attendees];
+                                      updated[idx].customClubName = customVal;
+                                      setAttendees(updated);
+                                    }}
+                                    placeholder="Type to search District 3192 clubs (e.g. Koramangala, Bangalore)..."
+                                  />
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </>
+                        )}
 
                         {/* 5. Designation / Role */}
                         <div className="space-y-1">

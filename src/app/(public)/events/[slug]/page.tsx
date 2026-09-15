@@ -257,25 +257,24 @@ export default async function EventDetailPage({ params }: PageProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent" />
 
         <div className="absolute bottom-0 inset-x-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 text-white space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-widest bg-amber-400 text-gray-950 px-3 py-1 rounded-full shadow-sm">
-              {event.event_type}
-            </span>
-            <span className="text-xs font-semibold text-gray-300 flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-              <ShieldCheck size={14} className="text-emerald-400" /> Verified Organizer
+          <div className="flex flex-wrap items-center gap-2.5 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/15">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+              <span className="font-bold uppercase tracking-wider text-[11px]">{event.event_type || "Event"}</span>
             </span>
             {((event as any).org_name || (event as any).organization_name) && (
-              <span className="text-xs font-bold text-white flex items-center gap-1.5 bg-[#0758fc]/85 backdrop-blur-md px-3.5 py-1 rounded-full border border-blue-300/30 shadow-xs">
-                🏛️ Hosted by {(event as any).org_name || (event as any).organization_name}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-gray-200 border border-white/10">
+                <span>🏛️ {(event as any).org_name || (event as any).organization_name}</span>
               </span>
             )}
             {event.allow_non_rotaract === false ? (
-              <span className="text-xs font-bold text-amber-300 bg-amber-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-500/40 flex items-center gap-1.5 shadow-xs">
-                <ShieldCheck size={14} className="text-amber-400" /> 🛡️ Rotaract &amp; Rotary Exclusive
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-950/60 backdrop-blur-md text-amber-300 border border-amber-500/30">
+                Rotaract Exclusive
               </span>
             ) : (
-              <span className="text-xs font-semibold text-blue-200 bg-blue-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-blue-400/30 flex items-center gap-1.5 shadow-xs">
-                <Globe size={14} className="text-blue-400" /> 🌐 Open to Everyone (Guests Welcome)
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-gray-300 border border-white/10">
+                <Globe size={13} className="text-blue-400 shrink-0" />
+                <span>Public (All Welcome)</span>
               </span>
             )}
           </div>

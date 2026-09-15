@@ -361,12 +361,12 @@ export function DisputeDashboardClient() {
 
       {/* ── CREATE DISPUTE MODAL ────────────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 pb-20 sm:pb-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl max-w-lg w-full p-5 sm:p-8 shadow-2xl space-y-5 relative max-h-[85dvh] sm:max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setIsModalOpen(false)}
               type="button"
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              className="absolute top-4 sm:top-5 right-4 sm:right-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -506,27 +506,27 @@ export function DisputeDashboardClient() {
                 />
               </div>
 
-              <div className="pt-2 flex items-center gap-3">
+              <div className="pt-3 pb-1 flex items-center gap-3 sticky bottom-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md -mx-5 px-5 sm:-mx-8 sm:px-8 border-t border-gray-100 dark:border-gray-800 mt-4 z-10">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition-colors cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="flex-1 bg-[#0758fc] hover:bg-[#054fe0] text-white font-black py-3 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" /> Submitting...
+                      <Loader2 size={16} className="animate-spin" /> Submitting...
                     </>
                   ) : (
                     <>
-                      <Send size={14} /> Submit Dispute
+                      <Send size={16} /> Submit Dispute
                     </>
                   )}
                 </button>
