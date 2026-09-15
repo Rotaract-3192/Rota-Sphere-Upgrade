@@ -53,6 +53,7 @@ export function TopNav() {
         {/* ── LEFT: Wordmark Logo ──────────────────────────────────────── */}
         <Link
           href="/"
+          data-tour="nav-logo"
           className="flex items-center gap-2.5 sm:gap-3 group focus:outline-hidden shrink-0"
           aria-label="RotaSphere home"
         >
@@ -82,13 +83,15 @@ export function TopNav() {
         </Link>
 
         {/* ── CENTER: Desktop Navigation Tabs ─────────────────────────── */}
-        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 lg:gap-1.5 shrink-0">
+        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 lg:gap-1.5 shrink-0" data-tour="nav-menu">
           {NAV_TABS.map(({ label, href, icon: Icon, isNew }) => {
             const active = isActive(href);
+            const tourId = href === "/" ? "nav-home" : `nav-${href.replace("/", "")}`;
             return (
               <Link
                 key={href}
                 href={href}
+                data-tour={tourId}
                 className={[
                   "relative flex items-center gap-2 px-3 lg:px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold whitespace-nowrap shrink-0 transition-all",
                   active
@@ -118,12 +121,15 @@ export function TopNav() {
         {/* ── RIGHT: Actions & User Button ─────────────────────────────── */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Dark Mode Toggle */}
-          <ThemeToggle />
+          <div data-tour="nav-theme">
+            <ThemeToggle />
+          </div>
 
           {/* Admin panel link */}
           {isAdminUser && (
             <Link
               href="/admin"
+              data-tour="nav-admin"
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <Shield size={14} className="text-amber-700" />
@@ -135,6 +141,7 @@ export function TopNav() {
           {isLoaded && isSignedIn && (
             <Link
               href="/dashboard"
+              data-tour="nav-host"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white bg-[#0758fc] hover:bg-[#054fe0] px-3 sm:px-4 py-2 rounded-xl shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0"
               aria-label="Host an Event"
             >
@@ -147,6 +154,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/dashboard"
+              data-tour="nav-host"
               className="hidden sm:inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <PlusCircle size={16} className="text-gray-600 dark:text-gray-300" />
@@ -158,6 +166,7 @@ export function TopNav() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
+              data-tour="nav-auth"
               className="text-xs sm:text-sm font-bold text-white bg-[#0758fc] hover:bg-[#054fe0] px-4 sm:px-5 py-2 rounded-xl shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0"
             >
               Sign In
@@ -165,13 +174,15 @@ export function TopNav() {
           )}
 
           {isLoaded && isSignedIn && (
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 shadow-xs",
-                },
-              }}
-            />
+            <div data-tour="nav-user">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 shadow-xs",
+                  },
+                }}
+              />
+            </div>
           )}
         </div>
       </div>

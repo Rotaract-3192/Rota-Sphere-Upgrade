@@ -724,6 +724,7 @@ export function OrganizerDashboardClient({
                   <button
                     key={id}
                     type="button"
+                    data-tour="tab-broadcast"
                     onClick={() => {
                       setSelectedBroadcastEventId("");
                       setIsBulkEmailOpen(true);
@@ -741,6 +742,7 @@ export function OrganizerDashboardClient({
               return (
                 <button
                   key={id}
+                  data-tour={`tab-${id}`}
                   onClick={() => setActiveTab(id as any)}
                   className={className}
                 >
@@ -824,6 +826,7 @@ export function OrganizerDashboardClient({
                   <span>Add Gallery Photos</span>
                 </button>
                 <button
+                  data-tour="create-event-btn"
                   onClick={handleOpenCreateModal}
                   className="inline-flex items-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
                 >
@@ -833,7 +836,7 @@ export function OrganizerDashboardClient({
             </div>
 
             {/* Metric KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div data-tour="organizer-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-xs space-y-1">
                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Sales</span>
                 <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">₹{totalGrossSales.toLocaleString("en-IN")}</p>
@@ -1044,7 +1047,7 @@ export function OrganizerDashboardClient({
 
         {/* ── 2. EVENTS MANAGER TAB ───────────────────────────────────── */}
         {activeTab === "events" && (
-          <div className="space-y-6">
+          <div data-tour="organizer-event-list" className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-extrabold text-gray-900">Events Management</h2>
@@ -1476,7 +1479,7 @@ export function OrganizerDashboardClient({
 
         {/* ── 6. ORDERS & FINANCIALS TAB ──────────────────────────────── */}
         {activeTab === "orders" && (
-          <div className="space-y-6">
+          <div data-tour="pending-payments" className="space-y-6">
             <div>
               <h2 className="text-2xl font-extrabold text-gray-900">Orders &amp; UPI Approvals</h2>
               <p className="text-xs text-gray-500 mt-1">Review, approve, or reject incoming UPI payment submissions for your events.</p>

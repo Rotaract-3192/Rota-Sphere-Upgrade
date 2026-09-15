@@ -109,7 +109,10 @@ export function EventCard({
       : "Join fellow Rotaractors and delegates for this featured district experience.";
 
   return (
-    <article className="group relative flex flex-col justify-between h-full rounded-3xl bg-white dark:bg-[#0c1322] border border-gray-200/90 dark:border-gray-800/90 hover:border-[#0758fc]/50 dark:hover:border-[#0758fc]/60 shadow-sm hover:shadow-xl hover:shadow-[#0758fc]/10 transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden">
+    <article
+      data-tour="event-card"
+      className="group relative flex flex-col justify-between h-full rounded-3xl bg-white dark:bg-[#0c1322] border border-gray-200/90 dark:border-gray-800/90 hover:border-[#0758fc]/50 dark:hover:border-[#0758fc]/60 shadow-sm hover:shadow-xl hover:shadow-[#0758fc]/10 transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden"
+    >
       
       {/* ── Top Poster & Badges ──────────────────────────────────────── */}
       <div className="relative">

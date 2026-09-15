@@ -183,6 +183,7 @@ export default async function HomePage() {
               <form
                 action="/events"
                 method="GET"
+                data-tour="search-bar"
                 className="max-w-xl flex items-center bg-white/10 hover:bg-white/[0.13] focus-within:bg-white/[0.16] border border-white/20 focus-within:border-[#0758fc] rounded-2xl p-1.5 transition-all shadow-2xl backdrop-blur-md"
               >
                 <Search size={18} className="text-gray-400 ml-3 shrink-0" />
@@ -201,7 +202,7 @@ export default async function HomePage() {
               </form>
 
               {/* Popular Category Shortcuts */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1" data-tour="trending-tags">
                 <span className="text-xs font-bold text-gray-400">Trending:</span>
                 <Link
                   href="/events"
@@ -243,7 +244,7 @@ export default async function HomePage() {
             {/* ── RIGHT: Hero Featured Event Showcase Pass ── */}
             <div className="lg:col-span-5 flex justify-center lg:justify-end">
               {heroEvent ? (
-                <div className="relative w-full max-w-md group">
+                <div className="relative w-full max-w-md group" data-tour="hero-event-card">
                   {/* Outer Radiant Glow */}
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 rounded-3xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
 
@@ -354,7 +355,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── 2. REAL-TIME STATS BAR ────────────────────────────────────────── */}
-      <section className="border-b border-gray-100 dark:border-gray-800/80 bg-white dark:bg-gray-900 transition-colors">
+      <section data-tour="stats-bar" className="border-b border-gray-100 dark:border-gray-800/80 bg-white dark:bg-gray-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800">
             {statItems.map((stat, i) => {
@@ -372,14 +373,14 @@ export default async function HomePage() {
       </section>
 
       {/* ── 3. CATEGORY FILTER STRIP ──────────────────────────────────────── */}
-      <section className="border-b border-gray-100 dark:border-gray-800/80 bg-gray-50 dark:bg-gray-950 transition-colors">
+      <section data-tour="category-strip" className="border-b border-gray-100 dark:border-gray-800/80 bg-gray-50 dark:bg-gray-950 transition-colors">
         <Suspense fallback={<div className="h-16" />}>
           <CategoryStrip />
         </Suspense>
       </section>
 
       {/* ── 4. FEATURED EVENTS SHOWCASE ───────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section data-tour="featured-events" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0758fc] uppercase tracking-widest mb-2">
@@ -403,7 +404,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── INTERACTIVE EVENT MAP & VENUE DISCOVERY ─────────────────────── */}
-      <section className="bg-gray-100/60 dark:bg-gray-900/60 border-y border-gray-200 dark:border-gray-800 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 transition-colors">
+      <section data-tour="map-explorer" className="bg-gray-100/60 dark:bg-gray-900/60 border-y border-gray-200 dark:border-gray-800 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 transition-colors">
         <div className="max-w-7xl mx-auto">
           <EventMapExplorer
             events={mapEvents}

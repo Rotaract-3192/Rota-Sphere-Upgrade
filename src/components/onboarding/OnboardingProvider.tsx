@@ -52,8 +52,8 @@ export function useOnboarding() {
   return ctx || defaultContextValue;
 }
 
-const STORAGE_KEY_WELCOME = "rs_welcome_seen_v2";
-const STORAGE_KEY_ONBOARDING = "rs_onboarding_done_v2";
+const STORAGE_KEY_WELCOME = "rs_welcome_seen_v3";
+const STORAGE_KEY_ONBOARDING = "rs_onboarding_done_v3";
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [showWelcome, setShowWelcome] = useState(false);
