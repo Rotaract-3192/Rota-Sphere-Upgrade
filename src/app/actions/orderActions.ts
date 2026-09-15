@@ -483,9 +483,12 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
           FROM saas_ticket_tiers 
           WHERE id = ${cleanTierId};
         `);
-        const tierName = tInfo?.[0]?.name || "selected pass";
+        const tierName = tInfo?.[0]?.name?.trim() || "Pass";
         const sold = Number(tInfo?.[0]?.sold_count) || 0;
         const cap = Number(tInfo?.[0]?.total_capacity) || 0;
+        const reserved = Number(tInfo?.[0]?.reserved_count) || 0;
+        const remainingTotal = cap > 0 ? Math.max(0, cap - sold) : 9999;
+        const remainingUnreserved = Math.max(0, remainingTotal - reserved);
 
         if (cap > 0 && sold >= cap) {
           return {
@@ -494,9 +497,23 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
           };
         }
 
+        if (effectiveSeats > remainingTotal) {
+          return {
+            success: false,
+            error: `Only ${remainingTotal} seat${remainingTotal === 1 ? "" : "s"} remain for "${tierName}". Cannot book ${effectiveSeats} seats.`,
+          };
+        }
+
+        if (reserved > 0 && effectiveSeats > remainingUnreserved) {
+          return {
+            success: false,
+            error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 5 minutes and check again.`,
+          };
+        }
+
         return {
           success: false,
-          error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 5 minutes and check again.`,
+          error: `Pass "${tierName}" is currently unavailable for the requested quantity (${effectiveSeats} seats).`,
         };
       }
 

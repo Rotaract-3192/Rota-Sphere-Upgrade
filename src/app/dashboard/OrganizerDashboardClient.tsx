@@ -624,7 +624,7 @@ export function OrganizerDashboardClient({
       </div>
 
       {/* ── SIDEBAR NAVIGATION (desktop only) ────────────────────────── */}
-      <aside className="hidden md:flex w-64 bg-gray-900 text-white p-5 flex-col justify-between flex-shrink-0 border-r border-gray-800">
+      <aside className="hidden md:flex w-64 bg-gray-900 text-white p-5 flex-col justify-between shrink-0 border-r border-gray-800 sticky top-0 h-screen max-h-screen overflow-y-auto z-30">
         <div className="space-y-6">
           
           {/* Brand Header */}
@@ -964,6 +964,15 @@ export function OrganizerDashboardClient({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Manage Dedicated Event Dashboard */}
+                        <Link
+                          href={`/dashboard/events/${evt.id}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-black text-white bg-[#0758fc] hover:bg-[#054fe0] px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer hover:scale-[1.02] active:scale-95"
+                        >
+                          <LayoutDashboard size={13} />
+                          <span>Manage Event →</span>
+                        </Link>
+
                         {/* Edit Button */}
                         <button
                           onClick={() => handleOpenEditModal(evt)}
@@ -1081,6 +1090,15 @@ export function OrganizerDashboardClient({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Dedicated Event Dashboard Link */}
+                        <Link
+                          href={`/dashboard/events/${evt.id}`}
+                          className="px-4 py-2 rounded-xl text-xs font-black text-white bg-[#0758fc] hover:bg-[#054fe0] transition-all shadow-xs flex items-center gap-1.5 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                        >
+                          <LayoutDashboard size={13} />
+                          <span>Manage Event →</span>
+                        </Link>
+
                         {/* Edit Button */}
                         <button
                           onClick={() => handleOpenEditModal(evt)}
@@ -1412,7 +1430,7 @@ export function OrganizerDashboardClient({
                               <p className="text-gray-800 dark:text-gray-200 font-medium line-clamp-1">{t.saas_events?.title || "Event"}</p>
                               <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">{t.saas_ticket_tiers?.name || "Standard Pass"}</p>
                             </td>
-                            <td className="py-3.5 px-6">
+                            <td className="py-3.5 px-6 whitespace-nowrap">
                               {(() => {
                                 const isRej = t.status === "PAYMENT_REJECTED" || t.status === "REJECTED" || t.order_status === "PAYMENT_REJECTED";
                                 const isPend = t.status === "PENDING_VERIFICATION" || t.status === "PENDING" || t.order_status === "PENDING_VERIFICATION";
@@ -1423,23 +1441,24 @@ export function OrganizerDashboardClient({
 
                                 return (
                                   <span
-                                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase whitespace-nowrap leading-none border ${
                                       isUsed
-                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                         : isRej
-                                        ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                        ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                         : isPend
-                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                         : isCanc
-                                        ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
+                                        ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700"
                                         : isRef
-                                        ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                        ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
                                         : isTrans
-                                        ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
-                                        : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                        ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
+                                        : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                                     }`}
                                   >
-                                    ● {isUsed ? "CHECKED_IN" : isRej ? "REJECTED" : isPend ? "PENDING APPROVAL" : isCanc ? "CANCELLED" : isRef ? "REFUNDED" : isTrans ? "TRANSFERRED" : "CONFIRMED"}
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                    {isUsed ? "CHECKED_IN" : isRej ? "REJECTED" : isPend ? "PENDING APPROVAL" : isCanc ? "CANCELLED" : isRef ? "REFUNDED" : isTrans ? "TRANSFERRED" : "CONFIRMED"}
                                   </span>
                                 );
                               })()}
@@ -1488,6 +1507,9 @@ export function OrganizerDashboardClient({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-bold text-gray-900 dark:text-white text-xs bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 px-2.5 py-1 rounded-lg">{o.order_number}</span>
                             <span className="font-extrabold text-gray-900 dark:text-white text-sm">₹{o.total_amount}</span>
+                            <span className="text-[11px] font-extrabold text-[#0758fc] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-lg inline-flex items-center gap-1">
+                              <Calendar size={11} /> {o.event_title || activeEvents.find((e: any) => e.id === o.event_id)?.title || "Event"}
+                            </span>
                           </div>
                           <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{o.customer_name}</p>
                           <p className="text-[11px] text-gray-500 dark:text-gray-400">{o.customer_email}</p>
@@ -1579,7 +1601,14 @@ export function OrganizerDashboardClient({
 
                         return (
                           <tr key={o.id} className={`hover:bg-gray-50/50 dark:hover:bg-gray-800/40 ${isPending ? "bg-amber-50/30 dark:bg-amber-950/20" : ""}`}>
-                            <td className="py-3.5 px-6 font-mono font-bold text-gray-900 dark:text-white">{o.order_number}</td>
+                            <td className="py-3.5 px-6">
+                              <div className="space-y-0.5">
+                                <span className="font-mono font-bold text-gray-900 dark:text-white block">{o.order_number}</span>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold truncate block max-w-[180px]">
+                                  {o.event_title || activeEvents.find((e: any) => e.id === o.event_id)?.title || "Event"}
+                                </span>
+                              </div>
+                            </td>
                             <td className="py-3.5 px-6">
                               <p className="font-bold text-gray-900 dark:text-white">{o.customer_name}</p>
                               <p className="text-[11px] text-gray-400 dark:text-gray-500">{o.customer_email}</p>
@@ -1619,17 +1648,18 @@ export function OrganizerDashboardClient({
                                 <span className="text-gray-400 dark:text-gray-500 italic text-[11px]">Free / N/A</span>
                               )}
                             </td>
-                            <td className="py-3.5 px-6">
+                            <td className="py-3.5 px-6 whitespace-nowrap">
                               <span
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase whitespace-nowrap leading-none border ${
                                   isPaid
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                                     : isPending
-                                    ? "bg-amber-50 text-amber-800 border-amber-300 font-black"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-black"
+                                    : "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 }`}
                               >
-                                ● {isPending ? "PENDING UTR APPROVAL" : isPaid ? "APPROVED" : "REJECTED"}
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {isPending ? "PENDING APPROVAL" : isPaid ? "APPROVED" : "REJECTED"}
                               </span>
                             </td>
                             <td className="py-3.5 px-6 text-right space-x-2">
@@ -2035,9 +2065,9 @@ export function OrganizerDashboardClient({
                               <span className="text-gray-400 italic">Free / Direct</span>
                             )}
                           </td>
-                          <td className="py-4 px-6">
+                          <td className="py-4 px-6 whitespace-nowrap">
                             <span
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase whitespace-nowrap leading-none border ${
                                 o.status === "PAID"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                   : o.status === "PENDING_VERIFICATION"
@@ -2045,7 +2075,8 @@ export function OrganizerDashboardClient({
                                   : "bg-rose-50 text-rose-700 border-rose-200"
                               }`}
                             >
-                              ● {o.status}
+                              <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                              {o.status === "PENDING_VERIFICATION" ? "PENDING APPROVAL" : o.status}
                             </span>
                           </td>
                           <td className="py-4 px-6 text-right text-gray-400 font-mono text-[11px]">
@@ -2078,8 +2109,9 @@ export function OrganizerDashboardClient({
                 </div>
                 <div>
                   <span className="font-bold text-gray-500 block mb-1">KYC Verification Status</span>
-                  <span className="inline-block bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200">
-                    ● VERIFIED
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200 leading-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                    VERIFIED
                   </span>
                 </div>
               </div>

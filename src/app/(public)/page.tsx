@@ -166,17 +166,6 @@ export default async function HomePage() {
             
             {/* ── LEFT: Headline, Search & Direct Discovery ── */}
             <div className="lg:col-span-7 space-y-6 text-left">
-              {/* Beacon badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-xs font-extrabold text-blue-400 backdrop-blur-md shadow-xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0758fc]" />
-                </span>
-                <span>District 3192 Official Pass Engine</span>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-300 font-medium">85 Chartered Clubs</span>
-              </div>
-
               {/* Headline */}
               <h1 className="text-4xl sm:text-6xl lg:text-[62px] font-black tracking-tight leading-[1.08] text-white">
                 Experience <br className="hidden sm:inline" />

@@ -146,11 +146,13 @@ export default async function DashboardPage(props: {
 
   // 3. Fetch orders for THIS organization's events only (prevents cross-club UPI payment confusion)
   const { data: ordersData } = await executeSql(`
-    SELECT o.*
+    SELECT o.*,
+      e.title as event_title,
+      e.slug as event_slug
     FROM saas_orders o
     INNER JOIN saas_events e ON o.event_id = e.id
     WHERE e.organization_id = '${orgId}'
-    GROUP BY o.id
+    GROUP BY o.id, e.title, e.slug
     ORDER BY
       CASE WHEN o.status = 'PENDING_VERIFICATION' THEN 0 ELSE 1 END,
       o.created_at DESC

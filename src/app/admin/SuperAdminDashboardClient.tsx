@@ -1554,7 +1554,7 @@ export function SuperAdminDashboardClient({
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                                   isPending
                                     ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-black animate-pulse"
                                     : isApproved
@@ -1562,7 +1562,8 @@ export function SuperAdminDashboardClient({
                                     : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 }`}
                               >
-                                ● {req.status}
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {req.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
@@ -1759,9 +1760,9 @@ export function SuperAdminDashboardClient({
                               )}
                             </td>
 
-                            <td className="px-6 py-4">
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                                   isPending
                                     ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-black"
                                     : isApproved
@@ -1769,7 +1770,8 @@ export function SuperAdminDashboardClient({
                                     : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 }`}
                               >
-                                ● {isPending ? "PENDING UTR APPROVAL" : isApproved ? "APPROVED / PAID" : "REJECTED"}
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {isPending ? "PENDING APPROVAL" : isApproved ? "APPROVED / PAID" : "REJECTED"}
                               </span>
                               {isRejected && ord.payment_rejection_reason && (
                                 <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1 max-w-xs italic">
@@ -2029,7 +2031,7 @@ export function SuperAdminDashboardClient({
 
                             <td className="px-5 py-3.5 whitespace-nowrap">
                               <span
-                                className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                                   isOpen
                                     ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 animate-pulse font-black"
                                     : isReview
@@ -2039,7 +2041,8 @@ export function SuperAdminDashboardClient({
                                     : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                                 }`}
                               >
-                                ● {comp.status}
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {comp.status}
                               </span>
                             </td>
 
@@ -2144,17 +2147,18 @@ export function SuperAdminDashboardClient({
                           <td className="px-5 py-3.5 max-w-xs">
                             <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{req.description || "Data principal request"}</p>
                           </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            <span
-                              className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
-                                isCompleted
-                                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                                  : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                              }`}
-                            >
-                              ● {req.status}
-                            </span>
-                          </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
+                                  isCompleted
+                                    ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                    : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                }`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {req.status}
+                              </span>
+                            </td>
                           <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
                             {!isCompleted && (
                               <button
@@ -2352,9 +2356,9 @@ export function SuperAdminDashboardClient({
                             </span>
                           </td>
 
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                              className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                                 org.kyc_status === "VERIFIED" || org.is_verified
                                   ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                                   : org.kyc_status === "REJECTED"
@@ -2362,7 +2366,8 @@ export function SuperAdminDashboardClient({
                                   : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                               }`}
                             >
-                              ● {org.kyc_status || (org.is_verified ? "VERIFIED" : "PENDING")}
+                              <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                              {org.kyc_status || (org.is_verified ? "VERIFIED" : "PENDING")}
                             </span>
                           </td>
 
@@ -2440,12 +2445,13 @@ export function SuperAdminDashboardClient({
                       <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 text-[#0758fc] dark:text-blue-400">
                         {evt.category || "Flagship"}
                       </span>
-                      <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                         evt.status === "PUBLISHED"
                           ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                           : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                       }`}>
-                        ● {evt.status}
+                        <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                        {evt.status}
                       </span>
                     </div>
 
@@ -2566,15 +2572,16 @@ export function SuperAdminDashboardClient({
                           ₹{Number(ord.platform_fee || 0).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 uppercase font-bold text-gray-500 dark:text-gray-400">{ord.payment_gateway || "UPI_QR"}</td>
-                        <td className="px-6 py-4">
-                          <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                             ord.status === "PAID"
                               ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                               : ord.status === "PENDING_VERIFICATION"
                               ? "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
                               : "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                           }`}>
-                            ● {ord.status}
+                            <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                            {ord.status === "PENDING_VERIFICATION" ? "PENDING APPROVAL" : ord.status}
                           </span>
                         </td>
                       </tr>
@@ -2630,13 +2637,14 @@ export function SuperAdminDashboardClient({
                         <tr key={chk.id} className="hover:bg-gray-50/80 transition-colors">
                           <td className="px-6 py-4 font-bold text-gray-900">{chk.event_title || "District Conference"}</td>
                           <td className="px-6 py-4">{chk.gate_name || "Main Gate Alpha"}</td>
-                          <td className="px-6 py-4">
-                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border whitespace-nowrap leading-none ${
                               chk.result === "SUCCESS"
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                 : "bg-rose-50 text-rose-700 border-rose-200"
                             }`}>
-                              ● {chk.result}
+                              <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                              {chk.result}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-gray-400">
@@ -3057,9 +3065,10 @@ export function SuperAdminDashboardClient({
                               </span>
                             </td>
 
-                            <td className="px-6 py-4">
-                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                ● {adm.status || "ACTIVE"}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap leading-none">
+                                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                {adm.status || "ACTIVE"}
                               </span>
                             </td>
 
