@@ -123,13 +123,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
 
     // 3. Determine Highest Effective Role
+    // Security M-3: admin/super_admin MUST come from the DB profile only \u2014 never from
+    // Clerk publicMetadata which could theoretically be influenced by misconfiguration.
     let targetRole: UserRole = "attendee";
     if (isDesignatedAdmin) {
       targetRole = "super_admin";
     } else if (profile?.role === "super_admin" || profile?.role === "admin") {
       targetRole = profile.role;
-    } else if (metadataRole === "super_admin" || metadataRole === "admin") {
-      targetRole = metadataRole;
     } else if (profile?.role === "organizer" || isOrgMember || hasApprovedOrganizerRequest || metadataRole === "organizer") {
       targetRole = "organizer";
     }

@@ -149,6 +149,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Security M-2: Cancel active tickets so deleted users' QR codes cannot be scanned at the gate
+    try {
+      await supabaseAdmin
+        .from("saas_tickets")
+        .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
+        .eq("owner_user_id", data.id)
+        .in("status", ["CONFIRMED", "PENDING_VERIFICATION", "ISSUED"]);
+
+      await supabaseAdmin
+        .from("saas_orders")
+        .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
+        .eq("user_id", data.id)
+        .in("status", ["PENDING_VERIFICATION", "PENDING"]);
+    } catch (cancelErr) {
+      logger.warn("Failed to cancel tickets/orders for deleted user", { userId: data.id, error: String(cancelErr) });
+    }
+
     logger.info("Profile soft-deleted from Clerk webhook", { userId: data.id });
   }
 

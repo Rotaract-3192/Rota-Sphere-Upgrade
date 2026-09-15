@@ -469,7 +469,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
-        const bulkSlabSize = isBulk ? (Number(tier.bulkSlabSize) || 15) : null;
+        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
         const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
 
@@ -894,7 +894,9 @@ export async function updateEventAction(
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
-        const bulkSlabSize = isBulk ? (Number(tier.bulkSlabSize) || 15) : null;
+        // Bug fix: Use explicit null/undefined check so a saved value of 5 doesn't get
+        // overridden by the default. || 15 would coerce 0 to 15 — use nullish coalescing instead.
+        const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
         const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
 

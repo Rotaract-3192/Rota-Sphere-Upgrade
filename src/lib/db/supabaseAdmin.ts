@@ -7,16 +7,20 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://db.rotaract3192.org";
-const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q";
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!serviceRoleKey) {
+  throw new Error(
+    "[supabaseAdmin] SUPABASE_SERVICE_ROLE_KEY is not set. " +
+    "Server-side admin operations require the service role key."
+  );
+}
 
 let clientInstance: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (!clientInstance) {
-    clientInstance = createClient(supabaseUrl, serviceRoleKey, {
+    clientInstance = createClient(supabaseUrl, serviceRoleKey!, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

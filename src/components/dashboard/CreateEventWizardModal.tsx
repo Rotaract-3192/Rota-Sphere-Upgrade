@@ -322,7 +322,7 @@ export function CreateEventWizardModal({
               salesEndTime: t.sales_end ? formatTimeStringToInput(t.sales_end, tz) : "23:59",
               maxPerOrder: t.max_per_order ? Number(t.max_per_order) : 10,
               isBulkSlab: Boolean(t.is_bulk_slab || t.tier_type === "BULK"),
-              bulkSlabSize: t.bulk_slab_size || 15,
+              bulkSlabSize: t.bulk_slab_size != null ? Number(t.bulk_slab_size) : 15,
             };
           })
         );

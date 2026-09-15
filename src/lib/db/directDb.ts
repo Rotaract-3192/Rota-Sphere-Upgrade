@@ -2,11 +2,21 @@
  * High-Performance Direct DB Client
  * Connects directly to the Supabase Studio query API on db.rotaract3192.org
  * with HTTP Basic Auth and executes queries with zero 401/404 issues.
+ *
+ * Security: All credentials MUST be set via environment variables.
+ * No hardcoded fallbacks for secrets.
  */
 
 const HOST = process.env.DIRECT_DB_HOST || "db.rotaract3192.org";
 const BASIC_USER = process.env.DIRECT_DB_USER || "rotaract-admin";
-const BASIC_PASS = process.env.DIRECT_DB_PASS || "Y9#M2!qR7@Lp8Xv$5NtW";
+const BASIC_PASS = process.env.DIRECT_DB_PASS;
+
+if (!BASIC_PASS && process.env.NODE_ENV !== "test") {
+  throw new Error(
+    "[directDb] DIRECT_DB_PASS environment variable is not set. " +
+    "Set it in .env.local (never commit secrets to source code)."
+  );
+}
 
 function getAuthHeader(): string {
   return `Basic ${Buffer.from(`${BASIC_USER}:${BASIC_PASS}`).toString("base64")}`;

@@ -352,17 +352,23 @@ export async function cleanupExpiredTicketHoldsAction(): Promise<{ success: bool
 }
 
 /**
- * Immediately releases an active reservation hold for a checkout session
+ * Immediately releases an active reservation hold for a checkout session.
+ * Security H-3: Only releases holds belonging to the authenticated caller.
  * (called if attendee cancels, navigates away, or closes the checkout modal).
  */
 export async function releaseUserHoldAction(sessionId: string): Promise<{ success: boolean }> {
   if (!sessionId) return { success: true };
   try {
+    const user = await getCurrentUser();
     const cleanSession = escapeSql(sessionId);
+    // Scope delete to caller's own holds: either matched by session OR by user_id
+    // This prevents one user from releasing another user's hold.
+    const userFilter = user?.clerkId ? `AND (session_id = ${cleanSession} OR user_id = ${escapeSql(user.clerkId)})` : `AND session_id = ${cleanSession}`;
     await executeSql(`
       WITH released AS (
         DELETE FROM ticket_inventory_holds
         WHERE session_id = ${cleanSession}
+        ${userFilter}
         RETURNING ticket_tier_id, quantity
       ),
       aggregated AS (
@@ -404,7 +410,15 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
   error?: string;
 }> {
   try {
+    // Security H-2: Require authentication to reserve inventory holds.
+    // Unauthenticated users could otherwise lock all tickets for an event.
     const user = await getCurrentUser();
+    if (!user?.clerkId) {
+      return {
+        success: false,
+        error: "You must be signed in to reserve tickets. Please log in and try again.",
+      };
+    }
     // Default duration: 300 seconds (5 minutes)
     const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 300));
     const targetSessionId =
@@ -789,13 +803,25 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     const isFree = feeCalculation.totalPayable === 0;
 
-    // Validate payment proof if paid (either screenshot OR UTR reference is required)
+    // Security C-3: Validate payment proof.
+    // paymentProofUrl MUST be a URL on our own Supabase Storage domain — not an arbitrary string.
+    function isValidStorageUrl(url: string): boolean {
+      try {
+        const u = new URL(url);
+        const host = process.env.NEXT_PUBLIC_SUPABASE_URL
+          ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+          : "db.rotaract3192.org";
+        return u.hostname === host && u.pathname.startsWith("/storage/");
+      } catch {
+        return false;
+      }
+    }
     const hasUtr = Boolean(input.upiTransactionId?.trim());
-    const hasScreenshot = Boolean(input.paymentProofUrl);
+    const hasScreenshot = Boolean(input.paymentProofUrl && isValidStorageUrl(input.paymentProofUrl));
     if (!isFree && !hasUtr && !hasScreenshot) {
       return {
         success: false,
-        error: "Please provide either a payment receipt screenshot or your 12-digit UPI UTR reference to confirm your booking.",
+        error: "Please provide either a valid payment receipt screenshot or your 12-digit UPI UTR reference to confirm your booking.",
       };
     }
 
@@ -1431,6 +1457,22 @@ export async function createManualAttendeeAction(
 
     if (!isSuperAdmin && !isOrganizer) {
       return { success: false, error: "You are not authorized to create manual attendees." };
+    }
+
+    // Security C-4: Verify event ownership — an organizer may only issue tickets for their own events.
+    if (!isSuperAdmin) {
+      const { data: ownerCheck } = await executeSql(`
+        SELECT id FROM saas_events
+        WHERE id = ${escapeSql(input.eventId)}
+          AND (organizer_id = ${escapeSql(user.clerkId)} OR created_by_user_id = ${escapeSql(user.clerkId)}
+          OR organization_id IN (
+            SELECT organization_id FROM organization_members WHERE user_id = ${escapeSql(user.clerkId)}
+          ))
+        LIMIT 1;
+      `);
+      if (!ownerCheck || ownerCheck.length === 0) {
+        return { success: false, error: "Unauthorized: You may only issue manual tickets for events you organize." };
+      }
     }
 
     // 2. Fetch Ticket Tier

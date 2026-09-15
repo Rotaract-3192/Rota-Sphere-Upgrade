@@ -43,6 +43,7 @@ import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 import { updateEventAction } from "@/app/actions/eventActions";
 import { checkInTicketAction } from "@/app/actions/checkInActions";
 import { exportEventAttendeesToExcel } from "@/lib/utils/excelExporter";
+import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 
 interface EventDashboardClientProps {
   user: any;
@@ -51,7 +52,7 @@ interface EventDashboardClientProps {
   initialOrders: any[];
   initialTickets: any[];
   initialCheckIns: any[];
-  categories: any[];
+  categories?: any[];
   initialTab?: string;
 }
 
@@ -74,17 +75,21 @@ export function EventDashboardClient({
   const [tickets, setTickets] = useState(initialTickets);
   const [checkIns, setCheckIns] = useState(initialCheckIns);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "orders" | "attendees" | "tickets" | "edit" | "scanner" | "broadcast"
-  >((initialTab as any) || "overview");
+    "overview" | "orders" | "attendees" | "tickets" | "broadcast"
+  >(
+    (initialTab as any) === "edit" || (initialTab as any) === "scanner"
+      ? "overview"
+      : (initialTab as any) || "overview"
+  );
 
   // Notifications
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
 
   // Modals & Action loading
   const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [rejectionModalOrder, setRejectionModalOrder] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -94,15 +99,6 @@ export function EventDashboardClient({
   const [attendeeStatusFilter, setAttendeeStatusFilter] = useState("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
-
-  // Scanner state
-  const [scannerInputCode, setScannerInputCode] = useState("");
-  const [scannerResult, setScannerResult] = useState<{
-    success: boolean;
-    message: string;
-    attendee?: string;
-  } | null>(null);
-  const [scannerLoading, setScannerLoading] = useState(false);
 
   // Tier Edit/Create Modal State
   const [tierModalOpen, setTierModalOpen] = useState(false);
@@ -117,30 +113,6 @@ export function EventDashboardClient({
     isBulkSlab: false,
     bulkSlabSize: 10,
     maxPerOrder: 10,
-  });
-
-  // Edit Event Form State
-  const [editForm, setEditForm] = useState({
-    title: event.title || "",
-    summary: event.summary || "",
-    description: event.description || "",
-    categoryId: event.category_id || (categories[0]?.id ?? ""),
-    eventType: event.event_type || "PHYSICAL",
-    venueName: event.venue_name || "",
-    address: event.address || "",
-    city: event.city || "",
-    state: event.state || "",
-    googleMapsUrl: event.google_maps_url || "",
-    startDate: event.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : "",
-    endDate: event.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : "",
-    coverImageUrl: event.cover_image_url || "",
-    upiId: event.upi_id || "",
-    upiPayeeName: event.upi_payee_name || "",
-    capacity: event.capacity || 200,
-    allowWaitlist: event.allow_waitlist ?? true,
-    allowTicketTransfer: event.allow_ticket_transfer ?? true,
-    allowRefunds: event.allow_refunds ?? false,
-    allowNonRotaract: event.allow_non_rotaract ?? true,
   });
 
   // Toast helper
@@ -293,48 +265,6 @@ export function EventDashboardClient({
     }
   }
 
-  // ── Save Event Details Handler ────────────────────────────────────────────
-  async function handleSaveEventDetails(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSavingEvent(true);
-    const res = await updateEventAction(event.id, {
-      title: editForm.title,
-      summary: editForm.summary,
-      description: editForm.description,
-      eventType: editForm.eventType as any,
-      venueName: editForm.venueName,
-      address: editForm.address,
-      city: editForm.city,
-      state: editForm.state,
-      googleMapsUrl: editForm.googleMapsUrl,
-      startDate: editForm.startDate ? new Date(editForm.startDate).toISOString() : undefined,
-      endDate: editForm.endDate ? new Date(editForm.endDate).toISOString() : undefined,
-      coverImageUrl: editForm.coverImageUrl,
-      upiId: editForm.upiId,
-      upiPayeeName: editForm.upiPayeeName,
-      capacity: Number(editForm.capacity) || 200,
-      allowWaitlist: editForm.allowWaitlist,
-      allowTicketTransfer: editForm.allowTicketTransfer,
-      allowRefunds: editForm.allowRefunds,
-      allowNonRotaract: editForm.allowNonRotaract,
-      category: editForm.categoryId,
-    });
-    setIsSavingEvent(false);
-
-    if (res.success) {
-      setEvent((prev: any) => ({
-        ...prev,
-        ...editForm,
-        start_date: editForm.startDate,
-        end_date: editForm.endDate,
-      }));
-      showToast("✓ Event configuration saved successfully!");
-      router.refresh();
-    } else {
-      alert(res.error || "Failed to update event.");
-    }
-  }
-
   // ── Save / Add Ticket Tier Handler ─────────────────────────────────────────
   async function handleSaveTier() {
     if (!tierForm.name.trim()) {
@@ -401,51 +331,6 @@ export function EventDashboardClient({
     }
   }
 
-  // ── Manual Scanner Check-In ────────────────────────────────────────────────
-  async function handleScannerCheckIn(e: React.FormEvent) {
-    e.preventDefault();
-    const code = scannerInputCode.trim();
-    if (!code) return;
-
-    setScannerLoading(true);
-    setScannerResult(null);
-
-    try {
-      const res = await checkInTicketAction({
-        rawInput: code,
-        eventId: event.id,
-        gateName: "Main Entrance",
-      });
-
-      if (res.result === "SUCCESS") {
-        setScannerResult({
-          success: true,
-          message: `ADMITTED: ${res.attendeeName || "Attendee"} verified!`,
-          attendee: res.attendeeName,
-        });
-        setTickets((prev) =>
-          prev.map((t) =>
-            t.ticket_code === code ? { ...t, status: "USED", checked_in_at: new Date().toISOString() } : t
-          )
-        );
-        setScannerInputCode("");
-        showToast(`✓ Admitted: ${res.attendeeName || code}`);
-      } else {
-        setScannerResult({
-          success: false,
-          message: res.message || "Invalid or already scanned ticket.",
-        });
-      }
-    } catch (err: any) {
-      setScannerResult({
-        success: false,
-        message: err.message || "Check-in failed.",
-      });
-    } finally {
-      setScannerLoading(false);
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col">
       {/* Toast Notification */}
@@ -481,6 +366,16 @@ export function EventDashboardClient({
 
             {/* Quick Actions Right */}
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBulkEmailOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#0758fc] hover:bg-[#054fe0] px-3.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                title="Broadcast Email to Delegates"
+              >
+                <Megaphone size={13} />
+                <span>Broadcast Email</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleCopyEventLink}
@@ -557,16 +452,20 @@ export function EventDashboardClient({
               },
               { id: "attendees", label: `Guest List (${tickets.length})`, icon: Users },
               { id: "tickets", label: `Passes & Tiers (${tiers.length})`, icon: Ticket },
-              { id: "edit", label: "Edit Event", icon: Edit3 },
-              { id: "scanner", label: "QR Scanner", icon: QrCode },
-              { id: "broadcast", label: "Broadcast", icon: Megaphone },
+              { id: "broadcast", label: "Broadcast Announcements", icon: Megaphone },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  data-tour={`tab-${tab.id}`}
+                  onClick={() => {
+                    setActiveTab(tab.id as any);
+                    if (tab.id === "broadcast") {
+                      setIsBulkEmailOpen(true);
+                    }
+                  }}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all shrink-0 cursor-pointer ${
                     isActive
                       ? "bg-[#0758fc] text-white shadow-xs font-extrabold"
@@ -1256,7 +1155,7 @@ export function EventDashboardClient({
                             tierType: t.tier_type || "REGULAR",
                             allowedAudience: t.allowed_audience || "ALL",
                             isBulkSlab: Boolean(t.is_bulk_slab),
-                            bulkSlabSize: t.bulk_slab_size || 10,
+                            bulkSlabSize: t.bulk_slab_size != null ? Number(t.bulk_slab_size) : 10,
                             maxPerOrder: t.max_per_order || 10,
                           });
                           setTierModalOpen(true);
@@ -1274,298 +1173,118 @@ export function EventDashboardClient({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            TAB 5: EDIT EVENT DETAILS & UPI CONFIGURATION
-            ══════════════════════════════════════════════════════════════════ */}
-        {activeTab === "edit" && (
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs animate-in fade-in-50 space-y-6">
-            <div>
-              <h3 className="text-xl font-black text-gray-900 dark:text-white">Edit Event Details</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Update event description, schedule dates, venue location, banner image, and payment accounts</p>
-            </div>
-
-            <form onSubmit={handleSaveEventDetails} className="space-y-6 text-xs">
-              {/* Event Title & Category */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">Event Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">Category</label>
-                  <select
-                    value={editForm.categoryId}
-                    onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3.5 py-2.5 text-xs text-gray-900 dark:text-white outline-none cursor-pointer"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Summary & Description */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 dark:text-gray-300">Short Summary</label>
-                <input
-                  type="text"
-                  placeholder="One sentence punchy teaser for social media cards..."
-                  value={editForm.summary}
-                  onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 dark:text-gray-300">Full Description</label>
-                <textarea
-                  rows={4}
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">Start Date &amp; Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editForm.startDate}
-                    onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">End Date &amp; Time</label>
-                  <input
-                    type="datetime-local"
-                    value={editForm.endDate}
-                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-              </div>
-
-              {/* Venue & Location */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">Venue Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Nimhans Convention Centre"
-                    value={editForm.venueName}
-                    onChange={(e) => setEditForm({ ...editForm, venueName: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">City</label>
-                  <input
-                    type="text"
-                    value={editForm.city}
-                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-gray-700 dark:text-gray-300">Overall Capacity</label>
-                  <input
-                    type="number"
-                    value={editForm.capacity}
-                    onChange={(e) => setEditForm({ ...editForm, capacity: Number(e.target.value) || 100 })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                  />
-                </div>
-              </div>
-
-              {/* Event-Specific Custom UPI Payment Settings */}
-              <div className="bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 rounded-3xl p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#0758fc] text-white flex items-center justify-center">
-                    <QrCode size={16} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white text-xs">Event UPI Payment Account</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Specify an event-specific UPI ID (VPA) if ticket proceeds should credit directly to your club treasurer</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-gray-700 dark:text-gray-300">UPI ID / VPA</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. rotaract3192@okhdfcbank"
-                      value={editForm.upiId}
-                      onChange={(e) => setEditForm({ ...editForm, upiId: e.target.value })}
-                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-gray-700 dark:text-gray-300">Payee Account Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rotaract Club of Bangalore"
-                      value={editForm.upiPayeeName}
-                      onChange={(e) => setEditForm({ ...editForm, upiPayeeName: e.target.value })}
-                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Cover Image URL */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 dark:text-gray-300">Cover Banner Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={editForm.coverImageUrl}
-                  onChange={(e) => setEditForm({ ...editForm, coverImageUrl: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
-                <button
-                  type="submit"
-                  disabled={isSavingEvent}
-                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-6 py-2.5 rounded-2xl transition-all shadow-md cursor-pointer inline-flex items-center gap-2 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                >
-                  {isSavingEvent && <Loader2 size={14} className="animate-spin" />}
-                  <span>{isSavingEvent ? "Saving Updates..." : "Save Event Configuration"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════
-            TAB 6: DEDICATED QR ENTRY SCANNER
-            ══════════════════════════════════════════════════════════════════ */}
-        {activeTab === "scanner" && (
-          <div className="max-w-xl mx-auto space-y-6 animate-in fade-in-50">
-            <div className="text-center space-y-1">
-              <h3 className="text-xl font-black text-gray-900 dark:text-white">Gate Entry Pass Scanner</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pre-locked to <strong>{event.title}</strong>. Scan camera QR or enter ticket code.</p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
-              <form onSubmit={handleScannerCheckIn} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Ticket Code Entry</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. TKT-K-3490..."
-                      value={scannerInputCode}
-                      onChange={(e) => setScannerInputCode(e.target.value)}
-                      className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white font-mono font-bold outline-none focus:border-[#0758fc]"
-                    />
-                    <button
-                      type="submit"
-                      disabled={scannerLoading || !scannerInputCode.trim()}
-                      className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-2.5 rounded-2xl transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {scannerLoading ? <Loader2 size={14} className="animate-spin" /> : <QrCode size={14} />}
-                      <span>Validate</span>
-                    </button>
-                  </div>
-                </div>
-              </form>
-
-              {/* Scanner Result Card */}
-              {scannerResult && (
-                <div
-                  className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-3 animate-in fade-in ${
-                    scannerResult.success
-                      ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800"
-                      : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-800"
-                  }`}
-                >
-                  {scannerResult.success ? (
-                    <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-                  ) : (
-                    <XCircle size={20} className="text-rose-600 shrink-0" />
-                  )}
-                  <div>
-                    <p className="font-extrabold">{scannerResult.message}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Gate Stats Counter */}
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-center text-xs">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Admitted Today</span>
-                  <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">{totalCheckedIn}</span>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Remaining Passes</span>
-                  <span className="text-lg font-black text-gray-900 dark:text-white">{totalSoldTickets - totalCheckedIn}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════
-            TAB 7: BROADCAST ANNOUNCEMENTS
+            TAB 5: BROADCAST ANNOUNCEMENTS (Full Feature matching Admin Panel)
             ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "broadcast" && (
-          <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in-50">
-            <div>
-              <h3 className="text-xl font-black text-gray-900 dark:text-white">Email Registered Delegates</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Send schedule updates, dress code guidelines, or parking info to all {tickets.length} attendees of this event</p>
+          <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in-50">
+            {/* Header banner */}
+            <div className="bg-gradient-to-br from-blue-600 via-[#0758fc] to-indigo-700 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+              <div className="relative z-10 space-y-3">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold">
+                  <Megaphone size={14} />
+                  <span>District 3192 Official Broadcast Engine</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                  Delegate Announcement Hub
+                </h2>
+                <p className="text-xs sm:text-sm text-blue-100 max-w-xl">
+                  Send high-converting email notifications, schedules, QR gate passes, and PDF documents to confirmed attendees of <strong>{event.title}</strong>.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkEmailOpen(true)}
+                    className="bg-white hover:bg-blue-50 text-[#0758fc] font-black text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+                  >
+                    <Send size={15} />
+                    <span>Open Broadcast Studio</span>
+                  </button>
+                </div>
+              </div>
+              <div className="absolute -right-6 -bottom-10 opacity-15 pointer-events-none">
+                <Megaphone size={220} />
+              </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4 text-xs">
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-2xl text-[11px] text-[#0758fc] dark:text-blue-400 font-bold flex items-center gap-2">
-                <Users size={14} />
-                <span>Broadcasting to {tickets.length} confirmed delegates for &quot;{event.title}&quot;</span>
+            {/* Recipient Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-3xl shadow-xs space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Registered</span>
+                <span className="text-2xl font-black text-gray-900 dark:text-white">{tickets.length}</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Total delegates in guest list</p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 dark:text-gray-300">Email Subject</label>
-                <input
-                  type="text"
-                  placeholder={`e.g. Important Notice: Venue and Parking update for ${event.title}`}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                />
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-3xl shadow-xs space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Approved &amp; Confirmed</span>
+                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{totalSoldTickets}</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Ready for instant QR broadcasts</p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 dark:text-gray-300">Message Body</label>
-                <textarea
-                  rows={6}
-                  placeholder="Dear Rotaractor / Delegate,&#10;&#10;Here are the final event instructions for tomorrow..."
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                />
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-3xl shadow-xs space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Admitted Today</span>
+                <span className="text-2xl font-black text-purple-600 dark:text-purple-400">{totalCheckedIn}</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Passed gate check-in</p>
+              </div>
+            </div>
+
+            {/* Feature Capabilities Breakdown */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <Sparkles size={16} className="text-[#0758fc]" />
+                <span>What you can do with the Broadcast Studio:</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-750 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                    <span className="text-base">📢</span>
+                    <span>District 3192 Branded Layout</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Broadcasts use official HTML templates styled with District 3192 headers, logos, and customizable action buttons.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-750 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                    <span className="text-base">🎟️</span>
+                    <span>Automated QR Pass Attachment</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Toggle automatic generation and attachment of personalized QR entry tickets directly to each delegate&apos;s email.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-750 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                    <span className="text-base">📎</span>
+                    <span>Event Materials &amp; Attachments</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Attach schedule itineraries, rulebooks, parking passes, and PDFs directly to the mass email transmission.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-750 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                    <span className="text-base">🧪</span>
+                    <span>Live Preview &amp; Test Dispatch</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Preview your email in real-time and send test verification emails to your inbox before reaching the guest list.
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex items-center justify-between border-t border-gray-100 dark:border-gray-800">
+                <span className="text-xs text-gray-400">Powered by the Platform Bulk Email Infrastructure</span>
                 <button
                   type="button"
-                  onClick={() => showToast("✓ Broadcast queue initialized! Emails sending...")}
-                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-extrabold text-xs px-5 py-2.5 rounded-2xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+                  onClick={() => setIsBulkEmailOpen(true)}
+                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-black text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
                 >
-                  <Send size={14} />
-                  <span>Send Broadcast to {tickets.length} Delegates</span>
+                  <Megaphone size={14} />
+                  <span>Launch Broadcast Studio</span>
                 </button>
               </div>
             </div>
@@ -1800,6 +1519,15 @@ export function EventDashboardClient({
           </div>
         </div>
       )}
+
+      {/* ── BROADCAST BULK EMAIL MODAL (Identical to Super Admin) ─────── */}
+      <BulkEmailModal
+        isOpen={isBulkEmailOpen}
+        onClose={() => setIsBulkEmailOpen(false)}
+        events={[{ id: event.id, title: event.title }]}
+        defaultEventId={event.id}
+        isSuperAdmin={user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com"}
+      />
     </div>
   );
 }

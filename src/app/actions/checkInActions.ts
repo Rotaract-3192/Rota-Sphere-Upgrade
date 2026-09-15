@@ -9,7 +9,7 @@
 
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
-import { getCurrentUser } from "@/lib/auth/getUser";
+import { getCurrentUser, hasMinimumRole } from "@/lib/auth/getUser";
 import { formatCheckedInTime } from "@/lib/utils/dateTimeUtils";
 
 export interface CheckInRequest {
@@ -69,6 +69,14 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       return {
         result: "INVALID",
         message: "Unauthorized: You must be signed in to an authorized staff or organizer account to operate the venue gate scanner.",
+      };
+    }
+
+    // Security H-1: Only organizers/admins can check in tickets. Attendees are blocked.
+    if (!hasMinimumRole(user.profile?.role, "organizer")) {
+      return {
+        result: "INVALID",
+        message: "Unauthorized: Gate scanner access requires Organizer or Admin role. Contact your event coordinator.",
       };
     }
 

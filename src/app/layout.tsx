@@ -21,6 +21,7 @@ import { BottomNav } from "@/components/shared/BottomNav";
 import { GlobalCommandPalette } from "@/components/shared/GlobalCommandPalette";
 import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
 import { UtmTracker } from "@/lib/analytics/utmTracker";
+import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 
 const openSans = Open_Sans({
   subsets: ["latin"],
@@ -156,20 +157,22 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-canvas text-ink font-sans relative selection:bg-[#0758fc] selection:text-white" suppressHydrationWarning>
-        <SkipToContent />
-        <ScrollProgressBar />
-        <UtmTracker />
-        <GlobalCommandPalette />
+        <OnboardingWrapper>
+          <SkipToContent />
+          <ScrollProgressBar />
+          <UtmTracker />
+          <GlobalCommandPalette />
 
-        <div id="main-content" className="pb-20 md:pb-0">
-          {children}
-        </div>
+          <div id="main-content" className="pb-20 md:pb-0">
+            {children}
+          </div>
 
-        <FloatingContactButton />
-        <ScrollToTop />
-        <CookieConsentBanner />
-        <PwaInstallPrompt />
-        <BottomNav />
+          <FloatingContactButton />
+          <ScrollToTop />
+          <CookieConsentBanner />
+          <PwaInstallPrompt />
+          <BottomNav />
+        </OnboardingWrapper>
       </body>
     </html>
   );
