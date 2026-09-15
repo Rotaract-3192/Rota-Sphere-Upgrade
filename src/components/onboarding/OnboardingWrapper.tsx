@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { OnboardingProvider } from "./OnboardingProvider";
 import { WelcomeModal } from "./WelcomeModal";
 import { SpotlightTour } from "./SpotlightTour";
-import { HelpButton } from "./HelpButton";
 
 export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -20,7 +19,6 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
         <>
           <WelcomeModal />
           <SpotlightTour />
-          <HelpButton />
         </>
       )}
     </OnboardingProvider>

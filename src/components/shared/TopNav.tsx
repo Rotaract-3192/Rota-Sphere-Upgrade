@@ -10,9 +10,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton } from "@clerk/nextjs";
-import { Home, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles } from "lucide-react";
+import { Home, Calendar, Image as ImageIcon, Shield, Ticket, PlusCircle, Users, Sparkles, Compass } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
+import { attendeeTourSteps } from "@/components/onboarding/tourSteps";
 
 const NAV_TABS = [
   { label: "Home", href: "/", icon: Home, isNew: false },
@@ -33,6 +35,7 @@ function useSafeUser() {
 export function TopNav() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded, user } = useSafeUser();
+  const { startTour } = useOnboarding();
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const isAdminUser = userEmail === "tech.rotaract3192@gmail.com";
 
@@ -124,6 +127,18 @@ export function TopNav() {
           <div data-tour="nav-theme">
             <ThemeToggle />
           </div>
+
+          {/* Quick Tour Trigger */}
+          <button
+            type="button"
+            onClick={() => startTour(attendeeTourSteps)}
+            aria-label="Start interactive tour"
+            title="Need help? Click to take interactive tour"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:text-[#0758fc] dark:hover:text-[#0758fc] bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-gray-200/80 dark:border-gray-700/60 px-2.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
+          >
+            <Compass size={15} className="text-[#0758fc]" />
+            <span>Tour</span>
+          </button>
 
           {/* Admin panel link */}
           {isAdminUser && (
