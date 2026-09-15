@@ -9,9 +9,10 @@
  */
 
 import { useState, useEffect } from "react";
-import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp, Lock, Clock } from "lucide-react";
+import { Ticket, ShieldCheck, Share2, Heart, ChevronRight, ChevronDown, ChevronUp, Lock, Clock, Users, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+import { BulkAttendeeForm } from "@/components/checkout/BulkAttendeeForm";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
 import { getEventTiersAction } from "@/app/actions/orderActions";
@@ -138,6 +139,10 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Bulk slab modal state
+  const [bulkTier, setBulkTier] = useState<SaasTicketTier | null>(null);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+
   // Dynamic live tiers reflecting real-time inventory holds
   const [liveTiers, setLiveTiers] = useState<SaasTicketTier[]>(tiers);
 
@@ -166,14 +171,18 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
     };
   }, [event.id]);
 
-  const earlyBirdTiers = liveTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
-  const generalTiers = liveTiers.filter(
+  // Separate bulk slab tiers from regular tiers
+  const bulkTiers = liveTiers.filter((t) => t.is_bulk_slab === true || t.tier_type === "BULK");
+  const regularTiers = liveTiers.filter((t) => !t.is_bulk_slab && t.tier_type !== "BULK");
+
+  const earlyBirdTiers = regularTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
+  const generalTiers = regularTiers.filter(
     (t) =>
       (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD"
   );
-  const otherTiers = liveTiers.filter(
+  const otherTiers = regularTiers.filter(
     (t) =>
       !/early/i.test(t.name) &&
       t.tier_type !== "EARLY_BIRD" &&
@@ -185,17 +194,18 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
     earlyBirdTiers.length > 0 &&
     earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
-  const hasAnyBookableTier = liveTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = regularTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableBulkTier = bulkTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
 
   // Find the earliest upcoming release tier if everything is locked
-  const earliestUpcoming = liveTiers
+  const earliestUpcoming = regularTiers
     .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
     .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
     .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
 
   const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
-  const prices = liveTiers.map((t) => Number(t.price));
+  const prices = regularTiers.map((t) => Number(t.price));
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const isFree = minPrice === 0;
 
@@ -226,6 +236,12 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
       }
     } catch (_) {}
     setModalOpen(true);
+  }
+
+  function handleOpenBulkForm(e: React.MouseEvent, tier: SaasTicketTier) {
+    e.stopPropagation();
+    setBulkTier(tier);
+    setBulkModalOpen(true);
   }
 
   return (
@@ -276,6 +292,71 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
               <p className="text-xs text-gray-500 italic">No tickets announced yet.</p>
             ) : (
               <>
+                {/* 0. BULK SLAB TIERS — rendered first, before regular passes */}
+                {bulkTiers.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                      <Users size={10} /> Group Passes
+                    </span>
+                    {bulkTiers.map((tier) => {
+                      const status = getTierScheduleStatus(tier, currentTime);
+                      const slabSize = tier.bulk_slab_size ?? 1;
+                      const pricePerPerson = Number(tier.price) || 0;
+                      const totalPrice = pricePerPerson * slabSize;
+                      const groupsAvailable = tier.total_capacity > 0
+                        ? Math.floor((tier.total_capacity - (tier.sold_count || 0)) / slabSize)
+                        : null;
+                      return (
+                        <div
+                          key={tier.id}
+                          className={`p-3.5 rounded-2xl border transition-all ${
+                            status.canBook
+                              ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200"
+                              : "bg-gray-50 border-dashed border-indigo-200/60 opacity-80"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Package size={12} className="text-indigo-600 shrink-0" />
+                                <p className="text-sm font-bold text-gray-900">{tier.name}</p>
+                                <span className="text-[9px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 px-1.5 py-0.5 rounded-full">
+                                  👥 {slabSize} people
+                                </span>
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${status.badgeClass}`}>
+                                  {status.badgeText}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500">{status.detailText}</p>
+                              {groupsAvailable !== null && (
+                                <p className="text-[10px] text-indigo-600 font-semibold">
+                                  {groupsAvailable === 0 ? "No groups remaining" : `${groupsAvailable} group${groupsAvailable !== 1 ? "s" : ""} available`}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-extrabold text-indigo-700">
+                                {pricePerPerson === 0 ? "FREE" : `₹${totalPrice.toLocaleString("en-IN")}`}
+                              </p>
+                              {pricePerPerson > 0 && (
+                                <p className="text-[10px] text-gray-400">₹{pricePerPerson.toLocaleString("en-IN")}/person</p>
+                              )}
+                            </div>
+                          </div>
+                          {status.canBook && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenBulkForm(e, tier)}
+                              className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl transition-colors cursor-pointer active:scale-95"
+                            >
+                              <Users size={13} /> Buy Group Pass · {slabSize} People
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 {/* 1. Early Bird Tiers */}
                 {earlyBirdTiers.length > 0 && (
                   <div className="space-y-2">
@@ -463,8 +544,8 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
           </div>
         </div>
 
-        {/* Action Button */}
-        {hasAnyBookableTier ? (
+        {/* Action Button — only shown for regular tiers */}
+        {regularTiers.length > 0 && (hasAnyBookableTier ? (
           <button
             type="button"
             onClick={handleOpenCheckout}
@@ -485,7 +566,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
                 : "Passes Currently Locked"}
             </span>
           </button>
-        )}
+        ))}
 
         {/* Utilities: Share & Wishlist */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
@@ -569,7 +650,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
       {/* Checkout Modal (rendered with z-[9999] high priority) */}
       <CheckoutModal
         event={event}
-        tiers={liveTiers}
+        tiers={regularTiers}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onTiersUpdate={(updated) => setLiveTiers(updated)}
@@ -577,6 +658,18 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
         userName={userName}
         initialServerTime={initialServerTime}
       />
+
+      {/* Bulk Attendee Form Modal */}
+      {bulkTier && (
+        <BulkAttendeeForm
+          isOpen={bulkModalOpen}
+          onClose={() => { setBulkModalOpen(false); setBulkTier(null); }}
+          event={event}
+          tier={bulkTier}
+          buyerName={userName || ""}
+          buyerEmail={userEmail || ""}
+        />
+      )}
     </>
   );
 }

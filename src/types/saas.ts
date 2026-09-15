@@ -29,7 +29,8 @@ export type TicketTierType =
   | "GROUP"
   | "FACULTY"
   | "WORKSHOP"
-  | "COMPLIMENTARY";
+  | "COMPLIMENTARY"
+  | "BULK";
 
 export type OrderStatus = "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "PARTIALLY_REFUNDED" | "REFUNDED";
 export type TicketStatus = "RESERVED" | "CONFIRMED" | "USED" | "CANCELLED" | "REFUNDED" | "TRANSFERRED" | "EXPIRED";
@@ -161,6 +162,10 @@ export interface SaasTicketTier {
   allow_non_rotaract?: boolean;
   allowed_audience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
   benefits: string[];
+  /** Bulk slab: if true, exactly bulk_slab_size tickets are sold per order */
+  is_bulk_slab?: boolean;
+  /** Bulk slab: fixed number of attendees (e.g. 15 or 20). Null for regular tiers. */
+  bulk_slab_size?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -281,6 +286,8 @@ export interface SaasTicket {
   checked_in_at: string | null;
   checked_in_gate: string | null;
   checked_in_by_user_id: string | null;
+  /** Groups all tickets from the same bulk purchase together */
+  bulk_order_group_id?: string | null;
   created_at: string;
   updated_at: string;
 

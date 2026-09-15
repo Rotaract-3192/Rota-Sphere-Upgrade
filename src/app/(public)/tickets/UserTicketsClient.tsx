@@ -36,6 +36,8 @@ import {
   Upload,
   Trash2,
   Eye,
+  Users,
+  Package,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { transferUserTicketAction, requestTicketRefundAction, resubmitUpiTransactionAction } from "@/app/actions/attendeeActions";
@@ -479,6 +481,32 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
   const displayedTickets = activeTab === "upcoming" ? upcomingTickets : previousTickets;
 
+  // ── Group bulk tickets by bulk_order_group_id ────────────────────────────
+  // Non-bulk tickets (no bulk_order_group_id) are kept as standalone.
+  // Bulk tickets sharing the same group id are collapsed into a group block.
+  interface TicketGroup {
+    type: "standalone" | "bulk";
+    tickets: any[];
+    bulkGroupId?: string;
+  }
+
+  const ticketGroups: TicketGroup[] = [];
+  const seenBulkGroups = new Set<string>();
+
+  for (const ticket of displayedTickets) {
+    const bgId = ticket.bulk_order_group_id;
+    if (bgId) {
+      if (!seenBulkGroups.has(bgId)) {
+        seenBulkGroups.add(bgId);
+        const groupTickets = displayedTickets.filter((t) => t.bulk_order_group_id === bgId);
+        ticketGroups.push({ type: "bulk", tickets: groupTickets, bulkGroupId: bgId });
+      }
+      // else: already added in its group, skip
+    } else {
+      ticketGroups.push({ type: "standalone", tickets: [ticket] });
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 35 }}
@@ -544,8 +572,133 @@ export function UserTicketsClient({ initialTickets }: UserTicketsClientProps) {
 
       {/* ── TICKETS GRID ──────────────────────────────────────────────── */}
       {displayedTickets.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
-          {displayedTickets.map((ticket) => {
+        <div className="space-y-8">
+          {ticketGroups.map((group, groupIdx) => {
+            // ── BULK GROUP BLOCK ────────────────────────────────────────
+            if (group.type === "bulk") {
+              const firstTicket = group.tickets[0];
+              const event = firstTicket?.saas_events;
+              const tier = firstTicket?.saas_ticket_tiers;
+              const shortGroupId = group.bulkGroupId?.slice(0, 8).toUpperCase() ?? "GROUP";
+              const allConfirmed = group.tickets.every((t) => t.status === "CONFIRMED" || t.status === "ISSUED" || t.status === "USED" || t.status === "CHECKED_IN");
+              const pendingCount = group.tickets.filter((t) => t.status === "PENDING_VERIFICATION" || t.status === "PENDING").length;
+
+              return (
+                <div key={`bulk-${group.bulkGroupId}`} className="space-y-3">
+                  {/* Group Banner Header */}
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
+                        <Package size={16} className="text-indigo-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-xs font-extrabold text-indigo-900">Group Purchase</p>
+                          <span className="text-[9px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full">
+                            👥 {group.tickets.length} Attendees
+                          </span>
+                          {pendingCount > 0 && (
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
+                              {pendingCount} pending
+                            </span>
+                          )}
+                          {allConfirmed && pendingCount === 0 && (
+                            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              ✓ All Confirmed
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-indigo-600 font-mono">{event?.title} · Group #{shortGroupId}</p>
+                        {tier && (
+                          <p className="text-[10px] text-indigo-400 font-semibold">{tier.name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-gray-400">Group Ref</p>
+                      <p className="text-xs font-mono font-bold text-gray-700">{shortGroupId}</p>
+                    </div>
+                  </div>
+
+                  {/* Individual Ticket Cards in the Group */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2 border-l-2 border-indigo-200">
+                    {group.tickets.map((ticket) => {
+                      const tEvent = ticket.saas_events;
+                      const tTier = ticket.saas_ticket_tiers;
+                      const isCheckedIn = ticket.status === "USED" || ticket.status === "CHECKED_IN";
+                      const isConfirmed = ticket.status === "ISSUED" || ticket.status === "CONFIRMED";
+                      const isApproved = isConfirmed || isCheckedIn;
+                      const isRefundRequested = ticket.status === "REFUND_REQUESTED";
+                      const isPaymentRejected = ticket.status === "PAYMENT_REJECTED";
+                      const isPendingVerification = (ticket.status === "PENDING_VERIFICATION" || ticket.status === "PENDING") && !isApproved;
+                      const isCancelled = ticket.status === "CANCELLED" || ticket.status === "REFUNDED";
+                      const isDownloading = downloadingId === ticket.id;
+                      const qrDataUrl = qrDataMap[ticket.id];
+
+                      return (
+                        <div
+                          key={ticket.id}
+                          className="bg-white border border-indigo-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col"
+                        >
+                          {/* Compact attendee header for bulk */}
+                          <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-extrabold text-gray-900 truncate">{ticket.attendee_name || "Delegate"}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{ticket.attendee_email}</p>
+                              {ticket.attendee_phone && <p className="text-[10px] text-gray-400">{ticket.attendee_phone}</p>}
+                            </div>
+                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                              isCheckedIn ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : isPendingVerification ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : isCancelled ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}>
+                              {isCheckedIn ? "✓ In" : isPendingVerification ? "Pending" : isCancelled ? "Cancelled" : "Confirmed"}
+                            </span>
+                          </div>
+
+                          {/* QR + Code */}
+                          {isApproved && (
+                            <div className="px-4 pb-4 flex items-center justify-between gap-3">
+                              <div className="text-[10px] font-mono text-gray-400 truncate">{ticket.ticket_code}</div>
+                              <div
+                                onClick={() => setQrModalTicket(ticket)}
+                                className="w-14 h-14 bg-white border-2 border-gray-800 rounded-xl p-1 cursor-pointer hover:scale-105 transition-all shrink-0 flex items-center justify-center"
+                              >
+                                {qrDataUrl ? (
+                                  <img src={qrDataUrl} alt={ticket.ticket_code} className="w-full h-full object-contain" />
+                                ) : (
+                                  <Loader2 size={14} className="animate-spin text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Download button */}
+                          {isApproved && (
+                            <div className="px-4 pb-4">
+                              <button
+                                onClick={() => handleDownloadTicket(ticket)}
+                                disabled={isDownloading}
+                                className={`w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50 ${
+                                  isCheckedIn ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-[#0758fc] hover:bg-[#054fe0] text-white"
+                                }`}
+                              >
+                                {isDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                                {isDownloading ? "Generating…" : "Download Pass"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
+            // ── STANDALONE (regular) TICKET ──────────────────────────
+            const ticket = group.tickets[0];
             const event = ticket.saas_events;
             const tier = ticket.saas_ticket_tiers;
             const isCheckedIn = ticket.status === "USED" || ticket.status === "CHECKED_IN";

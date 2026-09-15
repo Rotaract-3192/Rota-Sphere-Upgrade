@@ -7,6 +7,7 @@
  * Enforces strict authorization on payment verification and capacity validation on ticket tiers.
  */
 
+import { randomUUID } from "crypto";
 import { getCurrentUser, requireAuth, hasMinimumRole } from "@/lib/auth/getUser";
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
@@ -1147,6 +1148,7 @@ export async function verifyOrderPaymentAction(params: {
     // Verify order exists and check caller authorization against event organizer
     const { data: orderRows, error: orderFetchErr } = await executeSql(`
       SELECT o.id, o.order_number, o.total_amount, o.status as current_status, o.event_id,
+             o.customer_name, o.customer_email,
              e.organizer_id, e.created_by_user_id, e.organization_id, e.title as event_title, e.city as event_city
       FROM saas_orders o
       LEFT JOIN saas_events e ON o.event_id = e.id
@@ -1197,7 +1199,7 @@ export async function verifyOrderPaymentAction(params: {
         WHERE order_id = ${escapeSql(params.orderId)};
       `);
 
-      // 3. Dispatch email notification with QR attachment to attendee
+      // 3. Dispatch email notifications with QR attachments to ALL attendees & buyer
       try {
         const { data: tktDetails } = await executeSql(`
           SELECT t.ticket_code, t.qr_token, t.attendee_email, t.attendee_name, tr.name as tier_name
@@ -1207,24 +1209,51 @@ export async function verifyOrderPaymentAction(params: {
         `);
 
         if (tktDetails && tktDetails.length > 0) {
-          const primaryEmail = tktDetails[0].attendee_email;
-          const primaryName = tktDetails[0].attendee_name || "Delegate";
+          const eventTitle = ord.event_title || "Rotaract Event";
+          const eventCity = ord.event_city || "District 3192";
+          const eventDateStr = new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+          const orderTotalStr = `₹${Number(ord.total_amount || 0).toFixed(2)}`;
 
-          if (primaryEmail) {
-            sendTicketEmailWithQR({
-              to: primaryEmail,
-              fullName: primaryName,
-              eventTitle: ord.event_title || "Rotaract Event",
-              eventDate: new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
-              eventCity: ord.event_city || "District 3192",
-              orderNumber: ord.order_number,
-              orderTotal: `₹${Number(ord.total_amount || 0).toFixed(2)}`,
-              tickets: tktDetails.map((t: { ticket_code: string; qr_token: string; tier_name: string }) => ({
-                code: t.ticket_code,
-                qrToken: t.qr_token,
-                tierName: t.tier_name || "Pass",
-              })),
-            }).catch((err) => logger.error("Approval ticket email dispatch failed", { error: String(err) }));
+          // 3a. Send each individual attendee their personal QR pass
+          for (const tkt of tktDetails) {
+            if (tkt.attendee_email) {
+              sendTicketEmailWithQR({
+                to: tkt.attendee_email,
+                fullName: tkt.attendee_name || "Delegate",
+                eventTitle,
+                eventDate: eventDateStr,
+                eventCity,
+                orderNumber: ord.order_number,
+                orderTotal: orderTotalStr,
+                tickets: [{
+                  code: tkt.ticket_code,
+                  qrToken: tkt.qr_token,
+                  tierName: tkt.tier_name || "Pass",
+                }],
+              }).catch((err) => logger.error("Approval ticket email dispatch to attendee failed", { error: String(err) }));
+            }
+          }
+
+          // 3b. If multi-ticket/bulk order, also send the full pass bundle to the delegation lead/buyer
+          if (tktDetails.length > 1) {
+            const buyerEmail = ord.customer_email || tktDetails[0]?.attendee_email;
+            const buyerName = ord.customer_name || tktDetails[0]?.attendee_name || "Delegation Lead";
+            if (buyerEmail) {
+              sendTicketEmailWithQR({
+                to: buyerEmail,
+                fullName: buyerName,
+                eventTitle,
+                eventDate: eventDateStr,
+                eventCity,
+                orderNumber: ord.order_number,
+                orderTotal: orderTotalStr,
+                tickets: tktDetails.map((t: any) => ({
+                  code: t.ticket_code,
+                  qrToken: t.qr_token,
+                  tierName: t.tier_name || "Pass",
+                })),
+              }).catch((err) => logger.error("Approval bundle email dispatch to buyer failed", { error: String(err) }));
+            }
           }
         }
       } catch (err) {
@@ -1589,5 +1618,337 @@ export async function createManualAttendeeAction(
   } catch (err: any) {
     logger.error("createManualAttendeeAction error", { error: String(err) });
     return { success: false, error: err?.message || "Failed to create manual attendee." };
+  }
+}
+
+// ============================================================================
+// BULK TICKET ORDER ACTION
+// ============================================================================
+
+export interface BulkAttendeeInput {
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+export interface CreateBulkTicketOrderInput {
+  eventId: string;
+  tierId: string;             // must be a is_bulk_slab=true tier
+  attendees: BulkAttendeeInput[];  // length must match tier.bulk_slab_size exactly
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  upiTransactionId?: string;
+  paymentProofUrl?: string;
+  idempotencyKey: string;
+}
+
+export interface CreateBulkTicketOrderResult {
+  success: boolean;
+  orderNumber?: string;
+  orderStatus?: string;
+  ticketCount?: number;
+  bulkGroupId?: string;
+  error?: string;
+}
+
+/**
+ * Create a bulk ticket order — one order, N individual tickets.
+ *
+ * Flow:
+ * 1. Authenticate buyer
+ * 2. Validate tier is a live bulk slab and attendees count matches exactly
+ * 3. Check remaining group capacity
+ * 4. Run migration to ensure bulk columns exist
+ * 5. Create saas_order (total = price × N)
+ * 6. Create N saas_tickets, each with unique QR + same bulk_order_group_id
+ * 7. Increment sold_count by N
+ * 8. Send email to buyer (summary) + each attendee (personal QR)
+ */
+export async function createBulkTicketOrderAction(
+  input: CreateBulkTicketOrderInput
+): Promise<CreateBulkTicketOrderResult> {
+  try {
+    const user = await requireAuth();
+    const buyerUserId = user.clerkId;
+
+    if (!input.attendees?.length) {
+      return { success: false, error: "Attendee list is required." };
+    }
+
+    // ── 1. Fetch & validate the tier ──────────────────────────────────────────
+    const { data: tierRows } = await executeSql(`
+      SELECT t.id, t.name, t.price, t.total_capacity, t.sold_count, t.reserved_count,
+             t.is_active, t.is_bulk_slab, t.bulk_slab_size,
+             t.sales_start, t.sales_end,
+             (t.sales_start IS NOT NULL AND NOW() < t.sales_start) AS is_too_early,
+             (t.sales_end IS NOT NULL AND NOW() > t.sales_end) AS is_too_late,
+             e.title as event_title, e.city as event_city
+      FROM saas_ticket_tiers t
+      LEFT JOIN saas_events e ON e.id = t.event_id
+      WHERE t.id = ${escapeSql(input.tierId)}
+        AND t.event_id = ${escapeSql(input.eventId)};
+    `);
+
+    const tier = tierRows?.[0];
+    if (!tier) return { success: false, error: "Ticket tier not found." };
+    if (!tier.is_bulk_slab) return { success: false, error: "This tier is not a bulk slab." };
+    if (!tier.is_active) return { success: false, error: "This bulk slab is no longer active." };
+    if (tier.is_too_early) return { success: false, error: "Sales for this bulk slab have not started yet." };
+    if (tier.is_too_late) return { success: false, error: "The booking window for this bulk slab has closed." };
+
+    const slabSize = Number(tier.bulk_slab_size);
+    if (input.attendees.length !== slabSize) {
+      return {
+        success: false,
+        error: `This slab requires exactly ${slabSize} attendees. You provided ${input.attendees.length}.`,
+      };
+    }
+
+    // Validate attendee fields
+    const emailSet = new Set<string>();
+    for (let i = 0; i < input.attendees.length; i++) {
+      const a = input.attendees[i];
+      if (!a.name?.trim()) return { success: false, error: `Attendee ${i + 1}: name is required.` };
+      if (!a.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)) {
+        return { success: false, error: `Attendee ${i + 1}: valid email is required.` };
+      }
+      if (emailSet.has(a.email.toLowerCase())) {
+        return { success: false, error: `Duplicate email detected: ${a.email}. Each attendee must have a unique email.` };
+      }
+      emailSet.add(a.email.toLowerCase());
+    }
+
+    // ── 2. Capacity check ─────────────────────────────────────────────────────
+    const sold = Number(tier.sold_count) || 0;
+    const reserved = Number(tier.reserved_count) || 0;
+    const capacity = Number(tier.total_capacity) || 0;
+    if (capacity > 0 && sold + reserved + slabSize > capacity) {
+      const remainingGroups = Math.floor(Math.max(0, capacity - sold - reserved) / slabSize);
+      if (remainingGroups <= 0) {
+        return { success: false, error: "This bulk slab is fully sold out. No group slots remaining." };
+      }
+    }
+
+    // ── 3. Idempotency guard ──────────────────────────────────────────────────
+    if (input.idempotencyKey) {
+      const { data: existing } = await executeSql(`
+        SELECT id, order_number, status FROM saas_orders
+        WHERE idempotency_key = ${escapeSql(input.idempotencyKey)} LIMIT 1;
+      `);
+      if (existing?.[0]) {
+        return {
+          success: true,
+          orderNumber: existing[0].order_number,
+          orderStatus: existing[0].status,
+          error: "Order already exists (idempotency hit).",
+        };
+      }
+    }
+
+    // ── 4. Ensure bulk columns exist (safe migration) ─────────────────────────
+    try {
+      await executeSql(`
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
+        ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS bulk_order_group_id UUID DEFAULT NULL;
+      `);
+    } catch (_) { /* columns likely already exist */ }
+
+    // ── 5. Calculate order totals (using existing feeCalculator pattern) ───────
+    const pricePerPerson = Number(tier.price) || 0;
+    const subtotal = pricePerPerson * slabSize;
+    const feeCalculation = calculateOrderFees({ subtotal, couponDiscountAmount: 0 });
+
+    const isFree = feeCalculation.totalPayable === 0;
+    const orderStatus = isFree ? "PAID" : (input.upiTransactionId ? "PENDING_VERIFICATION" : "PENDING");
+    const ticketStatus = isFree ? "CONFIRMED" : "PENDING_VERIFICATION";
+
+    const orderNumber = `BULK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const bulkGroupId = randomUUID();
+
+    // ── 6. Create the single order ────────────────────────────────────────────
+    const { data: orderRows, error: orderError } = await executeSql(`
+      INSERT INTO saas_orders (
+        order_number, event_id, organization_id,
+        customer_user_id, customer_name, customer_email, customer_phone,
+        subtotal_amount, discount_amount, platform_fee, convenience_fee, tax_amount, total_amount,
+        currency, status, payment_method, payment_gateway,
+        upi_transaction_id, upi_receipt_url,
+        idempotency_key, custom_answers,
+        created_at, updated_at
+      )
+      SELECT
+        ${escapeSql(orderNumber)},
+        ${escapeSql(input.eventId)},
+        se.organization_id,
+        ${escapeSql(buyerUserId)},
+        ${escapeSql(input.buyerName)},
+        ${escapeSql(input.buyerEmail)},
+        ${input.buyerPhone ? escapeSql(input.buyerPhone) : "NULL"},
+        ${escapeSql(String(feeCalculation.subtotal))},
+        ${escapeSql(String(feeCalculation.discount))},
+        ${escapeSql(String(feeCalculation.platformFee))},
+        ${escapeSql(String(feeCalculation.convenienceFee))},
+        ${escapeSql(String(feeCalculation.tax))},
+        ${escapeSql(String(feeCalculation.totalPayable))},
+        'INR',
+        ${escapeSql(orderStatus)},
+        ${isFree ? "'free'" : "'upi_qr'"},
+        'UPI_DIRECT',
+        ${input.upiTransactionId ? escapeSql(input.upiTransactionId) : "NULL"},
+        ${input.paymentProofUrl ? escapeSql(input.paymentProofUrl) : "NULL"},
+        ${input.idempotencyKey ? escapeSql(input.idempotencyKey) : "NULL"},
+        ${escapeSql(JSON.stringify({ bulk_slab_size: slabSize, bulk_group_id: bulkGroupId }))}::jsonb,
+        NOW(), NOW()
+      FROM saas_events se
+      WHERE se.id = ${escapeSql(input.eventId)}
+      RETURNING id, order_number;
+    `);
+
+    if (orderError || !orderRows?.[0]?.id) {
+      logger.error("createBulkTicketOrderAction: order insert failed", { orderError });
+      return { success: false, error: "Failed to create order. Please try again." };
+    }
+
+    const orderId = orderRows[0].id;
+
+    // ── 7. Create N individual tickets ────────────────────────────────────────
+    const createdTickets: Array<{ ticketCode: string; qrToken: string; attendeeName: string; attendeeEmail: string }> = [];
+
+    for (let i = 0; i < input.attendees.length; i++) {
+      const attendee = input.attendees[i];
+      // generateSecureTicketToken is sync and takes (ticketCode, eventId)
+      const ticketCode = `BULK-${Date.now().toString(36).toUpperCase()}-${i + 1}`;
+      const qrToken = generateSecureTicketToken(ticketCode, input.eventId);
+
+      await executeSql(`
+        INSERT INTO saas_tickets (
+          ticket_code, order_id, event_id, ticket_tier_id,
+          owner_user_id, attendee_name, attendee_email, attendee_phone,
+          qr_token, status,
+          bulk_order_group_id,
+          custom_answers,
+          created_at, updated_at
+        ) VALUES (
+          ${escapeSql(ticketCode)},
+          ${escapeSql(orderId)},
+          ${escapeSql(input.eventId)},
+          ${escapeSql(input.tierId)},
+          ${escapeSql(buyerUserId)},
+          ${escapeSql(attendee.name.trim())},
+          ${escapeSql(attendee.email.trim().toLowerCase())},
+          ${attendee.phone ? escapeSql(attendee.phone.trim()) : "NULL"},
+          ${escapeSql(qrToken)},
+          ${escapeSql(ticketStatus)},
+          ${escapeSql(bulkGroupId)}::uuid,
+          '{}'::jsonb,
+          NOW(), NOW()
+        );
+      `);
+
+      createdTickets.push({
+        ticketCode,
+        qrToken,
+        attendeeName: attendee.name.trim(),
+        attendeeEmail: attendee.email.trim().toLowerCase(),
+      });
+    }
+
+    // ── 8. Increment sold_count atomically ────────────────────────────────────
+    await executeSql(`
+      UPDATE saas_ticket_tiers
+      SET sold_count = sold_count + ${slabSize}, updated_at = NOW()
+      WHERE id = ${escapeSql(input.tierId)};
+    `);
+
+    // ── 9. Audit log ──────────────────────────────────────────────────────────
+    await logAuditAction({
+      actorId: buyerUserId,
+      actorRole: user?.profile?.role || "attendee",
+      actorEmail: input.buyerEmail,
+      action: isFree ? "BULK_ORDER_COMPLETED_FREE" : "BULK_ORDER_UPI_SUBMITTED",
+      entityType: "ORDER",
+      entityId: orderId,
+      newState: {
+        orderNumber,
+        bulkGroupId,
+        tierId: input.tierId,
+        attendeeCount: slabSize,
+        totalAmount: feeCalculation.totalPayable,
+        status: orderStatus,
+      },
+    });
+
+    // ── 10. Send notification emails (non-blocking, matching existing signature) ─
+    const eventTitle = tier.event_title || "Rotaract Event";
+    const eventCity = tier.event_city || "District 3192";
+    const eventDateStr = new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+
+    if (isFree) {
+      // 10a. Send each individual attendee their own personal QR pass
+      for (const t of createdTickets) {
+        if (t.attendeeEmail) {
+          sendTicketEmailWithQR({
+            to: t.attendeeEmail,
+            fullName: t.attendeeName,
+            eventTitle,
+            eventDate: eventDateStr,
+            eventCity,
+            orderNumber,
+            orderTotal: "₹0.00 (Free Group Pass)",
+            tickets: [{
+              code: t.ticketCode,
+              qrToken: t.qrToken,
+              tierName: tier.name,
+            }],
+          }).catch((err: any) => logger.warn("Bulk free ticket attendee email failed", { error: String(err) }));
+        }
+      }
+
+      // 10b. Send the full bundle to the buyer
+      sendTicketEmailWithQR({
+        to: input.buyerEmail,
+        fullName: input.buyerName,
+        eventTitle,
+        eventDate: eventDateStr,
+        eventCity,
+        orderNumber,
+        orderTotal: "₹0.00 (Free Group Pass)",
+        tickets: createdTickets.map((t) => ({
+          code: t.ticketCode,
+          qrToken: t.qrToken,
+          tierName: tier.name,
+        })),
+      }).catch((err: any) => logger.warn("Bulk free ticket buyer bundle email failed", { error: String(err) }));
+    } else {
+      sendBookingReceivedEmail({
+        to: input.buyerEmail,
+        fullName: input.buyerName,
+        eventTitle,
+        eventDate: eventDateStr,
+        eventCity,
+        orderNumber,
+        orderTotal: `₹${feeCalculation.totalPayable.toFixed(2)}`,
+        upiTransactionId: input.upiTransactionId?.trim() || undefined,
+        ticketCount: slabSize,
+        tierNames: [tier.name],
+      }).catch((err: any) => logger.warn("Bulk booking email failed", { error: String(err) }));
+    }
+
+    revalidatePath("/tickets");
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      orderNumber,
+      orderStatus,
+      ticketCount: slabSize,
+      bulkGroupId,
+    };
+  } catch (err: any) {
+    logger.error("createBulkTicketOrderAction error", { error: String(err) });
+    return { success: false, error: err?.message || "Failed to create bulk order. Please try again." };
   }
 }

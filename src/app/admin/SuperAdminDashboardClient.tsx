@@ -64,9 +64,11 @@ import {
   UserCheck,
   UserPlus,
   ShieldAlert,
+  Package,
 } from "lucide-react";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import { GalleryUploadModal } from "@/components/gallery/GalleryUploadModal";
+import { BulkSlabManagerPanel } from "@/components/admin/BulkSlabManagerPanel";
 import {
   approveOrganizationKycAction,
   rejectOrganizationKycAction,
@@ -192,6 +194,9 @@ export function SuperAdminDashboardClient({
   // Manual Attendee Entry State
   const [manualAttendeeModalOpen, setManualAttendeeModalOpen] = useState(false);
   const [manualAttendeeEventId, setManualAttendeeEventId] = useState<string | undefined>(undefined);
+
+  // Bulk Ticket Slab State
+  const [selectedBulkSlabEvent, setSelectedBulkSlabEvent] = useState<any | null>(null);
 
   async function handleApproveRequest(requestId: string) {
     setReqProcessingId(requestId);
@@ -2469,6 +2474,15 @@ export function SuperAdminDashboardClient({
                       >
                         <FileSpreadsheet size={12} /> Excel
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBulkSlabEvent(evt)}
+                        title="Configure Bulk Ticket Slabs (e.g. 15 or 20 attendees)"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                      >
+                        <Package size={12} /> Bulk Slabs
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -3643,6 +3657,44 @@ export function SuperAdminDashboardClient({
               </div>
             </div>
 
+            {/* If Bulk / Multi-ticket order, show Attendee List */}
+            {(() => {
+              const orderTickets = tickets.filter((t) => t.order_id === proofModalOrder.id);
+              if (orderTickets.length <= 1) return null;
+              return (
+                <div className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#0758fc] dark:text-blue-400 flex items-center gap-1.5">
+                      <Users size={14} /> Bulk Delegation Slab • {orderTickets.length} Attendees
+                    </span>
+                    <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                      Approval sends individual QR passes to each attendee
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+                    {orderTickets.map((t, idx) => (
+                      <div
+                        key={t.id || idx}
+                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2.5 flex items-center justify-between text-xs"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold text-gray-900 dark:text-white truncate">
+                            {idx + 1}. {t.attendee_name || "Delegate"}
+                          </p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                            {t.attendee_email}
+                          </p>
+                        </div>
+                        <span className="font-mono text-[10px] text-[#0758fc] dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded shrink-0">
+                          {t.ticket_code}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Payment Receipt Image Viewport */}
             <div className="max-h-[55vh] overflow-y-auto rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-950 p-3 flex flex-col items-center justify-center">
               {proofModalOrder.payment_proof_url || proofModalOrder.upi_receipt_url || proofModalOrder.upi_screenshot_url ? (
@@ -3880,6 +3932,38 @@ export function SuperAdminDashboardClient({
           setTickets((prev) => [newTicket, ...prev]);
         }}
       />
+
+      {/* Bulk Ticket Slab Manager Modal */}
+      {selectedBulkSlabEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-50">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  Bulk Ticket Slabs
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedBulkSlabEvent.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedBulkSlabEvent(null)}
+                className="p-1 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <BulkSlabManagerPanel
+              eventId={selectedBulkSlabEvent.id}
+              eventTitle={selectedBulkSlabEvent.title}
+              existingSlabs={selectedBulkSlabEvent.saas_ticket_tiers?.filter((t: any) => t.is_bulk_slab) || []}
+              onRefresh={() => {
+                // If needed, refresh events or tickets
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   </div>
   );

@@ -63,6 +63,8 @@ export interface CreateEventInput {
     allowedAudience?: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY";
     benefits?: string[];
     maxPerOrder?: number;
+    isBulkSlab?: boolean;
+    bulkSlabSize?: number | null;
   }>;
   speakers?: Array<{
     name: string;
@@ -451,6 +453,13 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
 
     // 3. Insert Ticket Tiers
     if (input.ticketTiers && input.ticketTiers.length > 0) {
+      try {
+        await executeSql(`
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
+        `);
+      } catch (_) {}
+
       for (const tier of input.ticketTiers) {
         const benefitsJson = JSON.stringify(tier.benefits || []).replace(/'/g, "''");
         const tierAllowNonRotaract = tier.allowNonRotaract !== undefined ? tier.allowNonRotaract : input.allowNonRotaract !== false;
@@ -458,6 +467,11 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
 
         const salesStartSql = tier.salesStart ? escapeSql(tier.salesStart) : "NOW()";
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
+
+        const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
+        const bulkSlabSize = isBulk ? (Number(tier.bulkSlabSize) || 15) : null;
+        const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
 
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
@@ -469,6 +483,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             total_capacity,
             sold_count,
             reserved_count,
+            min_per_order,
             max_per_order,
             sales_start,
             sales_end,
@@ -476,24 +491,29 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
             allowed_audience,
             benefits,
             is_active,
-            is_visible
+            is_visible,
+            is_bulk_slab,
+            bulk_slab_size
           ) VALUES (
             ${escapeSql(eventId)},
             ${escapeSql(tier.name)},
             ${escapeSql(tier.description)},
-            ${escapeSql(tier.tierType || "REGULAR")},
+            ${escapeSql(isBulk ? "BULK" : (tier.tierType || "REGULAR"))},
             ${Number(tier.price) || 0},
             ${Number(tier.totalCapacity) || 100},
             0,
             0,
-            ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
+            ${minOrder},
+            ${maxOrder},
             ${salesStartSql},
             ${salesEndSql},
             ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
             ${escapeSql(tierAudience)},
             '${benefitsJson}'::jsonb,
             TRUE,
-            TRUE
+            TRUE,
+            ${isBulk ? "TRUE" : "FALSE"},
+            ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"}
           )
           RETURNING id;
         `;
@@ -873,6 +893,11 @@ export async function updateEventAction(
         const salesStartSql = tier.salesStart ? escapeSql(tier.salesStart) : "NOW()";
         const salesEndSql = tier.salesEnd ? escapeSql(tier.salesEnd) : "NULL";
 
+        const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
+        const bulkSlabSize = isBulk ? (Number(tier.bulkSlabSize) || 15) : null;
+        const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
+
         const match =
           (tier.id ? (existingTiers || []).find((t: any) => t.id === tier.id) : null) ||
           existingTierMap.get(tier.name.trim().toLowerCase());
@@ -884,10 +909,11 @@ export async function updateEventAction(
             SET
               name = ${escapeSql(tier.name)},
               description = ${escapeSql(tier.description)},
-              tier_type = ${escapeSql(tier.tierType || "REGULAR")},
+              tier_type = ${escapeSql(isBulk ? "BULK" : (tier.tierType || "REGULAR"))},
               price = ${Number(tier.price) || 0},
               total_capacity = ${Number(tier.totalCapacity) || 100},
-              max_per_order = ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
+              min_per_order = ${minOrder},
+              max_per_order = ${maxOrder},
               sales_start = ${salesStartSql},
               sales_end = ${salesEndSql},
               allow_non_rotaract = ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
@@ -895,6 +921,8 @@ export async function updateEventAction(
               benefits = '${benefitsJson}'::jsonb,
               is_active = TRUE,
               is_visible = TRUE,
+              is_bulk_slab = ${isBulk ? "TRUE" : "FALSE"},
+              bulk_slab_size = ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"},
               updated_at = NOW()
             WHERE id = ${escapeSql(match.id)};
           `);
@@ -916,6 +944,7 @@ export async function updateEventAction(
               total_capacity,
               sold_count,
               reserved_count,
+              min_per_order,
               max_per_order,
               sales_start,
               sales_end,
@@ -923,24 +952,29 @@ export async function updateEventAction(
               allowed_audience,
               benefits,
               is_active,
-              is_visible
+              is_visible,
+              is_bulk_slab,
+              bulk_slab_size
             ) VALUES (
               ${escapeSql(eventId)},
               ${escapeSql(tier.name)},
               ${escapeSql(tier.description)},
-              ${escapeSql(tier.tierType || "REGULAR")},
+              ${escapeSql(isBulk ? "BULK" : (tier.tierType || "REGULAR"))},
               ${Number(tier.price) || 0},
               ${Number(tier.totalCapacity) || 100},
               0,
               0,
-              ${tier.maxPerOrder ? Number(tier.maxPerOrder) : 10},
+              ${minOrder},
+              ${maxOrder},
               ${salesStartSql},
               ${salesEndSql},
               ${tierAllowNonRotaract ? "TRUE" : "FALSE"},
               ${escapeSql(tierAudience)},
               '${benefitsJson}'::jsonb,
               TRUE,
-              TRUE
+              TRUE,
+              ${isBulk ? "TRUE" : "FALSE"},
+              ${bulkSlabSize ? escapeSql(String(bulkSlabSize)) : "NULL"}
             )
             RETURNING id;
           `);

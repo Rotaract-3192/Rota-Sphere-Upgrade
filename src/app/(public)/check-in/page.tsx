@@ -43,12 +43,14 @@ import {
   ShieldAlert,
   Award,
   Ticket,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import {
   checkInTicketAction,
   approveAndCheckInTicketAction,
+  checkInEntireBulkGroupAction,
   getScannerEventsAction,
   CheckInResponse,
 } from "@/app/actions/checkInActions";
@@ -166,6 +168,7 @@ function CheckInScannerContent() {
 
   // Scan state
   const [scanResult, setScanResult] = useState<CheckInResponse | null>(null);
+  const [admittingBulkGroup, setAdmittingBulkGroup] = useState(false);
 
   const [recentScans, setRecentScans] = useState<
     Array<{
@@ -946,6 +949,109 @@ function CheckInScannerContent() {
                     </div>
                   )}
                 </div>
+
+                {/* ── BULK GROUP SLAB PROGRESS & GROUP ACTIONS ── */}
+                {scanResult.isBulkGroup && (
+                  <div className="w-full bg-gradient-to-r from-blue-950/60 to-indigo-950/60 border border-blue-800/80 rounded-2xl p-4 text-left space-y-3 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users size={18} className="text-[#0758fc]" />
+                        <span className="text-xs font-black uppercase tracking-wider text-blue-300">
+                          Bulk Delegation Slab
+                        </span>
+                      </div>
+                      <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        {scanResult.bulkGroupCheckedIn || 0} / {scanResult.bulkGroupTotal || 0} Admitted
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              ((scanResult.bulkGroupCheckedIn || 0) / (scanResult.bulkGroupTotal || 1)) * 100
+                            )
+                          )}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* One-click Check-in for remaining group members */}
+                    {scanResult.bulkGroupId &&
+                      (scanResult.bulkGroupTotal || 0) > (scanResult.bulkGroupCheckedIn || 0) && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!scanResult.bulkGroupId) return;
+                            setAdmittingBulkGroup(true);
+                            const res = await checkInEntireBulkGroupAction({
+                              bulkGroupId: scanResult.bulkGroupId,
+                              gateName,
+                            });
+                            setAdmittingBulkGroup(false);
+                            if (res.success) {
+                              if (soundEnabled) playSound("SUCCESS");
+                              setScanResult((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      bulkGroupCheckedIn: prev.bulkGroupTotal,
+                                      bulkGroupMembers: prev.bulkGroupMembers?.map((m) => ({
+                                        ...m,
+                                        status: "USED",
+                                        checkedInAt: new Date().toISOString(),
+                                      })),
+                                    }
+                                  : null
+                              );
+                            }
+                          }}
+                          disabled={admittingBulkGroup}
+                          className="w-full bg-gradient-to-r from-[#0758fc] to-indigo-600 hover:from-[#054fe0] hover:to-indigo-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-blue-500/20"
+                        >
+                          {admittingBulkGroup ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Users size={14} />
+                          )}
+                          Admit Entire Group ({((scanResult.bulkGroupTotal || 0) - (scanResult.bulkGroupCheckedIn || 0))} Remaining)
+                        </button>
+                      )}
+
+                    {/* Member List */}
+                    {scanResult.bulkGroupMembers && scanResult.bulkGroupMembers.length > 0 && (
+                      <div className="pt-2 border-t border-blue-900/60 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
+                          Delegation Members
+                        </span>
+                        {scanResult.bulkGroupMembers.map((m) => (
+                          <div
+                            key={m.id}
+                            className="flex items-center justify-between text-[11px] bg-gray-950/60 px-2.5 py-1.5 rounded-lg border border-gray-800"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <span className="font-semibold text-gray-200 truncate block">{m.attendeeName}</span>
+                              <span className="text-[9px] text-gray-500 font-mono">{m.ticketCode}</span>
+                            </div>
+                            <span
+                              className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${
+                                m.status === "USED" || m.status === "CHECKED_IN"
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-gray-800 text-gray-400"
+                              }`}
+                            >
+                              {m.status === "USED" || m.status === "CHECKED_IN" ? "✓ IN" : "WAITING"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* APPROVE ACTION FOR PAYMENT PENDING */}
                 {scanResult.result === "PAYMENT_PENDING" && scanResult.ticketId && (

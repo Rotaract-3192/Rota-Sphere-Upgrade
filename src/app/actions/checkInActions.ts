@@ -36,6 +36,18 @@ export interface CheckInResponse {
   message: string;
   scannedAt?: string;
   checkedInGate?: string;
+  isBulkGroup?: boolean;
+  bulkGroupId?: string;
+  bulkGroupTotal?: number;
+  bulkGroupCheckedIn?: number;
+  bulkGroupMembers?: Array<{
+    id: string;
+    ticketCode: string;
+    attendeeName: string;
+    attendeeEmail: string;
+    status: string;
+    checkedInAt?: string | null;
+  }>;
 }
 
 export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInResponse> {
@@ -82,6 +94,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         t.custom_answers,
         t.qr_token, 
         t.status, 
+        t.bulk_order_group_id,
         t.checked_in_at, 
         t.checked_in_gate, 
         t.checked_in_by_user_id,
@@ -188,6 +201,45 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     const memberType = ticket.member_type || customAnswers.member_type || "Rotaract";
     const zone = ticket.zone || customAnswers.zone || "";
 
+    // Load sibling bulk delegation group info if this ticket belongs to a bulk slab
+    let isBulkGroup = false;
+    let bulkGroupId: string | undefined = undefined;
+    let bulkGroupTotal: number | undefined = undefined;
+    let bulkGroupCheckedIn: number | undefined = undefined;
+    let bulkGroupMembers: Array<{
+      id: string;
+      ticketCode: string;
+      attendeeName: string;
+      attendeeEmail: string;
+      status: string;
+      checkedInAt?: string | null;
+    }> | undefined = undefined;
+
+    if (ticket.bulk_order_group_id) {
+      isBulkGroup = true;
+      bulkGroupId = ticket.bulk_order_group_id;
+      const { data: siblings } = await executeSql(`
+        SELECT id, ticket_code, attendee_name, attendee_email, status, checked_in_at
+        FROM saas_tickets
+        WHERE bulk_order_group_id = ${escapeSql(ticket.bulk_order_group_id)}
+        ORDER BY created_at ASC;
+      `);
+      if (siblings && siblings.length > 0) {
+        bulkGroupTotal = siblings.length;
+        bulkGroupCheckedIn = siblings.filter(
+          (s: any) => s.status === "USED" || s.status === "CHECKED_IN"
+        ).length;
+        bulkGroupMembers = siblings.map((s: any) => ({
+          id: s.id,
+          ticketCode: s.ticket_code,
+          attendeeName: s.attendee_name || "Delegate",
+          attendeeEmail: s.attendee_email,
+          status: s.status,
+          checkedInAt: s.checked_in_at,
+        }));
+      }
+    }
+
     // 2. Validate Event Filter (if an event is specifically locked)
     if (
       req.eventId &&
@@ -230,6 +282,11 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         ticketTierName: tierName,
         eventTitle,
         eventId: ticket.event_id,
+        isBulkGroup,
+        bulkGroupId,
+        bulkGroupTotal,
+        bulkGroupCheckedIn,
+        bulkGroupMembers,
         message: "PAYMENT PENDING APPROVAL. Review attendee details or approve directly below.",
       };
     }
@@ -305,6 +362,11 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         eventId: ticket.event_id,
         scannedAt: formattedTime,
         checkedInGate: ticket.checked_in_gate || "Main Gate",
+        isBulkGroup,
+        bulkGroupId,
+        bulkGroupTotal,
+        bulkGroupCheckedIn,
+        bulkGroupMembers,
         message: `ALREADY SCANNED at ${formattedTime} (${ticket.checked_in_gate || "Gate"}). Pass re-use prevented.`,
       };
     }
@@ -346,6 +408,14 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       metadata: { gate: gateName, timestamp: new Date().toISOString() },
     });
 
+    // Update bulkGroupCheckedIn count & member status for immediate UI feedback
+    if (isBulkGroup && bulkGroupMembers) {
+      bulkGroupCheckedIn = (bulkGroupCheckedIn || 0) + 1;
+      bulkGroupMembers = bulkGroupMembers.map((m) =>
+        m.id === ticket.id ? { ...m, status: "USED", checkedInAt: new Date().toISOString() } : m
+      );
+    }
+
     return {
       result: "SUCCESS",
       ticketId: ticket.id,
@@ -361,6 +431,11 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       eventTitle,
       eventId: ticket.event_id,
       checkedInGate: gateName,
+      isBulkGroup,
+      bulkGroupId,
+      bulkGroupTotal,
+      bulkGroupCheckedIn,
+      bulkGroupMembers,
       message: "VALID ENTRY PASS — ACCESS GRANTED",
     };
   } catch (err: any) {
@@ -404,7 +479,7 @@ export async function approveAndCheckInTicketAction(params: {
         checked_in_by_user_id = ${escapeSql(scannerUserId)},
         updated_at = NOW()
       WHERE id = ${cleanId}
-      RETURNING id, ticket_code, attendee_name, attendee_email, attendee_phone, member_type, club_name, zone, designation, custom_answers, event_id, ticket_tier_id;
+      RETURNING id, ticket_code, attendee_name, attendee_email, attendee_phone, member_type, club_name, zone, designation, custom_answers, event_id, ticket_tier_id, bulk_order_group_id, order_id;
     `;
     const { data: updatedRows, error } = await executeSql(updateSql);
     if (error || !updatedRows || updatedRows.length === 0) {
@@ -413,11 +488,26 @@ export async function approveAndCheckInTicketAction(params: {
 
     const t = updatedRows[0];
 
-    // Also update order status if linked
+    // Also update order status to PAID
+    if (t.order_id) {
+      await executeSql(`
+        UPDATE saas_orders
+        SET status = 'PAID', updated_at = NOW()
+        WHERE id = ${escapeSql(t.order_id)};
+      `);
+    }
+
+    // Critical fix: If this ticket is part of a bulk group or multi-ticket order,
+    // transition all other pending sibling tickets to CONFIRMED so they are immediately valid for entry
     await executeSql(`
-      UPDATE saas_orders
-      SET status = 'PAID', updated_at = NOW()
-      WHERE id = (SELECT order_id FROM saas_tickets WHERE id = ${cleanId});
+      UPDATE saas_tickets
+      SET status = 'CONFIRMED', updated_at = NOW()
+      WHERE (
+        ${t.order_id ? `order_id = ${escapeSql(t.order_id)}` : "FALSE"}
+        ${t.bulk_order_group_id ? `OR bulk_order_group_id = ${escapeSql(t.bulk_order_group_id)}` : ""}
+      )
+      AND id != ${cleanId}
+      AND status = 'PENDING_VERIFICATION';
     `);
 
     // Fetch event & tier titles
@@ -428,6 +518,45 @@ export async function approveAndCheckInTicketAction(params: {
       WHERE e.id = ${escapeSql(t.event_id)}
       LIMIT 1;
     `);
+
+    // Bulk group details if applicable
+    let isBulkGroup = false;
+    let bulkGroupId: string | undefined = undefined;
+    let bulkGroupTotal: number | undefined = undefined;
+    let bulkGroupCheckedIn: number | undefined = undefined;
+    let bulkGroupMembers: Array<{
+      id: string;
+      ticketCode: string;
+      attendeeName: string;
+      attendeeEmail: string;
+      status: string;
+      checkedInAt?: string | null;
+    }> | undefined = undefined;
+
+    if (t.bulk_order_group_id) {
+      isBulkGroup = true;
+      bulkGroupId = t.bulk_order_group_id;
+      const { data: siblings } = await executeSql(`
+        SELECT id, ticket_code, attendee_name, attendee_email, status, checked_in_at
+        FROM saas_tickets
+        WHERE bulk_order_group_id = ${escapeSql(t.bulk_order_group_id)}
+        ORDER BY created_at ASC;
+      `);
+      if (siblings && siblings.length > 0) {
+        bulkGroupTotal = siblings.length;
+        bulkGroupCheckedIn = siblings.filter(
+          (s: any) => s.id === t.id || s.status === "USED" || s.status === "CHECKED_IN"
+        ).length;
+        bulkGroupMembers = siblings.map((s: any) => ({
+          id: s.id,
+          ticketCode: s.ticket_code,
+          attendeeName: s.attendee_name || "Delegate",
+          attendeeEmail: s.attendee_email,
+          status: s.id === t.id ? "USED" : (s.status === "PENDING_VERIFICATION" ? "CONFIRMED" : s.status),
+          checkedInAt: s.id === t.id ? new Date().toISOString() : s.checked_in_at,
+        }));
+      }
+    }
 
     let customAnswers: any = {};
     if (t.custom_answers) {
@@ -473,10 +602,81 @@ export async function approveAndCheckInTicketAction(params: {
       eventTitle: info?.[0]?.event_title || "Event",
       eventId: t.event_id,
       checkedInGate: gateName,
+      isBulkGroup,
+      bulkGroupId,
+      bulkGroupTotal,
+      bulkGroupCheckedIn,
+      bulkGroupMembers,
       message: "PASS APPROVED & ADMITTED SUCCESSFULLY",
     };
   } catch (err: any) {
     return { result: "INVALID", message: `Error approving ticket: ${err?.message || err}` };
+  }
+}
+
+/**
+ * One-click Check-in for an entire Bulk Delegation / Group Slab at the venue gate.
+ * Atomically marks all remaining un-scanned tickets in the group as USED.
+ */
+export async function checkInEntireBulkGroupAction(params: {
+  bulkGroupId: string;
+  gateName?: string;
+}): Promise<{ success: boolean; admittedCount: number; message: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, admittedCount: 0, message: "Unauthorized scanner operation." };
+    }
+
+    const cleanGroupId = escapeSql(params.bulkGroupId);
+    const gateName = params.gateName?.trim() || "Main Gate";
+    const scannerUserId = user.profile?.full_name
+      ? `${user.profile.full_name} (${user.email})`
+      : user.email || user.clerkId || "gate-staff";
+
+    // Atomically admit all tickets in the bulk group that are confirmed/active and not yet used
+    const { data: updatedRows, error } = await executeSql(`
+      UPDATE saas_tickets
+      SET 
+        status = 'USED',
+        checked_in_at = NOW(),
+        checked_in_gate = ${escapeSql(gateName)},
+        checked_in_by_user_id = ${escapeSql(scannerUserId)},
+        updated_at = NOW()
+      WHERE bulk_order_group_id = ${cleanGroupId}::uuid
+        AND status IN ('CONFIRMED', 'ISSUED', 'VALID', 'ACTIVE')
+      RETURNING id, ticket_code, attendee_name;
+    `);
+
+    if (error) {
+      return { success: false, admittedCount: 0, message: `Database error: ${error.message}` };
+    }
+
+    const admittedCount = updatedRows?.length || 0;
+
+    // Log audit
+    await writeAuditLog({
+      actorId: scannerUserId,
+      actorEmail: user.email || "gate-scanner@rotasphere.org",
+      action: "BULK_GROUP_CHECKED_IN",
+      category: "ADMIN_ACTION",
+      resourceType: "TICKET_GROUP",
+      resourceId: params.bulkGroupId,
+      result: "SUCCESS",
+      metadata: { gate: gateName, count: admittedCount },
+    });
+
+    return {
+      success: true,
+      admittedCount,
+      message: `Successfully checked in all ${admittedCount} remaining group delegates.`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      admittedCount: 0,
+      message: `Failed to check in group: ${err?.message || String(err)}`,
+    };
   }
 }
 

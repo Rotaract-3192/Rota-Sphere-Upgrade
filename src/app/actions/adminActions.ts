@@ -814,3 +814,250 @@ export async function getAllUserProfilesAction(): Promise<{ success: boolean; da
   }
 }
 
+// ============================================================================
+// BULK TICKET SLAB ADMIN ACTIONS
+// ============================================================================
+
+export interface CreateBulkSlabInput {
+  name: string;
+  description?: string;
+  bulkSlabSize: number;        // exact number of attendees per purchase (e.g. 15)
+  pricePerPerson: number;      // price per individual ticket in INR
+  totalGroupSlots: number;     // total individual ticket capacity (groups × bulkSlabSize)
+  salesStart: string;          // ISO timestamp
+  salesEnd: string;            // ISO timestamp
+}
+
+/**
+ * Admin creates a new bulk slab ticket tier for a given event.
+ * min_per_order and max_per_order are both set to bulkSlabSize to enforce
+ * exact quantity purchases at the server level.
+ */
+export async function createBulkSlabTierAction(
+  eventId: string,
+  input: CreateBulkSlabInput
+): Promise<{ success: boolean; tierId?: string; error?: string }> {
+  try {
+    const user = await requireRole("admin");
+
+    if (!input.name?.trim()) return { success: false, error: "Slab name is required." };
+    if (!input.bulkSlabSize || input.bulkSlabSize < 2) return { success: false, error: "Group size must be at least 2." };
+    if (input.bulkSlabSize > 200) return { success: false, error: "Group size cannot exceed 200." };
+    if (input.pricePerPerson < 0) return { success: false, error: "Price per person cannot be negative." };
+    if (!input.totalGroupSlots || input.totalGroupSlots < input.bulkSlabSize) {
+      return { success: false, error: "Total capacity must be at least one group size." };
+    }
+
+    try {
+      await executeSql(`
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
+        ALTER TABLE saas_ticket_tiers DROP CONSTRAINT IF EXISTS saas_ticket_tiers_tier_type_check;
+        ALTER TABLE saas_ticket_tiers ADD CONSTRAINT saas_ticket_tiers_tier_type_check CHECK (tier_type IN (
+          'EARLY_BIRD', 'REGULAR', 'VIP', 'STUDENT', 'GROUP', 'FACULTY', 'WORKSHOP', 'COMPLIMENTARY', 'BULK'
+        ));
+      `);
+    } catch (_) {}
+
+    const { data, error } = await executeSql(`
+      INSERT INTO saas_ticket_tiers (
+        event_id, name, description, tier_type,
+        price, total_capacity, sold_count, reserved_count,
+        min_per_order, max_per_order,
+        sales_start, sales_end,
+        is_active, is_visible,
+        is_bulk_slab, bulk_slab_size,
+        benefits, created_at, updated_at
+      ) VALUES (
+        ${escapeSql(eventId)},
+        ${escapeSql(input.name.trim())},
+        ${input.description ? escapeSql(input.description.trim()) : "NULL"},
+        'BULK',
+        ${escapeSql(String(input.pricePerPerson))},
+        ${escapeSql(String(input.totalGroupSlots))},
+        0, 0,
+        ${escapeSql(String(input.bulkSlabSize))},
+        ${escapeSql(String(input.bulkSlabSize))},
+        ${escapeSql(input.salesStart)},
+        ${escapeSql(input.salesEnd)},
+        true, true,
+        true,
+        ${escapeSql(String(input.bulkSlabSize))},
+        '[]'::jsonb,
+        NOW(), NOW()
+      )
+      RETURNING id;
+    `);
+
+    if (error || !data?.[0]?.id) {
+      logger.error("createBulkSlabTierAction failed", { error });
+      return { success: false, error: "Failed to create bulk slab. Check event ID and try again." };
+    }
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "BULK_SLAB_CREATED",
+      entityType: "TICKET_TIER",
+      entityId: data[0].id,
+      newState: { ...input, tier_type: "BULK", is_bulk_slab: true },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath(`/events`);
+    return { success: true, tierId: data[0].id };
+  } catch (err: any) {
+    logger.error("createBulkSlabTierAction error", { error: String(err) });
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Toggle a bulk slab tier's active state (enable / disable sales).
+ */
+export async function toggleBulkSlabActiveAction(
+  tierId: string,
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireRole("admin");
+
+    await executeSql(`
+      UPDATE saas_ticket_tiers
+      SET is_active = ${isActive ? "true" : "false"}, updated_at = NOW()
+      WHERE id = ${escapeSql(tierId)} AND is_bulk_slab = true;
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: isActive ? "BULK_SLAB_ENABLED" : "BULK_SLAB_DISABLED",
+      entityType: "TICKET_TIER",
+      entityId: tierId,
+      newState: { is_active: isActive },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Delete a bulk slab tier (only if no tickets have been sold for it).
+ */
+export async function deleteBulkSlabTierAction(
+  tierId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireRole("admin");
+
+    const { data: tier } = await executeSql(`
+      SELECT id, name, sold_count FROM saas_ticket_tiers
+      WHERE id = ${escapeSql(tierId)} AND is_bulk_slab = true;
+    `);
+
+    if (!tier?.[0]) return { success: false, error: "Bulk slab not found." };
+    if (Number(tier[0].sold_count) > 0) {
+      return { success: false, error: "Cannot delete a slab that already has sold tickets." };
+    }
+
+    await executeSql(`
+      DELETE FROM saas_ticket_tiers WHERE id = ${escapeSql(tierId)} AND is_bulk_slab = true;
+    `);
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: "BULK_SLAB_DELETED",
+      entityType: "TICKET_TIER",
+      entityId: tierId,
+      previousState: { name: tier[0].name },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Fetch all bulk orders for a given event — returns grouped attendee lists.
+ */
+export async function getBulkSlabOrdersAction(
+  eventId: string
+): Promise<{ success: boolean; orders?: any[]; error?: string }> {
+  try {
+    await requireRole("admin");
+
+    const { data, error } = await executeSql(`
+      SELECT
+        o.id AS order_id,
+        o.order_number,
+        o.customer_name,
+        o.customer_email,
+        o.customer_phone,
+        o.total_amount,
+        o.status AS order_status,
+        o.created_at AS ordered_at,
+        t.name AS tier_name,
+        t.bulk_slab_size,
+        t.price AS price_per_person,
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', tk.id,
+              'ticket_code', tk.ticket_code,
+              'attendee_name', tk.attendee_name,
+              'attendee_email', tk.attendee_email,
+              'attendee_phone', tk.attendee_phone,
+              'status', tk.status,
+              'bulk_order_group_id', tk.bulk_order_group_id
+            ) ORDER BY tk.created_at
+          )
+          FROM saas_tickets tk
+          WHERE tk.order_id = o.id
+        ) AS attendees
+      FROM saas_orders o
+      JOIN saas_ticket_tiers t ON t.id = (
+        SELECT ticket_tier_id FROM saas_tickets WHERE order_id = o.id LIMIT 1
+      )
+      WHERE o.event_id = ${escapeSql(eventId)}
+        AND t.is_bulk_slab = true
+      ORDER BY o.created_at DESC;
+    `);
+
+    if (error) return { success: false, error: String(error) };
+    return { success: true, orders: data || [] };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Fetch all bulk slabs for a given event.
+ */
+export async function getBulkSlabsForEventAction(
+  eventId: string
+): Promise<{ success: boolean; slabs?: any[]; error?: string }> {
+  try {
+    await requireRole("admin");
+    const { data, error } = await executeSql(`
+      SELECT *
+      FROM saas_ticket_tiers
+      WHERE event_id = ${escapeSql(eventId)}
+        AND is_bulk_slab = true
+      ORDER BY created_at ASC;
+    `);
+    if (error) return { success: false, error: String(error) };
+    return { success: true, slabs: data || [] };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
