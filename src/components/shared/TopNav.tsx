@@ -133,11 +133,12 @@ export function TopNav() {
             type="button"
             onClick={() => startTour(attendeeTourSteps)}
             aria-label="Start interactive tour"
-            title="Need help? Click to take interactive tour"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:text-[#0758fc] dark:hover:text-[#0758fc] bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-gray-200/80 dark:border-gray-700/60 px-2.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
+            title="Need help navigating? Click for guided tour"
+            data-tour="nav-tour-btn"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:text-[#0758fc] dark:hover:text-[#0758fc] bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-gray-200/80 dark:border-gray-700/60 p-2 sm:px-2.5 sm:py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
           >
             <Compass size={15} className="text-[#0758fc]" />
-            <span>Tour</span>
+            <span className="hidden sm:inline">Tour</span>
           </button>
 
           {/* Admin panel link */}

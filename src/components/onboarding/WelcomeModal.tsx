@@ -44,7 +44,7 @@ export function WelcomeModal() {
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
       <div
-        className={`relative w-full max-w-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-500/15 dark:shadow-black/80 transition-all duration-200 ${
+        className={`relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-blue-500/15 dark:shadow-black/80 transition-all duration-200 ${
           exiting ? "scale-95 translate-y-2 opacity-0" : "scale-100 translate-y-0 opacity-100"
         }`}
       >

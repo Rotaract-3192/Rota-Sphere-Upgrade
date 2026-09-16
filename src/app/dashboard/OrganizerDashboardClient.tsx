@@ -506,6 +506,7 @@ export function OrganizerDashboardClient({
                     <button
                       key={id}
                       type="button"
+                      data-tour={isBroadcast ? "tab-broadcast" : `tab-${id}`}
                       onClick={() => {
                         if (isBroadcast) {
                           setSelectedBroadcastEventId("");
@@ -582,6 +583,7 @@ export function OrganizerDashboardClient({
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
+            data-tour="mobile-menu-btn"
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white cursor-pointer active:scale-95 transition-all flex items-center justify-center shrink-0 border border-gray-700/60"
             aria-label="Open Organizer Menu"

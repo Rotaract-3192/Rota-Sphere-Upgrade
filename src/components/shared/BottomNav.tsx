@@ -92,18 +92,23 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Mobile Bottom Navigation"
+      data-tour="bottom-nav"
       className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/92 dark:bg-gray-950/92 backdrop-blur-2xl border-t border-gray-200/80 dark:border-gray-800/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-colors pb-[max(env(safe-area-inset-bottom),10px)] pt-1.5 px-3 rounded-t-3xl"
     >
       <div className="grid grid-cols-5 items-center justify-around max-w-md mx-auto relative">
         {navItems.map((item) => {
           const active = isTabActive(item.href);
           const Icon = item.icon;
+          const tourId = item.isCenter
+            ? "bottom-nav-tickets"
+            : `bottom-nav-${item.href === "/" ? "home" : item.href.replace("/", "")}`;
 
           if (item.isCenter) {
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={tourId}
                 className="flex flex-col items-center justify-center -mt-6 group focus:outline-hidden"
               >
                 <motion.div
@@ -142,6 +147,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              data-tour={tourId}
               className="relative flex flex-col items-center justify-center py-1.5 px-1 text-center transition-all group focus:outline-hidden"
             >
               <motion.div

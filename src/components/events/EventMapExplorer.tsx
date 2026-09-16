@@ -286,7 +286,7 @@ export function EventMapExplorer({
     <div className="space-y-6">
       
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div data-tour="map-header" className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <span className="text-[11px] font-black uppercase tracking-widest text-[#0758fc] flex items-center gap-1.5 mb-1">
             <Compass size={14} /> District 3192 Location Intelligence

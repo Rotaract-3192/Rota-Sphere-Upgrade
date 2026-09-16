@@ -1,0 +1,1413 @@
+🌊 VIBE — UPDATED COMPLETE USER FLOW
+
+THE CORE IDEA
+
+Register → Get 500 VIBE Coins → Get assigned to a Zone → Explore → Spend Coins → Complete Activities → Earn XP → Upload/verify Stall Photos → Play Games → Earn Coins → Complete Zones → Climb the Leaderboard → Win
+
+There are 3 parallel competitions:
+
+👤 Individual
+
+Highest XP wins
+
+🌊 Zone
+
+Highest VIBE Coins collected wins
+
+📊 Zonal Performance
+
+The winning zone gets a detailed Zone Stats report showing why it won.
+
+1. 🎉 USER REGISTERS
+
+The user opens the VIBE web app.
+
+Registration
+
+They enter:
+
+Name
+
+Phone number
+
+Email
+
+Rotaract Club
+
+Instagram ID / Instagram username
+
+Registration ID
+
+Instagram ID
+
+The Instagram ID becomes part of their VIBE profile.
+
+Example:
+
+Aarcha U @aarcha.u Rotaract Club of ______
+
+This can also be used for social-media-based VIBE activities later.
+
+2. 🌊 USER IS MAPPED TO A ZONE
+
+After registration, every participant is assigned to one of the six VIBE zones.
+
+THE SIX ZONES
+
+🌊 ARNAVA
+
+🌊 TARANAGA
+
+🌊 SAGARA
+
+🌊 PRAVAHA
+
+🌊 SAMUDHRA
+
+🌊 VARUNA
+
+The assignment can either be:
+
+Option A — Random
+
+The system automatically assigns a zone.
+
+Option B — Organizer-controlled
+
+The organizers upload a list:
+
+Participant
+
+Club
+
+Assigned Zone
+
+Aarcha
+
+Club A
+
+Arnava
+
+Rahul
+
+Club B
+
+Taranaga
+
+Ananya
+
+Club C
+
+Sagara
+
+I'd recommend organizer-controlled mapping, especially if the zones are competing as teams.
+
+3. 🎊 WELCOME SCREEN
+
+Immediately after registration and zone assignment:
+
+WELCOME TO VIBE
+
+You are part of
+
+🌊 ARNAVA
+
+Your VIBE journey starts now.
+
+Then the coin animation:
+
+🪙 +500 VIBE COINS
+
+And:
+
+⭐ 0 XP
+
+Then:
+
+Your mission: Explore VIBE, complete experiences, interact with stalls, play games and help your zone climb to the top.
+
+[ ENTER VIBE ]
+
+4. 🏠 HOME DASHBOARD
+
+The home screen shows everything important.
+
+HEY AARCHA 👋
+
+🌊 ARNAVA
+
+🪙 500 VIBE
+
+⭐ 0 XP
+
+LEVEL 1
+
+VIBE NEWBIE
+
+━━━━━━━━━━━━━━━━
+
+ZONE PROGRESS
+
+0 / 6 explored
+
+EXPERIENCES
+
+0 completed
+
+STALLS
+
+0 visited
+
+GAMES
+
+0 played
+
+━━━━━━━━━━━━━━━━
+
+[ EXPLORE ZONES ]
+
+[ PLAY GAMES ]
+
+[ SCAN EXPERIENCE ]
+
+[ LEADERBOARD ]
+
+5. 🗺️ EXPLORE THE SIX ZONES
+
+The Zones section shows all six zones.
+
+🌊 ARNAVA
+
+Your Zone
+
+🌊 TARANAGA
+
+🌊 SAGARA
+
+🌊 PRAVAHA
+
+🌊 SAMUDHRA
+
+🌊 VARUNA
+
+The user's assigned zone should have a visual indicator:
+
+YOUR ZONE
+
+But they should still be allowed to visit and interact with all six zones.
+
+This is important because otherwise participants are likely to stay within their assigned zone.
+
+6. 🌊 EVERY ZONE HAS ACTIVITIES
+
+For example:
+
+ARNAVA
+
+Experience 01
+
+Icebreaker
+
+🪙 Cost: 50 ⭐ XP: 75
+
+Experience 02
+
+Mystery Challenge
+
+🪙 Cost: 100 ⭐ XP: 150
+
+Experience 03
+
+Final Wave
+
+🪙 Cost: 150 ⭐ XP: 250
+
+7. 📱 USER REACHES THE PHYSICAL ZONE
+
+At the physical activity center:
+
+VIBE QR
+
+The participant scans.
+
+The app recognizes:
+
+ARNAVA — MYSTERY CHALLENGE
+
+Then:
+
+Cost: 🪙 100
+
+Reward: ⭐ 150 XP
+
+Complete the challenge to earn XP.
+
+[ CONFIRM & PLAY ]
+
+8. 🪙 COINS MOVE TO THE ZONE
+
+Once confirmed:
+
+USER WALLET
+
+500 → 400 VIBE
+
+ARNAVA
+
++100 VIBE
+
+The backend records:
+
+Participant
+
+-100 VIBE
+
+Arnava
+
++100 VIBE
+
+This contributes to Arnava's Zone Score.
+
+9. ⭐ ACTIVITY COMPLETION
+
+The participant completes the challenge.
+
+Once verified:
+
+⭐ +150 XP
+
+Their profile:
+
+400 VIBE
+
+150 XP
+
+Arnava:
+
++100 VIBE
+
+10. 🏪 STALLS
+
+Now we add stalls as another major part of the experience.
+
+Every stall gets a VIBE profile.
+
+For example:
+
+🎮 STALL — MEMORY MATCH
+
+Entry: 50 VIBE
+
+XP: 100
+
+The participant scans the stall QR.
+
+Spends:
+
+-50 VIBE
+
+Completes the game.
+
+Gets:
+
++100 XP
+
+11. 📸 STALL PHOTO SYSTEM
+
+This is a really nice addition because it makes the event more social.
+
+At selected stalls:
+
+📸 CAPTURE YOUR VIBE
+
+The participant has to take a photo at the stall.
+
+They upload it through the VIBE app.
+
+Upload Photo
+
+[ 📷 Choose Photo ]
+
+Then:
+
+Add Instagram ID
+
+Their Instagram ID is already stored in their profile, so they don't need to enter it every time.
+
+12. PHOTO VERIFICATION
+
+The uploaded photo should go into:
+
+STALL VERIFICATION QUEUE
+
+The stall volunteer sees:
+
+Aarcha U
+
+@aarcha.u
+
+📸 [Photo]
+
+Stall: XYZ
+
+Buttons:
+
+[ APPROVE ]
+
+[ REJECT ]
+
+13. IF PHOTO IS APPROVED
+
+The user receives:
+
+⭐ +100 XP
+
+Potentially:
+
+🪙 +25 VIBE
+
+And:
+
+📸 STALL EXPERIENCE COMPLETE!
+
++100 XP
+
++25 VIBE
+
+The stall interaction is recorded.
+
+This is much safer than automatically awarding XP when someone uploads a random photo.
+
+14. WHY PHOTOS MATTER
+
+The photo system can serve three purposes:
+
+1. Engagement
+
+Encourages people to actually visit stalls.
+
+2. Social Media
+
+Participants can optionally share their VIBE experience on Instagram.
+
+3. Proof
+
+The photo provides evidence that the participant actually visited the stall.
+
+15. 🎮 THE FOUR VIBE GAMES
+
+The Games section should contain four major games.
+
+GAME 1 — ROTARACT GAME
+
+A game based on Rotaract knowledge/culture.
+
+For example:
+
+How well do you know Rotaract?
+
+Questions can cover:
+
+Rotaract
+
+Rotary
+
+District
+
+Club activities
+
+Fellowship
+
+Community service
+
+VIBE-specific Rotaract information
+
+Entry
+
+🪙 50 VIBE
+
+Completion
+
+⭐ 100 XP
+
+High score
+
+Additional:
+
+🪙 +100 VIBE
+
+⭐ +100 XP
+
+GAME 2 — VIBE MINION GAME
+
+A VIBE-themed mini-game using the event's Minion concept.
+
+For example:
+
+MINION VIBE RUN
+
+A timed mini-game where participants complete challenges.
+
+Entry
+
+🪙 50 VIBE
+
+Completion
+
+⭐ 100 XP
+
+High score
+
+🪙 +150 VIBE
+
+⭐ +200 XP
+
+This could become one of the most visually fun parts of the application.
+
+GAME 3 — MEMORY GAME
+
+Classic memory card game.
+
+Example:
+
+🍌   ❓   🍌   ❓
+
+❓   🎈   ❓   🎈
+
+🎉   ❓   🎉   ❓
+
+Participants have to match pairs within a time limit.
+
+Entry
+
+🪙 50 VIBE
+
+Completion
+
+⭐ 100 XP
+
+Fastest completion
+
+Bonus:
+
+🪙 +100 VIBE
+
+⭐ +150 XP
+
+GAME 4 — VIBE QUIZ
+
+A general VIBE/event quiz.
+
+Could include:
+
+Event-related questions
+
+Zone-related questions
+
+Rotaract questions
+
+Fun questions
+
+Things revealed during the event
+
+Entry
+
+🪙 50 VIBE
+
+Score-based XP
+
+For example:
+
+Score
+
+XP
+
+0–30%
+
+50
+
+31–60%
+
+100
+
+61–80%
+
+150
+
+81–100%
+
+250
+
+And potentially:
+
+100% score → +100 VIBE bonus
+
+16. 🪙 GAME ECONOMY
+
+Games shouldn't just be a way to spend coins.
+
+They should create opportunities to earn them back.
+
+Example:
+
+Memory Game
+
+Entry:
+
+-50 VIBE
+
+Complete:
+
++75 XP
+
+Top score:
+
++100 VIBE
+
+This creates a risk/reward system.
+
+17. 🪙 OTHER WAYS TO EARN VIBE COINS
+
+The user should never feel like:
+
+"I ran out of coins, so I can't do anything."
+
+I'd build several earning mechanisms.
+
+Zone Discovery
+
++50 VIBE
+
+once per zone.
+
+Complete 3 Zones
+
++100 VIBE
+
+Complete All 6 Zones
+
++300 VIBE
+
+Complete 5 Stall Experiences
+
++150 VIBE
+
+Complete All 4 Games
+
++200 VIBE
+
+Win a Game
+
++100–200 VIBE
+
+Stage Challenge
+
++50–200 VIBE
+
+Hidden VIBE QR
+
++100–300 VIBE
+
+Special Organizer Bonus
+
+Admins can award bonus coins.
+
+18. 🏆 QUEST SYSTEM
+
+Now all these activities can be tied together.
+
+QUEST 1 — THE EXPLORER
+
+Visit 3 zones.
+
++100 VIBE
+
++100 XP
+
+QUEST 2 — THE WANDERER
+
+Visit all 6 zones.
+
++300 VIBE
+
++300 XP
+
+QUEST 3 — SOCIAL VIBE
+
+Complete 5 stall interactions.
+
++150 VIBE
+
++200 XP
+
+QUEST 4 — GAME ON
+
+Complete all 4 games.
+
++200 VIBE
+
++300 XP
+
+QUEST 5 — VIBE MASTER
+
+Complete:
+
+All 6 zones
+
+5 stalls
+
+4 games
+
+Reward:
+
++500 VIBE
+
++500 XP
+
+🏆 Exclusive badge
+
+19. 🗺️ ZONE PASSPORT
+
+The participant gets a digital passport.
+
+MY VIBE PASSPORT
+
+🌊 ARNAVA       ✅
+
+🌊 TARANAGA     ✅
+
+🌊 SAGARA       ❌
+
+🌊 PRAVAHA      ❌
+
+🌊 SAMUDHRA     ❌
+
+🌊 VARUNA       ❌
+
+2 / 6 ZONES
+
+The passport updates after verified activity.
+
+20. ⭐ XP SYSTEM
+
+XP comes from participation.
+
+Zone activities
+
++50–250 XP
+
+Stall activities
+
++50–200 XP
+
+Sponsor experiences
+
++50–300 XP
+
+Games
+
++50–250 XP
+
+Quests
+
++100–500 XP
+
+Special challenges
+
++100–500 XP
+
+Photo verification
+
++50–150 XP
+
+21. ⭐ XP NEVER DECREASES
+
+This rule should be fixed.
+
+If someone has:
+
+2,000 XP
+
+and spends:
+
+500 VIBE
+
+they still have:
+
+2,000 XP
+
+The two systems remain separate.
+
+22. 🪙 VIBE COINS = ZONE SCORE
+
+Every time a participant spends coins on an activity belonging to a zone:
+
+User
+
+-100 VIBE
+
+Zone
+
++100 VIBE
+
+So the six zones accumulate:
+
+ARNAVA
+
+🪙 24,500
+
+TARANAGA
+
+🪙 22,800
+
+SAGARA
+
+🪙 21,400
+
+PRAVAHA
+
+🪙 19,800
+
+SAMUDHRA
+
+🪙 18,700
+
+VARUNA
+
+🪙 17,600
+
+23. 🌊 BUT THE USER'S ASSIGNED ZONE IS DIFFERENT
+
+This is important.
+
+Suppose Aarcha belongs to:
+
+ARNAVA
+
+She can still go to:
+
+Taranaga
+
+and spend 100 coins there.
+
+That means:
+
+Aarcha's team
+
+Arnava
+
+but:
+
+Her contribution
+
+Taranaga +100
+
+This creates a nice strategic element.
+
+People are technically members of one zone but free to explore the entire VIBE world.
+
+24. ZONAL STATS
+
+This is one of your new requirements, and I'd make this a proper feature rather than just showing the final coin number.
+
+Each zone gets a Zonal Stats Dashboard.
+
+For example:
+
+🌊 ARNAVA
+
+🪙 TOTAL VIBE
+
+42,850
+
+👥 PARTICIPANTS
+
+384
+
+🎯 EXPERIENCES COMPLETED
+
+1,245
+
+📸 STALL INTERACTIONS
+
+430
+
+🎮 GAME PARTICIPATIONS
+
+215
+
+⭐ XP GENERATED
+
+156,800
+
+🗺️ ZONE COMPLETION RATE
+
+72%
+
+25. ZONE STATS — MORE DETAIL
+
+You could show:
+
+Engagement
+
+Total unique visitors
+
+Total visits
+
+Experiences completed
+
+Average experiences per visitor
+
+Repeat interactions
+
+Economy
+
+Coins collected
+
+Average coins per visitor
+
+Coins spent on each activity
+
+Coins earned through zone rewards
+
+XP
+
+XP generated
+
+Average XP per visitor
+
+Highest XP contributor
+
+Stall Engagement
+
+Number of stall visits
+
+Photos submitted
+
+Photos approved
+
+XP generated through stalls
+
+Games
+
+Game participation
+
+Average score
+
+Highest score
+
+XP generated
+
+26. ZONE PERFORMANCE
+
+At the end, the organizers can see something like:
+
+🌊 ARNAVA
+
+VIBE Collected
+
+🪙 42,850
+
+Visitors
+
+384
+
+Experiences
+
+1,245
+
+XP Generated
+
+156,800
+
+Completion Rate
+
+72%
+
+🌊 TARANAGA
+
+VIBE Collected
+
+🪙 39,450
+
+Visitors
+
+401
+
+Experiences
+
+1,120
+
+XP Generated
+
+149,200
+
+Completion Rate
+
+68%
+
+This gives the winning zone actual statistics, rather than just saying:
+
+"Arnava won."
+
+27. 🏆 FINAL ZONE WINNER
+
+At the end of VIBE:
+
+ZONE SCORE = TOTAL VERIFIED VIBE COINS COLLECTED
+
+The zone with the highest total wins the:
+
+🌊 VIBE ZONE CHAMPIONSHIP
+
+You could display:
+
+AND THE WINNER IS...
+
+🌊 ARNAVA
+
+🪙 42,850 VIBE
+
+384 participants 1,245 experiences 72% completion rate
+
+28. 👤 INDIVIDUAL WINNER
+
+Separate leaderboard.
+
+RANKED BY XP
+
+Rank
+
+Participant
+
+Zone
+
+XP
+
+1
+
+Aarcha
+
+Arnava
+
+3,850
+
+2
+
+Rahul
+
+Taranaga
+
+3,720
+
+3
+
+Ananya
+
+Sagara
+
+3,550
+
+The participant with the highest verified XP wins the individual competition.
+
+29. 📸 PROFILE
+
+Each participant's profile can show:
+
+AARCHA U
+
+@aarcha.u
+
+🌊 ARNAVA
+
+🪙 850 VIBE
+
+⭐ 2,450 XP
+
+LEVEL 4
+
+⚡ VIBE RIDER
+
+VIBE PASSPORT
+
+4 / 6 Zones
+
+EXPERIENCES
+
+12 completed
+
+STALLS
+
+7 completed
+
+GAMES
+
+3 / 4
+
+ACHIEVEMENTS
+
+🏆🏆🏆
+
+30. 📊 PROFILE STATS
+
+Give each user their own event statistics:
+
+Total VIBE earned
+
+Total VIBE spent
+
+XP earned
+
+Zones visited
+
+Experiences completed
+
+Stalls visited
+
+Games played
+
+Games won
+
+Photos approved
+
+Quests completed
+
+This makes their profile feel like an actual VIBE player profile.
+
+31. 🔥 THE COMPLETE USER JOURNEY
+
+               REGISTER
+
+                    ↓
+
+          NAME + PHONE + EMAIL
+
+          CLUB + INSTAGRAM ID
+
+                    ↓
+
+              ZONE MAPPING
+
+                    ↓
+
+          🌊 ARNAVA / TARANAGA
+
+          🌊 SAGARA / PRAVAHA
+
+          🌊 SAMUDHRA / VARUNA
+
+                    ↓
+
+             🎉 WELCOME
+
+                    ↓
+
+              🪙 +500 VIBE
+
+                ⭐ 0 XP
+
+                    ↓
+
+             VIBE DASHBOARD
+
+                    ↓
+
+       ┌────────────┼────────────┐
+
+       ↓            ↓            ↓
+
+     ZONES        STALLS        GAMES
+
+       ↓            ↓            ↓
+
+   SCAN QR      VISIT STALL    PLAY GAME
+
+       ↓            ↓            ↓
+
+  SPEND COINS   UPLOAD PHOTO   SPEND COINS
+
+       ↓            ↓            ↓
+
+  ZONE +COINS   VERIFICATION   COMPLETE
+
+       ↓            ↓            ↓
+
+     +XP          +XP           +XP
+
+       │            │            │
+
+       └────────────┼────────────┘
+
+                    ↓
+
+               EARN COINS
+
+                    ↓
+
+        QUESTS / CHALLENGES /
+
+        HIDDEN QR / STAGE
+
+                    ↓
+
+             🗺️ PASSPORT
+
+                    ↓
+
+              ⭐ XP LEVEL
+
+                    ↓
+
+             🏆 LEADERBOARD
+
+                    ↓
+
+          ┌─────────┴─────────┐
+
+          ↓                   ↓
+
+     INDIVIDUAL             ZONE
+
+     HIGHEST XP         MOST VIBE COINS
+
+          ↓                   ↓
+
+      🏆 WINNER           🏆 WINNER
+
+32. EVENT-DAY USER EXPERIENCE
+
+The attendee essentially does this:
+
+BEFORE EVENT
+
+Register → Instagram ID → Get assigned zone.
+
+ARRIVE
+
+Login → Get 500 VIBE.
+
+EXPLORE
+
+Visit zones → Scan → Spend.
+
+EXPERIENCE
+
+Complete activities → Earn XP.
+
+STALLS
+
+Visit stalls → Take/upload photo → Get verified → Earn XP.
+
+GAMES
+
+Play:
+
+Rotaract Game
+
+Minion VIBE Game
+
+Memory Game
+
+VIBE Quiz
+
+EARN
+
+Complete quests → win challenges → discover hidden QR codes → earn more coins.
+
+COMPETE
+
+Watch:
+
+Individual XP leaderboard
+
+and
+
+Zone VIBE leaderboard
+
+FINISH
+
+VIBE closes → scores freeze → winners announced.
+
+33. THE TWO LEADERBOARDS SHOULD LOOK DIFFERENT
+
+This is a good UI opportunity.
+
+👤 INDIVIDUAL
+
+⭐ VIBE XP LEADERBOARD
+
+Who experienced the most?
+
+Rank by XP.
+
+🌊 ZONES
+
+🪙 VIBE ZONE BATTLE
+
+Which zone created the most engagement?
+
+Rank by VIBE Coins collected.
+
+34. FINAL SYSTEM IN ONE TABLE
+
+Feature
+
+User Gets
+
+What Happens
+
+Registration
+
+🪙 500
+
+Starting wallet
+
+Zone assignment
+
+🌊 Zone
+
+Team identity
+
+Zone discovery
+
+🪙 +50
+
+Passport + XP
+
+Zone activity
+
+⭐ XP
+
+Coins move to zone
+
+Stall activity
+
+⭐ XP
+
+Engagement recorded
+
+Stall photo
+
+⭐ XP
+
+After verification
+
+Sponsor activity
+
+⭐ XP
+
+Sponsor engagement
+
+Rotaract game
+
+⭐ XP
+
+Score-based
+
+Minion game
+
+⭐ XP
+
+Score-based
+
+Memory game
+
+⭐ XP
+
+Score-based
+
+VIBE quiz
+
+⭐ XP
+
+Score-based
+
+Quest
+
+🪙 + / ⭐ +
+
+Bonus
+
+Hidden QR
+
+🪙 + / ⭐ +
+
+Exploration
+
+Stage challenge
+
+🪙 + / ⭐ +
+
+Event engagement
+
+Zone completion
+
+🪙 + / ⭐ +
+
+Passport
+
+Leaderboard
+
+🏆
+
+XP ranking
+
+Zone battle
+
+🏆
+
+Coin ranking
+
+Profile
+
+📊
+
+Personal stats
+
+Zonal stats
+
+📊
+
+Zone performance
+
+The final VIBE concept
+
+🪙 COINS
+
+Flow through the event.
+
+Users earn them → spend them → spent coins contribute to zones.
+
+⭐ XP
+
+Measures engagement.
+
+Activities, stalls, photos, games and quests give XP.
+
+🌊 ZONES
+
+Compete against each other.
+
+Arnava vs Taranaga vs Sagara vs Pravaha vs Samudhra vs Varuna.
+
+👤 USERS
+
+Compete individually.
+
+Highest verified XP wins.
+
+📸 STALLS
+
+Become interactive experiences, not just booths.
+
+🎮 GAMES
+
+Give users another way to participate, earn XP and potentially earn coins.
+
+📊 ZONAL STATS
+
+Show exactly how each zone performed and give the organizers meaningful post-event data.
+
+So the overall philosophy becomes:
+
+🪙 Spend your VIBE. ⭐ Earn your XP. 🌊 Support your zone. 🎮 Play the event. 📸 Capture the experience. 🏆 Become the VIBE Champion.

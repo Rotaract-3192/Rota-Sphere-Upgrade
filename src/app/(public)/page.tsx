@@ -340,6 +340,7 @@ export default async function HomePage() {
                       {/* Action Button */}
                       <Link
                         href={`/events/${heroEvent.slug}`}
+                        data-tour="hero-event-action"
                         className="w-full mt-2 py-3 rounded-xl bg-[#0758fc] hover:bg-[#054fe0] active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 transition-all cursor-pointer"
                       >
                         <span>Book Delegate Pass</span>

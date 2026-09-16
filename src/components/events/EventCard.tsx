@@ -262,7 +262,7 @@ export function EventCard({
         </div>
 
         {/* ── Card Footer & CTA ────────────────────────────────────────── */}
-        <div className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
+        <div data-tour="event-card-action" className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
               {isFree ? "Admission" : "Pass Starts At"}
