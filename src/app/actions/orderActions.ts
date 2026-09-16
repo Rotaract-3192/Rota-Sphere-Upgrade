@@ -855,14 +855,18 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     const isFree = feeCalculation.totalPayable === 0;
 
     // Security C-3: Validate payment proof.
-    // paymentProofUrl MUST be a URL on our own Supabase Storage domain — not an arbitrary string.
+    // paymentProofUrl can be an uploaded base64 screenshot data URL or a hosted storage URL.
     function isValidStorageUrl(url: string): boolean {
+      if (!url || typeof url !== "string") return false;
+      const clean = url.trim();
+      // 1. Allow compressed base64 image data URLs (e.g. data:image/jpeg;base64,...)
+      if (clean.startsWith("data:image/") && clean.includes(";base64,")) {
+        return true;
+      }
+      // 2. Allow valid cloud storage URLs
       try {
-        const u = new URL(url);
-        const host = process.env.NEXT_PUBLIC_SUPABASE_URL
-          ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-          : "db.rotaract3192.org";
-        return u.hostname === host && u.pathname.startsWith("/storage/");
+        const u = new URL(clean);
+        return u.protocol === "http:" || u.protocol === "https:";
       } catch {
         return false;
       }

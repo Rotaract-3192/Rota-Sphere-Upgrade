@@ -44,6 +44,7 @@ import {
   Award,
   Ticket,
   Users,
+  Compass,
 } from "lucide-react";
 import Link from "next/link";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -887,14 +888,31 @@ function CheckInScannerContent() {
                       <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider block">
                         Rotaract Club / Organization
                       </span>
-                      <span className="text-sm sm:text-base font-bold text-white flex items-center gap-1.5 flex-wrap">
-                        <span>{scanResult.clubName || "Non-Rotaract / General Delegate"}</span>
+                      <span className="text-sm sm:text-base font-bold text-white block truncate">
+                        {scanResult.clubName || "Non-Rotaract / General Delegate"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* DISTRICT ZONE ROW */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <Compass size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider block">
+                        District 3192 Zone
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-sm sm:text-base font-black text-indigo-300">
+                          {scanResult.zone || "District 3192"}
+                        </span>
                         {scanResult.zone && (
-                          <span className="text-[10px] font-mono font-extrabold bg-blue-950 text-blue-300 border border-blue-800/80 px-2 py-0.5 rounded-md">
-                            {scanResult.zone}
+                          <span className="text-[9px] font-extrabold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded-md">
+                            Official Zone
                           </span>
                         )}
-                      </span>
+                      </div>
                     </div>
                   </div>
 
@@ -1266,9 +1284,11 @@ function CheckInScannerContent() {
                       />
                       <div className="min-w-0">
                         <p className="font-bold text-white truncate">{s.name}</p>
-                        {(s.club || s.designation) && (
+                        {(s.club || s.designation || s.zone) && (
                           <p className="text-[11px] text-blue-400 font-medium truncate mt-0.5">
-                            {s.designation ? `${s.designation} • ` : ""}{s.club}
+                            {s.designation ? `${s.designation} • ` : ""}
+                            {s.club || "Delegate"}
+                            {s.zone ? ` (${s.zone})` : ""}
                           </p>
                         )}
                         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 font-mono">

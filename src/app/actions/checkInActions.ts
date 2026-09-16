@@ -11,6 +11,7 @@ import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { writeAuditLog } from "@/lib/audit/auditLog";
 import { getCurrentUser, hasMinimumRole } from "@/lib/auth/getUser";
 import { formatCheckedInTime } from "@/lib/utils/dateTimeUtils";
+import { getClubZone } from "@/lib/utils/zoneResolver";
 
 export interface CheckInRequest {
   rawInput: string;
@@ -207,7 +208,11 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       "";
 
     const memberType = ticket.member_type || customAnswers.member_type || "Rotaract";
-    const zone = ticket.zone || customAnswers.zone || "";
+    const zone =
+      (ticket.zone && ticket.zone.trim()) ||
+      (customAnswers.zone && String(customAnswers.zone).trim()) ||
+      (clubName ? getClubZone(clubName) : "") ||
+      "";
 
     // Load sibling bulk delegation group info if this ticket belongs to a bulk slab
     let isBulkGroup = false;
@@ -604,7 +609,11 @@ export async function approveAndCheckInTicketAction(params: {
       attendeePhone: t.attendee_phone,
       memberType: t.member_type || customAnswers.member_type || "Rotaract",
       clubName,
-      zone: t.zone || customAnswers.zone || "",
+      zone:
+        (t.zone && t.zone.trim()) ||
+        (customAnswers.zone && String(customAnswers.zone).trim()) ||
+        (clubName ? getClubZone(clubName) : "") ||
+        "",
       designation,
       ticketTierName: info?.[0]?.tier_name || "General Pass",
       eventTitle: info?.[0]?.event_title || "Event",
