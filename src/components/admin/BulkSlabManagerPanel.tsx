@@ -24,6 +24,7 @@ interface BulkSlab {
   bulk_slab_size: number;
   total_capacity: number;
   sold_count: number;
+  reserved_count?: number;
   is_active: boolean;
   sales_start: string;
   sales_end: string;
@@ -176,7 +177,7 @@ export function BulkSlabManagerPanel({ eventId, eventTitle, existingSlabs = [], 
   }
 
   const groupsAvailable = (slab: BulkSlab) => {
-    const remaining = slab.total_capacity - slab.sold_count;
+    const remaining = Math.max(0, slab.total_capacity - (slab.sold_count + (Number(slab.reserved_count) || 0)));
     return Math.floor(remaining / slab.bulk_slab_size);
   };
 

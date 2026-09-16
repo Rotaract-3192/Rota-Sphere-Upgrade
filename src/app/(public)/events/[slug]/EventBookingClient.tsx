@@ -59,14 +59,15 @@ function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Dat
   const sold = Number(tier.sold_count) || 0;
   const reserved = Number(tier.reserved_count) || 0;
   const remaining = Math.max(0, cap - (sold + reserved));
+  const slabSize = tier.is_bulk_slab && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
 
-  if (remaining <= 0) {
-    if (sold < cap) {
+  if (remaining < slabSize) {
+    if (cap - sold >= slabSize) {
       return {
         state: "SOLD_OUT",
         badgeText: "In Checkout",
         badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-bold",
-        detailText: "Locked in checkout by another attendee",
+        detailText: tier.is_bulk_slab ? "All group passes currently in checkout" : "Locked in checkout by another attendee",
         canBook: false,
       };
     }
@@ -74,7 +75,7 @@ function getTierScheduleStatus(tier: SaasTicketTier, currentTime: Date = new Dat
       state: "SOLD_OUT",
       badgeText: "Sold Out",
       badgeClass: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
-      detailText: "All seats allocated",
+      detailText: tier.is_bulk_slab ? "All group passes allocated" : "All seats allocated",
       canBook: false,
     };
   }
@@ -253,7 +254,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
             }`}
           >
             {hasAnyBookableTier ? (
-              "● Live Booking"
+              "● Booking's Live"
             ) : earliestUpcoming ? (
               <>
                 <Lock size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
@@ -287,8 +288,12 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
                   const slabSize = tier.bulk_slab_size || 1;
                   const pricePerPerson = Number(tier.price) || 0;
                   const totalPrice = pricePerPerson * slabSize;
-                  const groupsAvailable = tier.total_capacity > 0
-                    ? Math.floor((tier.total_capacity - (tier.sold_count || 0)) / slabSize)
+                  const cap = Number(tier.total_capacity) || 0;
+                  const sold = Number(tier.sold_count) || 0;
+                  const reserved = Number(tier.reserved_count) || 0;
+                  const remainingSeats = Math.max(0, cap - (sold + reserved));
+                  const groupsAvailable = cap > 0
+                    ? Math.floor(remainingSeats / slabSize)
                     : null;
 
                   return (
@@ -316,7 +321,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {status.detailText}
-                            {groupsAvailable !== null && (
+                            {status.state === "LIVE" && groupsAvailable !== null && (
                               <span className="ml-1 font-semibold text-indigo-600 dark:text-indigo-400">
                                 · {groupsAvailable === 0 ? "Sold out" : `${groupsAvailable} group${groupsAvailable !== 1 ? "s" : ""} left`}
                               </span>

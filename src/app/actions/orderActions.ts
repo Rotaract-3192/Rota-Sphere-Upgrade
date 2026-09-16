@@ -173,10 +173,21 @@ export async function getEventTiersAction(eventId: string) {
   try {
     await cleanupExpiredTicketHoldsAction();
     const { data: tiers } = await executeSql(`
-      SELECT *
-      FROM saas_ticket_tiers
-      WHERE event_id = ${escapeSql(eventId)} AND is_active = true AND is_visible = true
-      ORDER BY price ASC, name ASC;
+      SELECT 
+        t.*,
+        GREATEST(
+          COALESCE(t.sold_count, 0),
+          COALESCE(tc.sold_cnt, 0)
+        )::int AS sold_count
+      FROM saas_ticket_tiers t
+      LEFT JOIN (
+        SELECT ticket_tier_id, count(*)::int AS sold_cnt
+        FROM saas_tickets
+        WHERE status NOT IN ('CANCELLED', 'PAYMENT_REJECTED')
+        GROUP BY ticket_tier_id
+      ) tc ON tc.ticket_tier_id = t.id
+      WHERE t.event_id = ${escapeSql(eventId)} AND t.is_active = true AND t.is_visible = true
+      ORDER BY t.price ASC, t.name ASC;
     `);
     return { success: true, tiers: (tiers || []) as unknown as SaasTicketTier[] };
   } catch (err: any) {
@@ -210,21 +221,32 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
     const formattedTierIds = tierIds.map((id) => escapeSql(id)).join(",");
     const { data: tiers, error } = await executeSql(`
       SELECT 
-        id, 
-        name, 
-        price, 
-        total_capacity, 
-        sold_count, 
-        reserved_count,
-        sales_start, 
-        sales_end, 
-        is_active,
-        max_per_order,
+        t.id, 
+        t.name, 
+        t.price, 
+        t.total_capacity, 
+        GREATEST(
+          COALESCE(t.sold_count, 0),
+          COALESCE(tc.sold_cnt, 0)
+        )::int AS sold_count,
+        t.reserved_count,
+        t.sales_start, 
+        t.sales_end, 
+        t.is_active,
+        t.max_per_order,
+        t.is_bulk_slab,
+        t.bulk_slab_size,
         NOW() as server_now,
-        (sales_start IS NOT NULL AND NOW() < sales_start) as is_too_early,
-        (sales_end IS NOT NULL AND NOW() > sales_end) as is_too_late
-      FROM saas_ticket_tiers
-      WHERE id IN (${formattedTierIds}) AND event_id = ${escapeSql(input.eventId)};
+        (t.sales_start IS NOT NULL AND NOW() < t.sales_start) as is_too_early,
+        (t.sales_end IS NOT NULL AND NOW() > t.sales_end) as is_too_late
+      FROM saas_ticket_tiers t
+      LEFT JOIN (
+        SELECT ticket_tier_id, count(*)::int AS sold_cnt
+        FROM saas_tickets
+        WHERE status NOT IN ('CANCELLED', 'PAYMENT_REJECTED')
+        GROUP BY ticket_tier_id
+      ) tc ON tc.ticket_tier_id = t.id
+      WHERE t.id IN (${formattedTierIds}) AND t.event_id = ${escapeSql(input.eventId)};
     `);
 
     if (error || !tiers || tiers.length === 0) {
@@ -265,23 +287,36 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
       }
 
       const count = input.selectedCounts[tier.id] || 0;
-      const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
+      const isBulk = Boolean(tier.is_bulk_slab);
+      const slabSize = isBulk && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
+      const maxAllowed = isBulk ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 10);
       if (count > maxAllowed) {
         return {
           valid: false,
-          error: `"${tier.name}" is limited to ${maxAllowed} ticket(s) per booking.`,
+          error: `"${tier.name}" is limited to ${maxAllowed} ${isBulk ? "group(s)" : "ticket(s)"} per booking.`,
           serverTime: serverNowStr,
         };
       }
 
+      const effectiveSeats = count * slabSize;
       const sold = Number(tier.sold_count) || 0;
       const reserved = Number(tier.reserved_count) || 0;
       const capacity = Number(tier.total_capacity) || 0;
-      if (capacity > 0 && sold + reserved + count > capacity) {
-        if (sold + count <= capacity) {
+      if (capacity > 0 && sold + reserved + effectiveSeats > capacity) {
+        if (sold + effectiveSeats <= capacity) {
           return {
             valid: false,
-            error: `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`,
+            error: isBulk
+              ? `All remaining group passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`
+              : `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`,
+            serverTime: serverNowStr,
+          };
+        }
+        if (isBulk) {
+          const remainingGroups = Math.floor(Math.max(0, capacity - sold) / slabSize);
+          return {
+            valid: false,
+            error: `Bulk tier "${tier.name}" has only ${remainingGroups} group${remainingGroups === 1 ? "" : "s"} (${Math.max(0, capacity - sold)} seats) remaining.`,
             serverTime: serverNowStr,
           };
         }
@@ -1501,20 +1536,40 @@ export async function createManualAttendeeAction(
     }
 
     // Atomically reserve seat capacity
+    // Admins and Organizers override the allotted tickets / capacity.
+    // If the tier is at capacity (e.g. 44 allotted and 44 sold), adding a manual attendee
+    // automatically expands total_capacity to accommodate the new attendee (e.g. makes it 45).
     const { data: reserveRes, error: reserveErr } = await executeSql(`
       UPDATE saas_ticket_tiers
-      SET sold_count = sold_count + 1
+      SET 
+        sold_count = sold_count + 1,
+        total_capacity = CASE 
+          WHEN total_capacity > 0 THEN GREATEST(total_capacity, sold_count + 1)
+          ELSE total_capacity
+        END,
+        updated_at = NOW()
       WHERE id = ${escapeSql(tier.id)}
-        AND (total_capacity <= 0 OR sold_count + 1 <= total_capacity)
       RETURNING id, sold_count, total_capacity;
     `);
 
     if (reserveErr || !reserveRes || reserveRes.length === 0) {
       return {
         success: false,
-        error: `Cannot issue manual ticket: Pass tier "${tier.name}" has reached maximum capacity (${tier.total_capacity}).`,
+        error: `Failed to issue manual ticket: ${reserveErr?.message || "Failed to update ticket tier capacity"}`,
       };
     }
+
+    // Keep event overall capacity in sync if defined
+    await executeSql(`
+      UPDATE saas_events
+      SET capacity = GREATEST(COALESCE(capacity, 0), (
+        SELECT COALESCE(SUM(total_capacity), 0)::int 
+        FROM saas_ticket_tiers 
+        WHERE event_id = ${escapeSql(input.eventId)}
+      )),
+      updated_at = NOW()
+      WHERE id = ${escapeSql(input.eventId)} AND capacity IS NOT NULL AND capacity > 0;
+    `).catch(() => {});
 
     // 3. Resolve Zone & Club
     const { clubName, zone } = resolveClubAndZone({

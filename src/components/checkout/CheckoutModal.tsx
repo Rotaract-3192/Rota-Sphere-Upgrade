@@ -123,19 +123,21 @@ function getTierScheduleStatus(
   const reserved = Number(tier.reserved_count) || 0;
 
   // Total unheld seats remaining in general (locked passes are immediately deducted from the count)
+  const slabSize = tier.is_bulk_slab && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
   const remaining = Math.max(0, cap - (sold + reserved));
 
   // Seats available for this active user session (accounting for tickets already held in user's current session)
-  const othersReserved = Math.max(0, reserved - userSelectedCount);
+  const userSelectedSeats = userSelectedCount * slabSize;
+  const othersReserved = Math.max(0, reserved - userSelectedSeats);
   const remainingForUser = Math.max(0, cap - (sold + othersReserved));
 
-  if (remainingForUser <= 0) {
-    if (sold < cap) {
+  if (remainingForUser < slabSize) {
+    if (cap - sold >= slabSize) {
       return {
         state: "SOLD_OUT",
         badgeText: "In Checkout",
         badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700",
-        detailText: "Remaining passes currently locked in checkout",
+        detailText: tier.is_bulk_slab ? "All group passes currently locked in checkout" : "Remaining passes currently locked in checkout",
         canBook: false,
       };
     }
@@ -143,7 +145,7 @@ function getTierScheduleStatus(
       state: "SOLD_OUT",
       badgeText: "Sold Out",
       badgeClass: "bg-gray-100 dark:bg-gray-700 text-gray-500",
-      detailText: "All seats allocated",
+      detailText: tier.is_bulk_slab ? "All group passes allocated" : "All seats allocated",
       canBook: false,
     };
   }
@@ -1530,6 +1532,11 @@ export function CheckoutModal({
                               </div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                                 Generates {slabSize} attendee entry passes
+                                {maxAvailableForUser > 0 && (
+                                  <span className="ml-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
+                                    · {maxAvailableForUser} group{maxAvailableForUser !== 1 ? "s" : ""} left
+                                  </span>
+                                )}
                               </p>
                               <div className="flex items-baseline gap-1.5">
                                 <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">

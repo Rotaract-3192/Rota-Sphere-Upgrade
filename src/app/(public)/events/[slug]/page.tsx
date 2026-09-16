@@ -150,9 +150,21 @@ export default async function EventDetailPage({ params }: PageProps) {
   } catch (_) {}
 
   const { data: tierRows } = await executeSql(`
-    SELECT * FROM saas_ticket_tiers
-    WHERE event_id = '${event.id}' AND is_active = true AND is_visible = true
-    ORDER BY price ASC;
+    SELECT 
+      t.*,
+      GREATEST(
+        COALESCE(t.sold_count, 0),
+        COALESCE(tc.sold_cnt, 0)
+      )::int AS sold_count
+    FROM saas_ticket_tiers t
+    LEFT JOIN (
+      SELECT ticket_tier_id, count(*)::int AS sold_cnt
+      FROM saas_tickets
+      WHERE status NOT IN ('CANCELLED', 'PAYMENT_REJECTED')
+      GROUP BY ticket_tier_id
+    ) tc ON tc.ticket_tier_id = t.id
+    WHERE t.event_id = '${event.id}' AND t.is_active = true AND t.is_visible = true
+    ORDER BY t.price ASC;
   `);
   const tiers = (tierRows || []) as unknown as SaasTicketTier[];
 

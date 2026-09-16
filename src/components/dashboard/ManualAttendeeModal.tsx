@@ -221,6 +221,14 @@ export function ManualAttendeeModal({
         attendeeName: name.trim(),
       });
 
+      if (selectedEventId) {
+        getEventTiersAction(selectedEventId).then((r) => {
+          if (r.success && r.tiers) {
+            setTiers(r.tiers);
+          }
+        });
+      }
+
       if (onAttendeeAdded) {
         onAttendeeAdded({
           ticket_code: res.ticketCode,
@@ -261,6 +269,8 @@ export function ManualAttendeeModal({
     setSuccessResult(null);
     setErrorMessage(null);
   }
+
+  const selectedTier = tiers.find((t) => String(t.id) === String(selectedTierId));
 
   if (!isOpen) return null;
 
@@ -389,12 +399,28 @@ export function ManualAttendeeModal({
                     {loadingTiers && <option value="">Loading ticket tiers...</option>}
                     {!loadingTiers && tiers.length === 0 && <option value="">No tiers configured</option>}
                     {!loadingTiers &&
-                      tiers.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} — {Number(t.price) === 0 ? "Free Pass" : `₹${Number(t.price).toFixed(2)}`}
-                        </option>
-                      ))}
+                      tiers.map((t) => {
+                        const isAtCap = t.total_capacity > 0 && (Number(t.sold_count) || 0) >= Number(t.total_capacity);
+                        const capInfo = isAtCap
+                          ? ` (${t.sold_count}/${t.total_capacity} sold · Admin Override)`
+                          : t.total_capacity > 0
+                          ? ` (${t.sold_count}/${t.total_capacity} sold)`
+                          : "";
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {t.name} — {Number(t.price) === 0 ? "Free Pass" : `₹${Number(t.price).toFixed(2)}`}{capInfo}
+                          </option>
+                        );
+                      })}
                   </select>
+                  {selectedTier && selectedTier.total_capacity > 0 && (Number(selectedTier.sold_count) || 0) >= Number(selectedTier.total_capacity) && (
+                    <div className="p-2 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mt-1">
+                      <Sparkles size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>
+                        Capacity reached ({selectedTier.sold_count}/{selectedTier.total_capacity}). Adding this attendee will automatically override and increase allotted tickets to {(Number(selectedTier.sold_count) || Number(selectedTier.total_capacity)) + 1}.
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
