@@ -1594,31 +1594,43 @@ export async function createManualAttendeeAction(
         order_number,
         event_id,
         organization_id,
-        user_id,
+        customer_user_id,
         customer_name,
         customer_email,
         customer_phone,
+        subtotal_amount,
+        discount_amount,
+        platform_fee,
+        convenience_fee,
+        tax_amount,
         total_amount,
         currency,
         status,
-        payment_status,
         payment_method,
+        payment_gateway,
         upi_transaction_id,
-        metadata
+        custom_answers,
+        created_at,
+        updated_at
       ) VALUES (
         ${escapeSql(orderNumber)},
         ${escapeSql(input.eventId)},
-        ${escapeSql(event.organization_id || user.profile.home_club_id || null)},
+        ${escapeSql(event.organization_id || user.profile?.home_club_id || null)},
         ${escapeSql(user.clerkId)},
         ${escapeSql(input.name.trim())},
         ${escapeSql(input.email.trim())},
-        ${escapeSql(input.phone?.trim() || null)},
+        ${input.phone?.trim() ? escapeSql(input.phone.trim()) : "NULL"},
+        ${escapeSql(amountPaid)},
+        0.00,
+        0.00,
+        0.00,
+        0.00,
         ${escapeSql(amountPaid)},
         'INR',
         'PAID',
-        'PAID',
         ${escapeSql(paymentMode)},
-        ${escapeSql(input.referenceNote?.trim() || "Manual Spot Entry")},
+        'MANUAL_SPOT_ENTRY',
+        ${input.referenceNote?.trim() ? escapeSql(input.referenceNote.trim()) : "NULL"},
         ${escapeSql(JSON.stringify({
           member_type: resolvedMemberType,
           club_name: clubName,
@@ -1627,14 +1639,23 @@ export async function createManualAttendeeAction(
           food_preference: input.foodPreference,
           manual_entry_by: user.email,
           manual_entry_role: user.profile.role,
-        }))}
+        }))}::jsonb,
+        NOW(),
+        NOW()
       ) RETURNING id, order_number;
     `;
 
-    const { data: orderRes } = await executeSql(insertOrderSql);
+    const { data: orderRes, error: orderErr } = await executeSql(insertOrderSql);
     const orderId = orderRes?.[0]?.id;
-    if (!orderId) {
-      throw new Error("Failed to create order record for manual attendee");
+    if (!orderId || orderErr) {
+      // Rollback the incremented ticket capacity on order failure
+      await executeSql(`
+        UPDATE saas_ticket_tiers
+        SET sold_count = GREATEST(0, sold_count - 1)
+        WHERE id = ${escapeSql(tier.id)};
+      `).catch(() => {});
+      logger.error("Failed to create order record for manual attendee", { error: orderErr, sql: insertOrderSql });
+      throw new Error(`Failed to create order record for manual attendee: ${orderErr?.message || "Database insert failed"}`);
     }
 
     // 5. Generate Ticket
@@ -1666,7 +1687,7 @@ export async function createManualAttendeeAction(
         ${escapeSql(user.clerkId)},
         ${escapeSql(input.name.trim())},
         ${escapeSql(input.email.trim())},
-        ${escapeSql(input.phone?.trim() || null)},
+        ${input.phone?.trim() ? escapeSql(input.phone.trim()) : "NULL"},
         ${escapeSql(resolvedMemberType)},
         ${escapeSql(clubName || null)},
         ${escapeSql(resolvedDesignation || null)},
@@ -1683,11 +1704,15 @@ export async function createManualAttendeeAction(
           payment_mode: paymentMode,
           reference_note: input.referenceNote || "Manual Spot Entry",
           manual_entry_by: user.email,
-        }))}
+        }))}::jsonb
       ) RETURNING id, ticket_code, qr_token;
     `;
 
-    await executeSql(insertTicketSql);
+    const { data: ticketRes, error: ticketErr } = await executeSql(insertTicketSql);
+    if (!ticketRes || ticketRes.length === 0 || ticketErr) {
+      logger.error("Failed to insert ticket for manual attendee", { error: ticketErr, sql: insertTicketSql });
+      throw new Error(`Failed to create ticket record: ${ticketErr?.message || "Database insert failed"}`);
+    }
 
     // 6. Send Ticket Email if opted in
     if (input.sendConfirmationEmail !== false && input.email) {
