@@ -105,8 +105,12 @@ function formatCountdown(diffMs: number): string {
   return `Opens in ${diffSecs}s`;
 }
 
-export function formatSecondsToTimer(totalSecs: number | null | undefined): string {
-  if (totalSecs === null || totalSecs === undefined) return "05:00";
+export function formatSecondsToTimer(totalSecs: number | null | undefined, defaultSecs: number = 300): string {
+  if (totalSecs === null || totalSecs === undefined) {
+    const defaultMins = Math.floor(defaultSecs / 60);
+    const defaultRemSecs = defaultSecs % 60;
+    return `${String(defaultMins).padStart(2, "0")}:${String(defaultRemSecs).padStart(2, "0")}`;
+  }
   const s = Math.max(0, totalSecs);
   const mins = Math.floor(s / 60);
   const secs = s % 60;
@@ -518,12 +522,19 @@ export function CheckoutModal({
   // Calculate totals
   let subtotal = 0;
   let totalTicketCount = 0;
+  let hasBulkSelected = false;
   currentTiers.forEach((t) => {
     const count = selectedCounts[t.id] || 0;
+    if (count > 0 && (t.is_bulk_slab || t.tier_type === "BULK")) {
+      hasBulkSelected = true;
+    }
     const slabMultiplier = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
     subtotal += Number(t.price) * slabMultiplier * count;
     totalTicketCount += count * slabMultiplier;
   });
+
+  const holdDurationSeconds = hasBulkSelected ? 600 : 300;
+  const holdDurationMinutes = hasBulkSelected ? 10 : 5;
 
   const discountAmount = couponApplied ? (subtotal * discountPercent) / 100 : 0;
   const fees = calculateOrderFees({
@@ -552,11 +563,16 @@ export function CheckoutModal({
         return;
       }
 
+      const isBulkInCounts = currentTiers.some(
+        (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (countsToReserve[t.id] || 0) > 0
+      );
+      const requestedDuration = isBulkInCounts ? 600 : 300;
+
       try {
         const res = await reserveTicketHoldAction({
           eventId: event.id,
           selectedCounts: countsToReserve,
-          holdDurationSeconds: 300,
+          holdDurationSeconds: requestedDuration,
           sessionId: activeSessionId,
           existingSessionId: activeSessionId,
         });
@@ -578,18 +594,22 @@ export function CheckoutModal({
         console.error("Hold reservation sync error:", err);
       }
     },
-    [event.id, userEmail, completedOrder, isFreeOrder, onTiersUpdate]
+    [event.id, userEmail, completedOrder, isFreeOrder, currentTiers, onTiersUpdate]
   );
 
   async function handleRenewHold() {
     setIsRenewingHold(true);
     setErrorMessage(null);
     try {
+      const isBulkInCounts = currentTiers.some(
+        (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (selectedCounts[t.id] || 0) > 0
+      );
+      const requestedDuration = isBulkInCounts ? 600 : 300;
       const sid = checkoutSessionIdRef.current || holdSessionId;
       const res = await reserveTicketHoldAction({
         eventId: event.id,
         selectedCounts,
-        holdDurationSeconds: 300,
+        holdDurationSeconds: requestedDuration,
         sessionId: sid || undefined,
         existingSessionId: sid || undefined,
       });
@@ -605,7 +625,7 @@ export function CheckoutModal({
 
       setHoldSessionId(res.holdSessionId);
       setHoldExpiresAt(new Date(res.expiresAt!));
-      setHoldSecondsRemaining(res.remainingSeconds ?? 300);
+      setHoldSecondsRemaining(res.remainingSeconds ?? requestedDuration);
       setIsHoldExpired(false);
       const tierRes = await getEventTiersAction(event.id);
       if (tierRes.success && tierRes.tiers) {
@@ -895,7 +915,7 @@ export function CheckoutModal({
       return;
     }
 
-    // 5-Minute Lock Reservation:
+    // Lock Reservation (10-minute hold for bulk slabs, 5-minute hold for standard tiers):
     let acquiredHoldId: string | undefined = undefined;
     if (!isFreeOrder) {
       try {
@@ -904,11 +924,16 @@ export function CheckoutModal({
           debounceHoldTimerRef.current = null;
         }
 
+        const isBulkInCounts = currentTiers.some(
+          (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (selectedCounts[t.id] || 0) > 0
+        );
+        const requestedDuration = isBulkInCounts ? 600 : 300;
+
         const sid = checkoutSessionIdRef.current || holdSessionId;
         const holdRes = await reserveTicketHoldAction({
           eventId: event.id,
           selectedCounts,
-          holdDurationSeconds: 300, // 5-Minute Lock
+          holdDurationSeconds: requestedDuration,
           sessionId: sid || undefined,
           existingSessionId: sid || undefined,
         });
@@ -917,7 +942,9 @@ export function CheckoutModal({
           setLoading(false);
           setErrorMessage(
             holdRes.error ||
-              "All remaining passes for this tier are currently locked in checkout by other attendees. Please wait 5 minutes and check again."
+              (isBulkInCounts
+                ? "All remaining group passes for this tier are currently locked in checkout by other attendees. Please wait 10 minutes and check again."
+                : "All remaining passes for this tier are currently locked in checkout by other attendees. Please wait 5 minutes and check again.")
           );
           return;
         }
@@ -925,7 +952,7 @@ export function CheckoutModal({
         acquiredHoldId = holdRes.holdSessionId;
         setHoldSessionId(holdRes.holdSessionId);
         setHoldExpiresAt(new Date(holdRes.expiresAt!));
-        setHoldSecondsRemaining(holdRes.remainingSeconds ?? 300);
+        setHoldSecondsRemaining(holdRes.remainingSeconds ?? requestedDuration);
         setIsHoldExpired(false);
         const tierRes = await getEventTiersAction(event.id);
         if (tierRes.success && tierRes.tiers) {
@@ -1081,16 +1108,16 @@ export function CheckoutModal({
                 !isHoldExpired ? (
                   <div
                     className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-black font-mono tracking-wider transition-all bg-red-950/90 text-red-400 border border-red-500/80 shadow-[0_0_16px_rgba(239,68,68,0.5)] select-none animate-pulse"
-                    title="5-Minute Ticket Lock-in: Complete checkout before timer reaches 0"
+                    title={`${holdDurationMinutes}-Minute Ticket Lock-in: Complete checkout before timer reaches 0`}
                   >
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
                     </span>
                     <Clock size={14} className="text-red-400 animate-pulse" />
-                    <span className="text-red-300 font-extrabold">{formatSecondsToTimer(holdSecondsRemaining)}</span>
+                    <span className="text-red-300 font-extrabold">{formatSecondsToTimer(holdSecondsRemaining, holdDurationSeconds)}</span>
                     <span className="hidden sm:inline text-[9px] uppercase font-black tracking-widest text-red-300 bg-red-900/60 px-1.5 py-0.5 rounded border border-red-500/30">
-                      LOCK
+                      {hasBulkSelected ? "10M LOCK" : "LOCK"}
                     </span>
                   </div>
                 ) : (
@@ -1099,7 +1126,7 @@ export function CheckoutModal({
                     disabled={isRenewingHold}
                     onClick={handleRenewHold}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black font-mono tracking-tight bg-red-950 text-red-200 border border-red-600 shadow-[0_0_14px_rgba(239,68,68,0.6)] cursor-pointer hover:bg-red-900 transition-all active:scale-95 disabled:opacity-60"
-                    title="5-Minute Hold Expired. Click to re-lock your tickets"
+                    title={`${holdDurationMinutes}-Minute Hold Expired. Click to re-lock your tickets`}
                   >
                     {isRenewingHold ? <Loader2 size={12} className="animate-spin text-red-300" /> : <RefreshCw size={12} className="text-red-300" />}
                     <span className="text-red-300">00:00 EXPIRED</span>
@@ -1883,9 +1910,15 @@ export function CheckoutModal({
                   <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                     Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
                   </span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                    Badges &amp; entry passes will be issued with these details
-                  </span>
+                  {hasBulkSelected ? (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span>⏱️</span> 10-Minute Lock Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                      Badges &amp; entry passes will be issued with these details
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-4 max-h-[52vh] sm:max-h-[58vh] overflow-y-auto pr-1 sm:pr-2">
@@ -2264,10 +2297,10 @@ export function CheckoutModal({
                 ) : isFreeOrder ? (
                   <>Confirm Free Registration <ArrowRight size={16} /></>
                 ) : isHoldExpired ? (
-                  <><RefreshCw size={16} /> 5m Hold Expired — Re-lock Passes &amp; Continue</>
+                  <><RefreshCw size={16} /> {holdDurationMinutes}m Hold Expired — Re-lock Passes &amp; Continue</>
                 ) : (
                   <>
-                    Proceed to Payment {!isFreeOrder && holdSecondsRemaining !== null && `(${formatSecondsToTimer(holdSecondsRemaining)})`} • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} />
+                    Proceed to Payment {!isFreeOrder && holdSecondsRemaining !== null && `(${formatSecondsToTimer(holdSecondsRemaining, holdDurationSeconds)})`} • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} />
                   </>
                 )}
               </button>

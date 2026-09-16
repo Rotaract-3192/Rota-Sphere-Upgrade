@@ -307,7 +307,7 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
           return {
             valid: false,
             error: isBulk
-              ? `All remaining group passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`
+              ? `All remaining group passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 10 minutes or try another pass.`
               : `All remaining passes for "${tier.name}" are currently locked in checkout by other attendees. Please wait 5 minutes or try another pass.`,
             serverTime: serverNowStr,
           };
@@ -454,8 +454,21 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
         error: "You must be signed in to reserve tickets. Please log in and try again.",
       };
     }
-    // Default duration: 300 seconds (5 minutes)
-    const durationSec = Math.max(30, Math.min(600, input.holdDurationSeconds || 300));
+    // Default duration: 600 seconds (10 minutes) for bulk tiers, 300 seconds (5 minutes) for regular tiers
+    let defaultDuration = 300;
+    const requestedTierIds = Object.keys(input.selectedCounts).filter((id) => (input.selectedCounts[id] || 0) > 0);
+    if (requestedTierIds.length > 0) {
+      const cleanIds = requestedTierIds.map((id) => escapeSql(id)).join(",");
+      const { data: bulkCheck } = await executeSql(`
+        SELECT id FROM saas_ticket_tiers 
+        WHERE id IN (${cleanIds}) AND (is_bulk_slab = true OR tier_type = 'BULK')
+        LIMIT 1;
+      `);
+      if (bulkCheck && bulkCheck.length > 0) {
+        defaultDuration = 600; // 10 Minutes for bulk bookings
+      }
+    }
+    const durationSec = Math.max(30, Math.min(900, input.holdDurationSeconds || defaultDuration));
     const targetSessionId =
       input.sessionId || input.existingSessionId || `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const cleanSessionId = escapeSql(targetSessionId);
@@ -528,11 +541,12 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
 
         // Fetch tier name for informative error message
         const { data: tInfo } = await executeSql(`
-          SELECT name, total_capacity, sold_count, reserved_count 
+          SELECT name, total_capacity, sold_count, reserved_count, is_bulk_slab, tier_type 
           FROM saas_ticket_tiers 
           WHERE id = ${cleanTierId};
         `);
         const tierName = tInfo?.[0]?.name?.trim() || "Pass";
+        const isBulkTier = Boolean(tInfo?.[0]?.is_bulk_slab || tInfo?.[0]?.tier_type === "BULK");
         const sold = Number(tInfo?.[0]?.sold_count) || 0;
         const cap = Number(tInfo?.[0]?.total_capacity) || 0;
         const reserved = Number(tInfo?.[0]?.reserved_count) || 0;
@@ -556,7 +570,9 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
         if (reserved > 0 && effectiveSeats > remainingUnreserved) {
           return {
             success: false,
-            error: `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 5 minutes and check again.`,
+            error: isBulkTier
+              ? `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 10 minutes and check again.`
+              : `All remaining passes for "${tierName}" are currently locked in checkout by other attendees. Please wait 5 minutes and check again.`,
           };
         }
 
@@ -943,7 +959,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
           return {
             success: false,
             error: input.holdSessionId
-              ? `Your 5-minute reservation expired, and pass tier "${tier?.name || "Selected Pass"}" reached maximum capacity before confirmation. If you already made a payment, please contact support with your UPI reference.`
+              ? `Your reservation expired, and pass tier "${tier?.name || "Selected Pass"}" reached maximum capacity before confirmation. If you already made a payment, please contact support with your UPI reference.`
               : `Ticket Sold Out: Pass tier "${tier?.name || "Selected Pass"}" has just reached maximum capacity (${tier?.total_capacity || 0} seats). Another attendee booked the last available ticket.`,
           };
         }
