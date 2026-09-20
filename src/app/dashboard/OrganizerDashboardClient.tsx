@@ -49,6 +49,7 @@ import {
   UserPlus,
   Building,
   Menu,
+  KeyRound,
 } from "lucide-react";
 import {
   duplicateEventAction,
@@ -1793,23 +1794,50 @@ export function OrganizerDashboardClient({
                       <h3 className="text-base font-bold text-gray-900 leading-tight">{evt.title}</h3>
                       <p className="text-xs text-gray-500 mt-0.5">{evt.city} · {new Date(evt.start_date).toLocaleDateString("en-IN")}</p>
                     </div>
+
+                    {/* 6-Digit Gate PIN Box */}
+                    <div className="flex items-center justify-between bg-amber-50/70 border border-amber-200/80 rounded-2xl px-3.5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <KeyRound size={16} className="text-amber-600 shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Event Gate PIN</p>
+                          <p className="font-mono text-base font-black text-amber-950 tracking-widest leading-none mt-0.5">
+                            {evt.access_password || "123456"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pin = evt.access_password || "123456";
+                          navigator.clipboard.writeText(String(pin));
+                          showToast(`✓ Gate PIN (${pin}) copied to clipboard!`);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-950 bg-white hover:bg-amber-100/60 border border-amber-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer shadow-xs"
+                        title="Copy 6-digit Gate PIN"
+                      >
+                        <Copy size={12} /> Copy PIN
+                      </button>
+                    </div>
+
                     <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <Link
-                        href={`/check-in?eventId=${evt.id}`}
+                        href={`/check-in?eventId=${evt.id}${evt.access_password ? `&pin=${evt.access_password}` : ""}`}
                         className="flex-1 inline-flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md hover:scale-[1.02]"
                       >
                         <QrCode size={15} /> Open Scanner
                       </Link>
                       <button
                         onClick={() => {
-                          const url = `${window.location.origin}/check-in?eventId=${evt.id}`;
+                          const pinParam = evt.access_password ? `&pin=${evt.access_password}` : "";
+                          const url = `${window.location.origin}/check-in?eventId=${evt.id}${pinParam}`;
                           navigator.clipboard.writeText(url);
                           setCopiedScannerEventId(evt.id);
-                          showToast("Protected gate scanner link copied to clipboard!");
+                          showToast("✓ Staff link with Gate PIN copied! Gate volunteers can scan immediately.");
                           setTimeout(() => setCopiedScannerEventId(null), 2500);
                         }}
                         className="inline-flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer border border-gray-200"
-                        title="Copy direct gate link to share with volunteer check-in staff"
+                        title="Copy direct gate link with pre-authorized PIN for volunteer check-in staff"
                       >
                         {copiedScannerEventId === evt.id ? (
                           <>
@@ -1823,8 +1851,8 @@ export function OrganizerDashboardClient({
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-600 pt-0.5">
-                      <ShieldCheck size={12} className="text-blue-600 shrink-0" />
-                      <span>Protected link · Sign-in required for staff</span>
+                      <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
+                      <span>Protected gate · Auto-unlocked for Organizer or with 6-digit PIN</span>
                     </div>
                   </div>
                 ))}

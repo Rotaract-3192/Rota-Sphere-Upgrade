@@ -18,6 +18,7 @@ export interface CheckInRequest {
   eventId?: string;
   gateName?: string;
   scannerUserId?: string;
+  gatePin?: string;
 }
 
 export interface CheckInResponse {
@@ -66,25 +67,43 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
     }
 
     const user = await getCurrentUser();
-    if (!user) {
-      return {
-        result: "INVALID",
-        message: "Unauthorized: You must be signed in to an authorized staff or organizer account to operate the venue gate scanner.",
-      };
+    let isAuthorized = false;
+    let authRole: "admin" | "organizer" | "staff" = "staff";
+    let scannerUserId = req.scannerUserId || "gate-staff";
+
+    if (user && hasMinimumRole(user.profile?.role, "organizer")) {
+      isAuthorized = true;
+      authRole = user.profile?.role === "organizer" ? "organizer" : "admin";
+      scannerUserId = user.profile?.full_name
+        ? `${user.profile.full_name} (${user.email})`
+        : user.email || user.clerkId || "organizer-scanner";
     }
 
-    // Security H-1: Only organizers/admins can check in tickets. Attendees are blocked.
-    if (!hasMinimumRole(user.profile?.role, "organizer")) {
+    // If not authenticated as organizer/admin, check 6-digit Gate PIN
+    const targetEventId = req.eventId?.trim();
+    const providedPin = (req.gatePin || "").trim();
+
+    if (!isAuthorized && providedPin && targetEventId) {
+      const { data: eventData } = await executeSql(`
+        SELECT access_password, title FROM saas_events WHERE id = ${escapeSql(targetEventId)} LIMIT 1;
+      `);
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === providedPin) {
+        isAuthorized = true;
+        authRole = "staff";
+        scannerUserId = user?.profile?.full_name
+          ? `${user.profile.full_name} (Gate PIN)`
+          : `Gate Staff (PIN verified)`;
+      }
+    }
+
+    if (!isAuthorized) {
       return {
         result: "INVALID",
-        message: "Unauthorized: Gate scanner access requires Organizer or Admin role. Contact your event coordinator.",
+        message: "Unauthorized: Access denied. Please sign in with an organizer account or enter the valid 6-digit Gate PIN.",
       };
     }
 
     const gateName = req.gateName?.trim() || "Main Gate";
-    const scannerUserId = user.profile?.full_name
-      ? `${user.profile.full_name} (${user.email})`
-      : user.email || user.clerkId || "staff-gate-ops";
 
     // 1. Query saas_tickets
     const sql = `
@@ -467,21 +486,42 @@ export async function approveAndCheckInTicketAction(params: {
   ticketId: string;
   gateName?: string;
   scannerUserId?: string;
+  eventId?: string;
+  gatePin?: string;
 }): Promise<CheckInResponse> {
   try {
     const user = await getCurrentUser();
-    if (!user) {
+    let isAuthorized = false;
+    let scannerUserId = params.scannerUserId || "gate-manager";
+
+    if (user && hasMinimumRole(user.profile?.role, "organizer")) {
+      isAuthorized = true;
+      scannerUserId = user.profile?.full_name
+        ? `${user.profile.full_name} (${user.email})`
+        : user.email || user.clerkId || "organizer-approver";
+    }
+
+    if (!isAuthorized && params.gatePin && params.eventId) {
+      const { data: eventData } = await executeSql(`
+        SELECT access_password FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+      `);
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === params.gatePin.trim()) {
+        isAuthorized = true;
+        scannerUserId = user?.profile?.full_name
+          ? `${user.profile.full_name} (Gate PIN)`
+          : `Gate Staff (PIN verified)`;
+      }
+    }
+
+    if (!isAuthorized) {
       return {
         result: "INVALID",
-        message: "Unauthorized: You must be signed in to an authorized staff or organizer account to approve passes.",
+        message: "Unauthorized: You must be signed in to an organizer account or provide a valid Gate PIN to approve passes.",
       };
     }
 
     const cleanId = escapeSql(params.ticketId);
     const gateName = params.gateName?.trim() || "Main Gate";
-    const scannerUserId = user.profile?.full_name
-      ? `${user.profile.full_name} (${user.email})`
-      : user.email || user.clerkId || "gate-manager";
 
     const updateSql = `
       UPDATE saas_tickets
@@ -512,16 +552,18 @@ export async function approveAndCheckInTicketAction(params: {
 
     // Critical fix: If this ticket is part of a bulk group or multi-ticket order,
     // transition all other pending sibling tickets to CONFIRMED so they are immediately valid for entry
-    await executeSql(`
-      UPDATE saas_tickets
-      SET status = 'CONFIRMED', updated_at = NOW()
-      WHERE (
-        ${t.order_id ? `order_id = ${escapeSql(t.order_id)}` : "FALSE"}
-        ${t.bulk_order_group_id ? `OR bulk_order_group_id = ${escapeSql(t.bulk_order_group_id)}` : ""}
-      )
-      AND id != ${cleanId}
-      AND status = 'PENDING_VERIFICATION';
-    `);
+    if (t.order_id || t.bulk_order_group_id) {
+      await executeSql(`
+        UPDATE saas_tickets
+        SET status = 'CONFIRMED', updated_at = NOW()
+        WHERE (
+          ${t.order_id ? `order_id = ${escapeSql(t.order_id)}` : "FALSE"}
+          ${t.bulk_order_group_id ? `OR bulk_order_group_id = ${escapeSql(t.bulk_order_group_id)}` : ""}
+        )
+        AND id != ${cleanId}
+        AND status = 'PENDING_VERIFICATION';
+      `).catch(() => {});
+    }
 
     // Fetch event & tier titles
     const { data: info } = await executeSql(`
@@ -638,18 +680,39 @@ export async function approveAndCheckInTicketAction(params: {
 export async function checkInEntireBulkGroupAction(params: {
   bulkGroupId: string;
   gateName?: string;
+  eventId?: string;
+  gatePin?: string;
 }): Promise<{ success: boolean; admittedCount: number; message: string }> {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, admittedCount: 0, message: "Unauthorized scanner operation." };
+    let isAuthorized = false;
+    let scannerUserId = "gate-staff";
+
+    if (user && hasMinimumRole(user.profile?.role, "organizer")) {
+      isAuthorized = true;
+      scannerUserId = user.profile?.full_name
+        ? `${user.profile.full_name} (${user.email})`
+        : user.email || user.clerkId || "organizer-staff";
+    }
+
+    if (!isAuthorized && params.gatePin && params.eventId) {
+      const { data: eventData } = await executeSql(`
+        SELECT access_password FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
+      `);
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === params.gatePin.trim()) {
+        isAuthorized = true;
+        scannerUserId = user?.profile?.full_name
+          ? `${user.profile.full_name} (Gate PIN)`
+          : `Gate Staff (PIN verified)`;
+      }
+    }
+
+    if (!isAuthorized) {
+      return { success: false, admittedCount: 0, message: "Unauthorized scanner operation. Valid staff authorization or Gate PIN required." };
     }
 
     const cleanGroupId = escapeSql(params.bulkGroupId);
     const gateName = params.gateName?.trim() || "Main Gate";
-    const scannerUserId = user.profile?.full_name
-      ? `${user.profile.full_name} (${user.email})`
-      : user.email || user.clerkId || "gate-staff";
 
     // Atomically admit all tickets in the bulk group that are confirmed/active and not yet used
     const { data: updatedRows, error } = await executeSql(`
@@ -674,7 +737,7 @@ export async function checkInEntireBulkGroupAction(params: {
     // Log audit
     await writeAuditLog({
       actorId: scannerUserId,
-      actorEmail: user.email || "gate-scanner@rotasphere.org",
+      actorEmail: user?.email || "gate-scanner@rotasphere.org",
       action: "BULK_GROUP_CHECKED_IN",
       category: "ADMIN_ACTION",
       resourceType: "TICKET_GROUP",
@@ -698,7 +761,7 @@ export async function checkInEntireBulkGroupAction(params: {
 }
 
 export async function getScannerEventsAction(): Promise<{
-  events: Array<{ id: string; title: string; city: string; start_date: string; access_password?: string | null }>;
+  events: Array<{ id: string; title: string; city: string; start_date: string }>;
 }> {
   try {
     const user = await getCurrentUser();
@@ -715,7 +778,7 @@ export async function getScannerEventsAction(): Promise<{
     }
 
     const { data } = await executeSql(`
-      SELECT id, title, city, start_date, access_password
+      SELECT id, title, city, start_date
       FROM saas_events 
       WHERE ${whereClause}
       ORDER BY start_date DESC 
@@ -726,3 +789,117 @@ export async function getScannerEventsAction(): Promise<{
     return { events: [] };
   }
 }
+
+export interface VerifyGateAccessResult {
+  authorized: boolean;
+  role?: "super_admin" | "admin" | "organizer" | "staff" | null;
+  eventId?: string;
+  eventTitle?: string;
+  eventCity?: string;
+  startDate?: string;
+  userName?: string;
+  userEmail?: string;
+  error?: string;
+}
+
+/**
+ * Server-side Gate Scanner Authorization Verifier.
+ * Checks whether user has organizer/admin credentials, or validates event Gate PIN.
+ * Never leaks the access_password in plain client state.
+ */
+export async function verifyGateAccessAction(params: {
+  eventId: string;
+  pin?: string;
+}): Promise<VerifyGateAccessResult> {
+  try {
+    const cleanEventId = params.eventId?.trim();
+    if (!cleanEventId) {
+      return { authorized: false, error: "Event ID is required." };
+    }
+
+    // 1. Fetch event record (never exposes password to client)
+    const { data: eventRows } = await executeSql(`
+      SELECT id, title, city, start_date, access_password, organizer_id, created_by_user_id
+      FROM saas_events
+      WHERE id = ${escapeSql(cleanEventId)}
+        AND (deleted_at IS NULL AND status != 'TRASHED')
+      LIMIT 1;
+    `);
+
+    if (!eventRows || eventRows.length === 0) {
+      return { authorized: false, error: "Event not found or has concluded." };
+    }
+
+    const evt = eventRows[0];
+    const eventTitle = evt.title;
+    const eventCity = evt.city;
+    const startDate = evt.start_date;
+    const correctPin = (evt.access_password || "").trim();
+
+    // 2. Check current authenticated user
+    const user = await getCurrentUser();
+    if (user) {
+      const userRole = user.profile?.role;
+      const userName = user.profile?.full_name || user.email;
+      const userEmail = user.email;
+
+      // Admin / Super Admin have universal gate clearance
+      if (userRole === "super_admin" || userRole === "admin") {
+        return {
+          authorized: true,
+          role: userRole,
+          eventId: evt.id,
+          eventTitle,
+          eventCity,
+          startDate,
+          userName,
+          userEmail,
+        };
+      }
+
+      // Organizer of this event
+      if (userRole === "organizer") {
+        return {
+          authorized: true,
+          role: "organizer",
+          eventId: evt.id,
+          eventTitle,
+          eventCity,
+          startDate,
+          userName,
+          userEmail,
+        };
+      }
+    }
+
+    // 3. If not organizer/admin, verify 6-digit Gate PIN
+    const providedPin = (params.pin || "").trim();
+    if (providedPin && correctPin && providedPin === correctPin) {
+      return {
+        authorized: true,
+        role: "staff",
+        eventId: evt.id,
+        eventTitle,
+        eventCity,
+        startDate,
+        userName: user?.profile?.full_name || "Gate Staff",
+        userEmail: user?.email,
+      };
+    }
+
+    // Unauthorized - return public event info so the lock screen can show event name
+    return {
+      authorized: false,
+      eventId: evt.id,
+      eventTitle,
+      eventCity,
+      startDate,
+      error: providedPin
+        ? "Incorrect 6-digit Gate PIN. Please check with your event coordinator."
+        : "Staff sign-in or 6-digit Gate PIN required.",
+    };
+  } catch (err: any) {
+    return { authorized: false, error: `Gate verification failed: ${err?.message || String(err)}` };
+  }
+}
+

@@ -54,6 +54,7 @@ import {
   approveAndCheckInTicketAction,
   checkInEntireBulkGroupAction,
   getScannerEventsAction,
+  verifyGateAccessAction,
   CheckInResponse,
 } from "@/app/actions/checkInActions";
 import { GateScannerSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -143,13 +144,28 @@ function playSound(type: "SUCCESS" | "DUPLICATE" | "PENDING" | "INVALID") {
 function CheckInScannerContent() {
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId") || "";
+  const initialPin = searchParams.get("pin") || "";
   const isUrlLocked = initialEventId !== "";
 
   const [selectedEventId, setSelectedEventId] = useState(initialEventId);
-  const [eventsList, setEventsList] = useState<Array<{ id: string; title: string; city: string; access_password?: string | null }>>([]);
+  const [eventsList, setEventsList] = useState<Array<{ id: string; title: string; city: string; start_date: string }>>([]);
   const [gateName] = useState("Main Entrance");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // ── Authorization & Gate Security State ─────────────────────────────────
+  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "locked">("checking");
+  const [authorizedRole, setAuthorizedRole] = useState<string | null>(null);
+  const [operatorIdentity, setOperatorIdentity] = useState<string | null>(null);
+  const [gateEventMeta, setGateEventMeta] = useState<{ id: string; title: string; city: string; startDate?: string } | null>(null);
+  const [activeGatePin, setActiveGatePin] = useState<string>(initialPin);
+
+  // PIN Lock screen state
+  const [pinInput, setPinInput] = useState(initialPin || "");
+  const [pinError, setPinError] = useState(false);
+  const [pinShake, setPinShake] = useState(false);
+  const [pinErrorMessage, setPinErrorMessage] = useState<string | null>(null);
+  const [pinVerifying, setPinVerifying] = useState(false);
 
   // Camera stream & hardware states
   const [cameraActive, setCameraActive] = useState(false);
@@ -193,55 +209,128 @@ function CheckInScannerContent() {
   const lastScannedTokenRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ── Access Code Gate ─────────────────────────────────────────────────────
-  const [pinUnlocked, setPinUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
-  const [pinShake, setPinShake] = useState(false);
+  // ── Verification Callback ────────────────────────────────────────────────
+  const checkGateClearance = useCallback(async (eventId: string, pinToTest?: string) => {
+    if (!eventId) {
+      // Check if signed-in organizer has access to any events
+      try {
+        const res = await getScannerEventsAction();
+        if (res.events && res.events.length > 0) {
+          setEventsList(res.events);
+          setAuthStatus("authorized");
+          setAuthorizedRole("organizer");
+          setOperatorIdentity("Organizer Hub");
+        } else {
+          setAuthStatus("locked");
+        }
+      } catch {
+        setAuthStatus("locked");
+      }
+      return;
+    }
 
-  const selectedEvent = eventsList.find((e) => e.id === selectedEventId) || null;
-  const requiresPin = Boolean(selectedEvent?.access_password);
-  const isLocked = requiresPin && !pinUnlocked;
+    setAuthStatus("checking");
+    try {
+      const pinCandidate = pinToTest !== undefined ? pinToTest : activeGatePin;
+      const res = await verifyGateAccessAction({
+        eventId,
+        pin: pinCandidate,
+      });
 
-  // Reset pin gate when a different event is selected
-  const prevEventIdRef = useRef(selectedEventId);
+      if (res.eventTitle) {
+        setGateEventMeta({
+          id: res.eventId || eventId,
+          title: res.eventTitle,
+          city: res.eventCity || "Venue",
+          startDate: res.startDate,
+        });
+      }
+
+      if (res.authorized) {
+        setAuthStatus("authorized");
+        setAuthorizedRole(res.role || "staff");
+        setOperatorIdentity(
+          res.userName
+            ? `${res.userName} (${res.role === "organizer" || res.role === "admin" ? "Organizer" : "Gate Staff"})`
+            : res.role === "staff"
+            ? "Gate Staff (PIN Verified)"
+            : "Authorized Organizer"
+        );
+        if (pinCandidate) {
+          setActiveGatePin(pinCandidate);
+        }
+        setPinError(false);
+        setPinErrorMessage(null);
+      } else {
+        setAuthStatus("locked");
+        if (pinCandidate) {
+          setPinError(true);
+          setPinShake(true);
+          setPinErrorMessage(res.error || "Incorrect 6-digit Gate PIN");
+          setTimeout(() => setPinShake(false), 600);
+        }
+      }
+    } catch (err: any) {
+      setAuthStatus("locked");
+      setPinErrorMessage(err?.message || "Failed to verify gate authorization.");
+    }
+  }, [activeGatePin]);
+
   useEffect(() => {
-    if (prevEventIdRef.current !== selectedEventId) {
-      prevEventIdRef.current = selectedEventId;
-      setPinUnlocked(false);
-      setPinInput("");
-      setPinError(false);
-    }
-  }, [selectedEventId]);
+    checkGateClearance(selectedEventId, initialPin || undefined);
+  }, [selectedEventId, checkGateClearance, initialPin]);
 
-  function handlePinSubmit() {
-    const correct = selectedEvent?.access_password;
-    if (!correct) return;
-    if (pinInput.trim() === correct.trim()) {
-      setPinError(false);
-      setPinUnlocked(true);
-    } else {
-      setPinError(true);
-      setPinShake(true);
-      setPinInput("");
-      setTimeout(() => setPinShake(false), 600);
-    }
-  }
-
-  // Load events list on mount
+  // Load events list for dropdown
   useEffect(() => {
     getScannerEventsAction().then((res) => {
       if (res.events && res.events.length > 0) {
         setEventsList(res.events);
-        if (initialEventId) {
-          setSelectedEventId(initialEventId);
-        } else {
-          // Default to All Events (Auto-Detect) for friction-free gate admission
-          setSelectedEventId("");
-        }
       }
-    });
-  }, [initialEventId]);
+    }).catch(() => {});
+  }, []);
+
+  async function handlePinSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    const cleanPin = pinInput.trim();
+    if (cleanPin.length !== 6) {
+      setPinError(true);
+      setPinErrorMessage("Please enter all 6 digits of the Gate PIN.");
+      return;
+    }
+    setPinVerifying(true);
+    setPinErrorMessage(null);
+    try {
+      const res = await verifyGateAccessAction({
+        eventId: selectedEventId || (gateEventMeta?.id || ""),
+        pin: cleanPin,
+      });
+
+      if (res.authorized) {
+        setAuthStatus("authorized");
+        setAuthorizedRole(res.role || "staff");
+        setOperatorIdentity(
+          res.userName
+            ? `${res.userName} (Gate Staff)`
+            : "Gate Staff (PIN Verified)"
+        );
+        setActiveGatePin(cleanPin);
+        setPinError(false);
+        playSound("SUCCESS");
+      } else {
+        setPinError(true);
+        setPinShake(true);
+        setPinErrorMessage(res.error || "Incorrect 6-digit Gate PIN. Ask your event coordinator.");
+        setPinInput("");
+        playSound("INVALID");
+        setTimeout(() => setPinShake(false), 600);
+      }
+    } catch {
+      setPinError(true);
+      setPinErrorMessage("Connection error. Please try again.");
+    } finally {
+      setPinVerifying(false);
+    }
+  }
 
   // Verified counts
   const admittedCount = recentScans.filter((s) => s.result === "SUCCESS").length;
@@ -297,7 +386,8 @@ function CheckInScannerContent() {
           rawInput: clean,
           eventId: selectedEventId || undefined,
           gateName,
-          scannerUserId: "gate-staff",
+          scannerUserId: operatorIdentity || "gate-staff",
+          gatePin: activeGatePin || undefined,
         });
 
         setLoading(false);
@@ -336,7 +426,7 @@ function CheckInScannerContent() {
         isProcessingRef.current = true; // Keep locked until dismissed
       }
     },
-    [selectedEventId, gateName, soundEnabled]
+    [selectedEventId, gateName, soundEnabled, activeGatePin, operatorIdentity]
   );
 
   const handleVerifyRef = useRef(handleVerify);
@@ -352,7 +442,9 @@ function CheckInScannerContent() {
       const res = await approveAndCheckInTicketAction({
         ticketId,
         gateName,
-        scannerUserId: "gate-manager",
+        scannerUserId: operatorIdentity || "gate-manager",
+        eventId: selectedEventId || undefined,
+        gatePin: activeGatePin || undefined,
       });
       setApprovingTicketId(null);
       setScanResult(res);
@@ -666,6 +758,16 @@ function CheckInScannerContent() {
               </select>
             )}
 
+            {/* Operator Clearance Badge */}
+            {authorizedRole && authStatus === "authorized" && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
+                <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                  {operatorIdentity || (authorizedRole === "organizer" ? "Organizer" : "Gate Staff")}
+                </span>
+              </div>
+            )}
+
             {/* Torch Flashlight Toggle */}
             {torchSupported && cameraActive && (
               <button
@@ -709,65 +811,113 @@ function CheckInScannerContent() {
         </header>
 
         {/* ── 2. CAMERA VIEWFINDER & SCAN OVERLAY ─────────────────────────── */}
-        {isLocked ? (
-          /* ── ACCESS CODE PIN WALL ─────────────────────────────────────── */
+        {authStatus === "checking" ? (
+          <div className="flex-1 min-h-[400px] flex items-center justify-center px-4 py-16 bg-gray-900/60 rounded-3xl border border-gray-800">
+            <div className="text-center space-y-3">
+              <Loader2 size={36} className="text-[#0758fc] animate-spin mx-auto" />
+              <p className="text-sm font-bold text-gray-200">Verifying Gate Clearance...</p>
+              <p className="text-xs text-gray-500">Checking credentials and event gate security tokens.</p>
+            </div>
+          </div>
+        ) : authStatus === "locked" ? (
+          /* ── PROTECTED GATE ACCESS GATEKEEPER ───────────────────────────── */
           <div className="flex-1 flex items-center justify-center px-4 py-8">
             <div
-              className={`max-w-sm w-full bg-gray-900 border-2 ${pinError ? "border-red-500/60" : "border-gray-700"} rounded-3xl p-8 text-center space-y-6 shadow-2xl transition-all ${
+              className={`max-w-md w-full bg-gray-900 border-2 ${pinError ? "border-red-500/60 shadow-red-500/10" : "border-gray-800"} rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl transition-all ${
                 pinShake ? "animate-[shake_0.4s_ease-in-out]" : ""
               }`}
             >
-              <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto">
-                <Lock size={30} className="text-amber-400" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mx-auto text-[#0758fc] shadow-[0_0_25px_rgba(7,88,252,0.25)]">
+                <ShieldCheck size={32} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Scanner Locked</h2>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 mb-2">
+                  <Lock size={11} /> Protected Venue Gate
+                </div>
+                <h2 className="text-xl font-black text-white">Gate Scanner Restricted</h2>
                 <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-                  Enter the 6-digit access code for<br />
-                  <span className="font-bold text-gray-200">{selectedEvent?.title}</span>
+                  Admission pass scanner for<br />
+                  <span className="font-extrabold text-white text-sm">
+                    {gateEventMeta?.title || "Venue Gate"}
+                  </span>
+                  {gateEventMeta?.city && (
+                    <span className="block text-[11px] text-gray-500 mt-0.5">
+                      {gateEventMeta.city} {gateEventMeta.startDate ? `· ${new Date(gateEventMeta.startDate).toLocaleDateString("en-IN")}` : ""}
+                    </span>
+                  )}
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  value={pinInput}
-                  autoFocus
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setPinInput(val);
-                    setPinError(false);
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") handlePinSubmit(); }}
-                  placeholder="──────"
-                  className={`w-full text-center font-mono text-3xl font-black tracking-[0.4em] bg-gray-800 border-2 ${
-                    pinError ? "border-red-500 text-red-400" : "border-gray-600 text-white focus:border-[#0758fc]"
-                  } rounded-2xl py-4 outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                />
-                {pinError && (
-                  <p className="text-xs font-bold text-red-400 flex items-center justify-center gap-1.5">
-                    <ShieldAlert size={13} />
-                    Incorrect code — try again
-                  </p>
-                )}
+              {/* Method A: 6-Digit Gate PIN */}
+              <form onSubmit={handlePinSubmit} className="space-y-4 pt-1">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-gray-300 block uppercase tracking-wider">
+                    Enter 6-Digit Gate PIN
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={pinInput}
+                    autoFocus
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setPinInput(val);
+                      setPinError(false);
+                      setPinErrorMessage(null);
+                    }}
+                    placeholder="──────"
+                    className={`w-full text-center font-mono text-3xl font-black tracking-[0.4em] bg-gray-800/90 border-2 ${
+                      pinError ? "border-red-500 text-red-400 focus:border-red-500" : "border-gray-700 text-white focus:border-[#0758fc]"
+                    } rounded-2xl py-3.5 outline-none transition-all shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  />
+                  {pinErrorMessage && (
+                    <p className="text-xs font-bold text-red-400 flex items-center justify-center gap-1.5 animate-in fade-in-50">
+                      <ShieldAlert size={14} />
+                      {pinErrorMessage}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={pinInput.length !== 6 || pinVerifying}
+                  className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-sm py-3.5 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {pinVerifying ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Verifying PIN...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} /> Unlock Scanner
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-gray-800 w-full" />
+                <span className="bg-gray-900 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest absolute">
+                  OR SIGN IN
+                </span>
               </div>
 
-              <button
-                type="button"
-                disabled={pinInput.length !== 6}
-                onClick={handlePinSubmit}
-                className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm py-3.5 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/30 active:scale-95 cursor-pointer"
-              >
-                <ShieldCheck size={16} className="inline mr-2" />
-                Unlock Scanner
-              </button>
-
-              <p className="text-[11px] text-gray-500">
-                Contact your event organiser if you don&apos;t have the access code.
-              </p>
+              {/* Method B: Sign in with Staff / Organizer Account */}
+              <div className="space-y-2">
+                <Link
+                  href={`/sign-in?redirect_url=${encodeURIComponent(`/check-in?eventId=${selectedEventId || gateEventMeta?.id || ""}`)}`}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs py-3 rounded-2xl border border-gray-700 transition-colors"
+                >
+                  <Users size={15} className="text-blue-400" />
+                  Sign In with Organizer / Staff Account
+                </Link>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Verified event organizers and coordinators gain instant access automatically when signed in.
+                </p>
+              </div>
             </div>
           </div>
         ) : (
@@ -1106,6 +1256,8 @@ function CheckInScannerContent() {
                             const res = await checkInEntireBulkGroupAction({
                               bulkGroupId: scanResult.bulkGroupId,
                               gateName,
+                              eventId: selectedEventId || undefined,
+                              gatePin: activeGatePin || undefined,
                             });
                             setAdmittingBulkGroup(false);
                             if (res.success) {
