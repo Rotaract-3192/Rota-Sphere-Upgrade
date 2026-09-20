@@ -145,7 +145,11 @@ export default async function EventDetailPage({ params }: PageProps) {
 
   // Fetch Tiers with expired holds purged
   try {
-    await executeSql(`ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;`);
+    await executeSql(`
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 50;
+      ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
+      UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
+    `);
     await cleanupExpiredTicketHoldsAction();
   } catch (_) {}
 

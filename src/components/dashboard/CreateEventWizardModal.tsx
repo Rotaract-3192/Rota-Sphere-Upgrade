@@ -208,7 +208,7 @@ export function CreateEventWizardModal({
       salesStartTime: "09:00",
       salesEndDate: "",
       salesEndTime: "23:59",
-      maxPerOrder: 10,
+      maxPerOrder: 50,
       isBulkSlab: false,
       bulkSlabSize: 15,
     },
@@ -469,7 +469,7 @@ export function CreateEventWizardModal({
               salesStartTime: "09:00",
               salesEndDate: "",
               salesEndTime: "23:59",
-              maxPerOrder: 10,
+              maxPerOrder: 50,
             },
           ];
         }
@@ -508,7 +508,7 @@ export function CreateEventWizardModal({
         salesStartTime: "09:00",
         salesEndDate: "",
         salesEndTime: "23:59",
-        maxPerOrder: 10,
+        maxPerOrder: 50,
       },
     ]);
   }
@@ -521,7 +521,7 @@ export function CreateEventWizardModal({
     description: string,
     allowedAudience: "ALL" | "ROTARACT_ONLY" | "NON_ROTARACT_ONLY" = "ALL",
     hasCustomSchedule: boolean = tierType === "EARLY_BIRD",
-    maxPerOrder: number = 10
+    maxPerOrder: number = 50
   ) {
     if (price > 0) {
       setPriceModel("PAID");
@@ -803,7 +803,7 @@ export function CreateEventWizardModal({
           allowedAudience: t.allowedAudience || "ALL",
           salesStart: salesStartISO,
           salesEnd: salesEndISO,
-          maxPerOrder: isBulk && bulkSlabSize ? bulkSlabSize : (t.maxPerOrder ? Number(t.maxPerOrder) : 10),
+          maxPerOrder: isBulk && bulkSlabSize ? bulkSlabSize : (t.maxPerOrder ? Number(t.maxPerOrder) : 50),
           isBulkSlab: isBulk,
           bulkSlabSize,
         };
@@ -1738,37 +1738,137 @@ export function CreateEventWizardModal({
                         />
                       </div>
 
-                      {/* 🎟️ PURCHASE LIMIT CONTROL (Single Ticket vs Multi-Pass) */}
-                      <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60">
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
-                          <div>
-                            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800 dark:text-gray-200 select-none">
-                              <input
-                                type="checkbox"
-                                checked={tier.maxPerOrder === 1}
-                                disabled={Boolean(tier.isBulkSlab || tier.tierType === "BULK")}
-                                onChange={(e) => {
-                                  updateTierField(idx, "maxPerOrder", e.target.checked ? 1 : 10);
-                                }}
-                                className="w-4 h-4 rounded text-[#0758fc] focus:ring-[#0758fc] cursor-pointer disabled:opacity-50"
-                              />
-                              <span className="flex items-center gap-1.5">
-                                <Ticket size={13} className="text-[#0758fc]" />
-                                <span>Limit to 1 ticket per attendee / order</span>
+                      {/* 🎟️ PURCHASE LIMIT CONTROL BAR (Slider + Number Stepper + Quick Presets) */}
+                      <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60 space-y-2">
+                        <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <Ticket size={15} className="text-[#0758fc] shrink-0" />
+                              <span className="text-xs font-bold text-gray-900 dark:text-white">
+                                Purchase Limit per Order
                               </span>
-                            </label>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-6 mt-0.5">
-                              Buyers can only purchase 1 ticket of this tier (prevents bulk hoarding for limited passes).
-                            </p>
+                            </div>
+                            {Boolean(tier.isBulkSlab || tier.tierType === "BULK") ? (
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                Fixed Slab ({tier.bulkSlabSize || 15} passes)
+                              </span>
+                            ) : Number(tier.maxPerOrder) === 1 ? (
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                🔒 Strict Limit: 1 Ticket
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                Max {tier.maxPerOrder ?? 50} Tickets
+                              </span>
+                            )}
                           </div>
-                          {tier.maxPerOrder === 1 ? (
-                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
-                              🔒 Max 1 Ticket
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 shrink-0">
-                              Standard (Up to 10)
-                            </span>
+
+                          {!Boolean(tier.isBulkSlab || tier.tierType === "BULK") && (
+                            <div className="space-y-3 pt-1">
+                              {/* Toggle: Strict 1 ticket vs Multi-pass */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateTierField(idx, "maxPerOrder", 1)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    Number(tier.maxPerOrder) === 1
+                                      ? "bg-amber-500 text-white shadow-xs"
+                                      : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  }`}
+                                >
+                                  🔒 Limit to 1 Ticket
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (Number(tier.maxPerOrder) === 1) {
+                                      updateTierField(idx, "maxPerOrder", 50);
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    Number(tier.maxPerOrder) !== 1
+                                      ? "bg-[#0758fc] text-white shadow-xs"
+                                      : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  }`}
+                                >
+                                  🎟️ Multi-Ticket (Up to 50+)
+                                </button>
+                              </div>
+
+                              {/* Interactive Slider Bar and Number Input */}
+                              {Number(tier.maxPerOrder) !== 1 && (
+                                <div className="space-y-2.5 p-3 bg-white dark:bg-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <label className="text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                      Upper Limit Slider (Max Tickets to Buy):
+                                    </label>
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="number"
+                                        min="2"
+                                        max="200"
+                                        value={tier.maxPerOrder ?? 50}
+                                        onChange={(e) => {
+                                          const val = parseInt(e.target.value, 10);
+                                          updateTierField(idx, "maxPerOrder", isNaN(val) ? "" : Math.max(1, Math.min(val, 200)));
+                                        }}
+                                        onBlur={() => {
+                                          const val = Number(tier.maxPerOrder);
+                                          if (!val || isNaN(val) || val < 1) {
+                                            updateTierField(idx, "maxPerOrder", 50);
+                                          }
+                                        }}
+                                        className="w-16 text-center bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs font-black text-gray-900 dark:text-white"
+                                      />
+                                      <span className="text-xs font-bold text-gray-500">tickets</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Slider bar */}
+                                  <div className="space-y-1">
+                                    <input
+                                      type="range"
+                                      min="2"
+                                      max="100"
+                                      step="1"
+                                      value={Number(tier.maxPerOrder) || 50}
+                                      onChange={(e) => updateTierField(idx, "maxPerOrder", Number(e.target.value))}
+                                      className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#0758fc]"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-gray-400 font-semibold px-0.5">
+                                      <span>2</span>
+                                      <span>10</span>
+                                      <span>25</span>
+                                      <span className="text-[#0758fc] font-bold">50 (Standard)</span>
+                                      <span>100</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Quick Presets */}
+                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] text-gray-400 mr-1">Quick presets:</span>
+                                    {[5, 10, 20, 30, 50, 100].map((preset) => (
+                                      <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => updateTierField(idx, "maxPerOrder", preset)}
+                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                          Number(tier.maxPerOrder) === preset
+                                            ? "bg-[#0758fc] text-white"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                        }`}
+                                      >
+                                        {preset}
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
+                                    Buyers will be able to select up to <strong className="text-gray-900 dark:text-white">{tier.maxPerOrder ?? 50}</strong> tickets of this pass tier per checkout booking.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

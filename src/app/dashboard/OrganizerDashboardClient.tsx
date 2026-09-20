@@ -1260,11 +1260,15 @@ export function OrganizerDashboardClient({
                             <td className="py-3.5 font-bold text-gray-900">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span>{t.name}</span>
-                                {Number(t.max_per_order) === 1 && (
+                                {Number(t.max_per_order) === 1 ? (
                                   <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
                                     🔒 Limit 1
                                   </span>
-                                )}
+                                ) : t.max_per_order && Number(t.max_per_order) < 50 ? (
+                                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-[#0758fc] border border-blue-200">
+                                    Max {t.max_per_order}
+                                  </span>
+                                ) : null}
                               </div>
                             </td>
                             <td className="py-3.5 text-gray-500">{e.title}</td>

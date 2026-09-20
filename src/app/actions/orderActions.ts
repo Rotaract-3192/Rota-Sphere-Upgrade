@@ -127,7 +127,9 @@ async function ensureUpiColumns() {
   try {
     // Add missing columns and capacity guardrail constraint to saas_ticket_tiers
     await executeSql(`
-      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 50;
+      ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
+      UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
       ALTER TABLE saas_ticket_tiers 
         DROP CONSTRAINT IF EXISTS check_capacity_not_exceeded;
       ALTER TABLE saas_ticket_tiers 
@@ -289,7 +291,7 @@ export async function validateTicketTiersAvailabilityAction(input: ValidateTiers
       const count = input.selectedCounts[tier.id] || 0;
       const isBulk = Boolean(tier.is_bulk_slab);
       const slabSize = isBulk && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
-      const maxAllowed = isBulk ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 10);
+      const maxAllowed = isBulk ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 50);
       if (count > maxAllowed) {
         return {
           valid: false,
@@ -738,7 +740,7 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
       // Single-ticket / per-order quantity restriction check (accounting for bulk slabs)
       const slabSize = tier.is_bulk_slab && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
       const orderQuantity = tier.is_bulk_slab ? Math.ceil(requestedCount / slabSize) : requestedCount;
-      const maxAllowed = tier.is_bulk_slab ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 10);
+      const maxAllowed = tier.is_bulk_slab ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 50);
       if (orderQuantity > maxAllowed) {
         return {
           success: false,

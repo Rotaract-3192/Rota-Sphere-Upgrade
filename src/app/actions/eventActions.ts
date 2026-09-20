@@ -339,7 +339,9 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allow_non_rotaract BOOLEAN DEFAULT TRUE;
         ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS allowed_audience VARCHAR(50) DEFAULT 'ALL';
-        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+        ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 50;
+        ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
+        UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
       `);
     } catch {}
@@ -471,7 +473,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
         const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
-        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 50);
 
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
@@ -722,7 +724,7 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             ${Number(t.total_capacity) || 100},
             0,
             0,
-            ${t.max_per_order ? Number(t.max_per_order) : 10},
+            ${t.max_per_order ? Number(t.max_per_order) : 50},
             NOW(),
             NOW() + INTERVAL '8 days',
             ${t.allow_non_rotaract !== false ? "TRUE" : "FALSE"},
@@ -876,7 +878,9 @@ export async function updateEventAction(
         await executeSql(`
           ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_end DROP NOT NULL;
           ALTER TABLE saas_ticket_tiers ALTER COLUMN sales_start DROP NOT NULL;
-          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+          ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 50;
+          ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
+          UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
           ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
           ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
         `);
@@ -902,7 +906,7 @@ export async function updateEventAction(
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
         const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
-        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 10);
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 50);
 
         const match =
           (tier.id ? (existingTiers || []).find((t: any) => t.id === tier.id) : null) ||

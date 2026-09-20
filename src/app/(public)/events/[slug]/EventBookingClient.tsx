@@ -374,11 +374,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
                                 Rotaract Only
                               </span>
                             )}
-                            {Number(tier.max_per_order) === 1 && (
-                              <span className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
-                                Limit 1
+                            {Number(tier.max_per_order) === 1 ? (
+                              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                                🔒 Limit 1
                               </span>
-                            )}
+                            ) : tier.max_per_order && Number(tier.max_per_order) < 50 ? (
+                              <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full">
+                                Limit {tier.max_per_order}
+                              </span>
+                            ) : null}
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{status.detailText}</p>
                         </div>

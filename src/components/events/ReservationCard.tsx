@@ -136,7 +136,7 @@ export function ReservationCard({ event, tiers, initialServerTime }: Reservation
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
     const qty = quantities[tier.id] ?? 0;
     const status = getTierScheduleStatus(tier, currentTime);
-    const maxAllowed = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 10);
+    const maxAllowed = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 50);
 
     return (
       <div key={tier.id} className={`border rounded-2xl p-4 transition-all space-y-2 ${status.canBook ? "border-gray-200 bg-white" : "border-gray-200 bg-gray-50/80 opacity-80"}`}>
@@ -166,24 +166,59 @@ export function ReservationCard({ event, tiers, initialServerTime }: Reservation
           </div>
 
           {status.canBook && (
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setQty(tier.id, qty - 1)}
-                disabled={qty === 0}
-                className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                -
-              </button>
-              <span className="w-6 text-center text-xs font-bold text-gray-900">{qty}</span>
-              <button
-                type="button"
-                onClick={() => setQty(tier.id, qty + 1)}
-                disabled={qty >= Math.min(available, maxAllowed)}
-                className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                +
-              </button>
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setQty(tier.id, qty - 1)}
+                  disabled={qty === 0}
+                  className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  max={Math.min(available, maxAllowed)}
+                  value={qty}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setQty(tier.id, isNaN(val) ? 0 : val);
+                  }}
+                  className="w-8 text-center text-xs font-bold text-gray-900 bg-transparent outline-none focus:bg-gray-100 rounded py-0.5"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQty(tier.id, qty + 1)}
+                  disabled={qty >= Math.min(available, maxAllowed)}
+                  className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-800 disabled:opacity-40 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+              {maxAllowed > 5 && (
+                <div className="flex items-center gap-1">
+                  {[5, 10].filter((step) => qty + step <= Math.min(available, maxAllowed)).map((step) => (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => setQty(tier.id, qty + step)}
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer transition-colors"
+                    >
+                      +{step}
+                    </button>
+                  ))}
+                  {qty < Math.min(available, maxAllowed) && (
+                    <button
+                      type="button"
+                      onClick={() => setQty(tier.id, Math.min(available, maxAllowed))}
+                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-[#0758fc] cursor-pointer transition-colors"
+                    >
+                      Max
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -202,7 +237,7 @@ export function ReservationCard({ event, tiers, initialServerTime }: Reservation
   function setQty(tierId: string, val: number) {
     const tier = publicTiers.find((t) => t.id === tierId)!;
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
-    const maxLimit = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 10);
+    const maxLimit = (tier as any).max_per_order ? Number((tier as any).max_per_order) : (tier.maximum_quantity || 50);
     const clamped = Math.max(0, Math.min(val, available, maxLimit));
     setQuantities((q) => ({ ...q, [tierId]: clamped }));
   }

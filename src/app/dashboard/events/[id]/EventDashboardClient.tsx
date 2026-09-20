@@ -112,7 +112,7 @@ export function EventDashboardClient({
     allowedAudience: "ALL",
     isBulkSlab: false,
     bulkSlabSize: 15,
-    maxPerOrder: 10,
+    maxPerOrder: 50,
   });
 
   // Toast helper
@@ -287,8 +287,8 @@ export function EventDashboardClient({
                 isBulkSlab: tierForm.isBulkSlab,
                 bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
                 bulk_slab_size: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
-                maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
-                max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
+                maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 50,
+                max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 50,
               }
             : t
         )
@@ -304,8 +304,8 @@ export function EventDashboardClient({
             isBulkSlab: tierForm.isBulkSlab,
             bulkSlabSize: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
             bulk_slab_size: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : null,
-            maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
-            max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 10,
+            maxPerOrder: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 50,
+            max_per_order: tierForm.isBulkSlab ? Number(tierForm.bulkSlabSize) || 15 : Number(tierForm.maxPerOrder) || 50,
           },
         ];
 
@@ -321,7 +321,7 @@ export function EventDashboardClient({
         allowedAudience: t.allowed_audience || t.allowedAudience || "ALL",
         isBulkSlab: Boolean(t.is_bulk_slab || t.isBulkSlab),
         bulkSlabSize: t.bulkSlabSize !== undefined ? t.bulkSlabSize : (t.bulk_slab_size != null ? Number(t.bulk_slab_size) : null),
-        maxPerOrder: t.maxPerOrder || t.max_per_order || 10,
+        maxPerOrder: t.maxPerOrder || t.max_per_order || 50,
       })),
     });
     setActionLoadingId(null);
@@ -1081,7 +1081,7 @@ export function EventDashboardClient({
                     allowedAudience: "ALL",
                     isBulkSlab: false,
                     bulkSlabSize: 10,
-                    maxPerOrder: 10,
+                    maxPerOrder: 50,
                   });
                   setTierModalOpen(true);
                 }}
@@ -1166,7 +1166,7 @@ export function EventDashboardClient({
                               : (t.bulkSlabSize != null 
                                   ? Number(t.bulkSlabSize) 
                                   : (t.max_per_order && Number(t.max_per_order) > 1 ? Number(t.max_per_order) : 15)),
-                            maxPerOrder: t.max_per_order || 10,
+                            maxPerOrder: t.max_per_order || 50,
                           });
                           setTierModalOpen(true);
                         }}
@@ -1520,6 +1520,139 @@ export function EventDashboardClient({
                       }}
                       className="w-full bg-white dark:bg-gray-800 border border-purple-300 dark:border-purple-700 rounded-xl px-3 py-2 text-xs"
                     />
+                  </div>
+                )}
+              </div>
+
+              {/* Purchase Limit Control Bar (Slider + Number Stepper + Quick Presets) */}
+              <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Ticket size={15} className="text-[#0758fc] shrink-0" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                      Purchase Limit per Order
+                    </span>
+                  </div>
+                  {tierForm.isBulkSlab ? (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      Fixed Slab ({tierForm.bulkSlabSize || 15} passes)
+                    </span>
+                  ) : Number(tierForm.maxPerOrder) === 1 ? (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      🔒 Strict Limit: 1 Ticket
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                      Max {tierForm.maxPerOrder ?? 50} Tickets
+                    </span>
+                  )}
+                </div>
+
+                {!tierForm.isBulkSlab && (
+                  <div className="space-y-3 pt-1">
+                    {/* Toggle: Strict 1 ticket vs Multi-pass */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTierForm({ ...tierForm, maxPerOrder: 1 })}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          Number(tierForm.maxPerOrder) === 1
+                            ? "bg-amber-500 text-white shadow-xs"
+                            : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        🔒 Limit to 1 Ticket
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (Number(tierForm.maxPerOrder) === 1) {
+                            setTierForm({ ...tierForm, maxPerOrder: 50 });
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          Number(tierForm.maxPerOrder) !== 1
+                            ? "bg-[#0758fc] text-white shadow-xs"
+                            : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        🎟️ Multi-Ticket (Up to 50+)
+                      </button>
+                    </div>
+
+                    {/* Interactive Slider Bar and Number Input */}
+                    {Number(tierForm.maxPerOrder) !== 1 && (
+                      <div className="space-y-2.5 p-3 bg-white dark:bg-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between gap-3">
+                          <label className="text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                            Upper Limit Slider (Max Tickets to Buy):
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="2"
+                              max="200"
+                              value={tierForm.maxPerOrder ?? 50}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setTierForm({ ...tierForm, maxPerOrder: isNaN(val) ? ("" as any) : Math.max(1, Math.min(val, 200)) });
+                              }}
+                              onBlur={() => {
+                                const val = Number(tierForm.maxPerOrder);
+                                if (!val || isNaN(val) || val < 1) {
+                                  setTierForm({ ...tierForm, maxPerOrder: 50 });
+                                }
+                              }}
+                              className="w-16 text-center bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs font-black text-gray-900 dark:text-white"
+                            />
+                            <span className="text-xs font-bold text-gray-500">tickets</span>
+                          </div>
+                        </div>
+
+                        {/* Slider bar */}
+                        <div className="space-y-1">
+                          <input
+                            type="range"
+                            min="2"
+                            max="100"
+                            step="1"
+                            value={Number(tierForm.maxPerOrder) || 50}
+                            onChange={(e) => setTierForm({ ...tierForm, maxPerOrder: Number(e.target.value) })}
+                            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#0758fc]"
+                          />
+                          <div className="flex justify-between text-[10px] text-gray-400 font-semibold px-0.5">
+                            <span>2</span>
+                            <span>10</span>
+                            <span>25</span>
+                            <span className="text-[#0758fc] font-bold">50 (Standard)</span>
+                            <span>100</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] text-gray-400 mr-1">Quick presets:</span>
+                          {[5, 10, 20, 30, 50, 100].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setTierForm({ ...tierForm, maxPerOrder: preset })}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                Number(tierForm.maxPerOrder) === preset
+                                  ? "bg-[#0758fc] text-white"
+                                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
+                          Delegates will be able to select up to <strong className="text-gray-900 dark:text-white">{tierForm.maxPerOrder ?? 50}</strong> tickets of this pass tier in a single order.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

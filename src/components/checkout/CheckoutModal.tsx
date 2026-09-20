@@ -38,6 +38,7 @@ import {
   Briefcase,
   Award,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
@@ -283,7 +284,7 @@ export function CheckoutModal({
         let changed = false;
         const updated = { ...prev };
         currentTiers.forEach((t) => {
-          const max = t.is_bulk_slab ? 5 : (t.max_per_order ? Number(t.max_per_order) : 10);
+          const max = t.is_bulk_slab ? 5 : (t.max_per_order ? Number(t.max_per_order) : 50);
           if (updated[t.id] && updated[t.id] > max) {
             updated[t.id] = max;
             changed = true;
@@ -684,40 +685,7 @@ export function CheckoutModal({
 
   if (!isOpen) return null;
 
-  function handleCountChange(tierId: string, delta: number) {
-    const targetTier = currentTiers.find((t) => t.id === tierId);
-    if (!targetTier) return;
-
-    const current = selectedCounts[tierId] || 0;
-    const status = getTierScheduleStatus(targetTier, currentTime, current);
-    if (delta > 0 && !status.canBook) {
-      setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
-      return;
-    }
-
-    const slabSize = targetTier.is_bulk_slab && targetTier.bulk_slab_size ? Number(targetTier.bulk_slab_size) : 1;
-    const cap = Number(targetTier.total_capacity) || 9999;
-    const sold = Number(targetTier.sold_count) || 0;
-    const reserved = Number(targetTier.reserved_count) || 0;
-    const othersReserved = Math.max(0, reserved - (current * slabSize));
-    const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
-    const tierMax = targetTier.is_bulk_slab ? 5 : (targetTier.max_per_order ? Number(targetTier.max_per_order) : 10);
-    const maxAllowed = Math.min(tierMax, maxAvailableForUser);
-
-    if (delta > 0 && current >= maxAllowed) {
-      if (current >= maxAvailableForUser && maxAvailableForUser < tierMax) {
-        setErrorMessage(`No more slots available for "${targetTier.name}".`);
-      } else {
-        setErrorMessage(
-          tierMax === 1
-            ? `"${targetTier.name}" is strictly limited to 1 per booking.`
-            : `You can only select up to ${tierMax} for "${targetTier.name}".`
-        );
-      }
-      return;
-    }
-    const next = Math.max(0, Math.min(maxAllowed, current + delta));
-    const newCounts = { ...selectedCounts, [tierId]: next };
+  function applyCountUpdate(newCounts: Record<string, number>) {
     setSelectedCounts(newCounts);
     setErrorMessage(null);
 
@@ -787,6 +755,77 @@ export function CheckoutModal({
     );
   }
 
+  function handleCountChange(tierId: string, delta: number) {
+    const targetTier = currentTiers.find((t) => t.id === tierId);
+    if (!targetTier) return;
+
+    const current = selectedCounts[tierId] || 0;
+    const status = getTierScheduleStatus(targetTier, currentTime, current);
+    if (delta > 0 && !status.canBook) {
+      setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
+      return;
+    }
+
+    const slabSize = targetTier.is_bulk_slab && targetTier.bulk_slab_size ? Number(targetTier.bulk_slab_size) : 1;
+    const cap = Number(targetTier.total_capacity) || 9999;
+    const sold = Number(targetTier.sold_count) || 0;
+    const reserved = Number(targetTier.reserved_count) || 0;
+    const othersReserved = Math.max(0, reserved - (current * slabSize));
+    const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
+    const tierMax = targetTier.is_bulk_slab ? 5 : (targetTier.max_per_order ? Number(targetTier.max_per_order) : 50);
+    const maxAllowed = Math.min(tierMax, maxAvailableForUser);
+
+    if (delta > 0 && current >= maxAllowed) {
+      if (current >= maxAvailableForUser && maxAvailableForUser < tierMax) {
+        setErrorMessage(`No more slots available for "${targetTier.name}".`);
+      } else {
+        setErrorMessage(
+          tierMax === 1
+            ? `"${targetTier.name}" is strictly limited to 1 per booking.`
+            : `You can only select up to ${tierMax} for "${targetTier.name}".`
+        );
+      }
+      return;
+    }
+    const next = Math.max(0, Math.min(maxAllowed, current + delta));
+    applyCountUpdate({ ...selectedCounts, [tierId]: next });
+  }
+
+  function handleSetCount(tierId: string, targetVal: number) {
+    const targetTier = currentTiers.find((t) => t.id === tierId);
+    if (!targetTier) return;
+
+    const current = selectedCounts[tierId] || 0;
+    const status = getTierScheduleStatus(targetTier, currentTime, current);
+    if (targetVal > current && !status.canBook) {
+      setErrorMessage(`"${targetTier.name}" is locked. ${status.detailText}`);
+      return;
+    }
+
+    const slabSize = targetTier.is_bulk_slab && targetTier.bulk_slab_size ? Number(targetTier.bulk_slab_size) : 1;
+    const cap = Number(targetTier.total_capacity) || 9999;
+    const sold = Number(targetTier.sold_count) || 0;
+    const reserved = Number(targetTier.reserved_count) || 0;
+    const othersReserved = Math.max(0, reserved - (current * slabSize));
+    const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
+    const tierMax = targetTier.is_bulk_slab ? 5 : (targetTier.max_per_order ? Number(targetTier.max_per_order) : 50);
+    const maxAllowed = Math.min(tierMax, maxAvailableForUser);
+
+    const clamped = Math.max(0, Math.min(maxAllowed, targetVal));
+    if (targetVal > maxAllowed) {
+      if (maxAvailableForUser < tierMax) {
+        setErrorMessage(`Only ${maxAvailableForUser} slots available for "${targetTier.name}".`);
+      } else {
+        setErrorMessage(
+          tierMax === 1
+            ? `"${targetTier.name}" is strictly limited to 1 per booking.`
+            : `You can only select up to ${tierMax} for "${targetTier.name}".`
+        );
+      }
+    }
+    applyCountUpdate({ ...selectedCounts, [tierId]: clamped });
+  }
+
   function handleApplyCoupon() {
     if (!couponCode.trim()) return;
     const code = couponCode.trim().toUpperCase();
@@ -825,7 +864,7 @@ export function CheckoutModal({
           setErrorMessage(`"${tier.name}" is locked (${status.detailText}). Please adjust your selection.`);
           return;
         }
-        const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 10;
+        const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 50;
         if (count > maxAllowed) {
           setErrorMessage(
             maxAllowed === 1
@@ -1618,7 +1657,7 @@ export function CheckoutModal({
                         const reserved = Number(tier.reserved_count) || 0;
                         const othersReserved = Math.max(0, reserved - count);
                         const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
                         const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                         return (
                           <div
@@ -1649,24 +1688,60 @@ export function CheckoutModal({
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, -1)}
-                                disabled={count === 0}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                -
-                              </button>
-                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= maxAllowed}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                +
-                              </button>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, -1)}
+                                  disabled={count === 0}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={maxAllowed}
+                                  value={count}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    handleSetCount(tier.id, isNaN(val) ? 0 : val);
+                                  }}
+                                  disabled={!status.canBook}
+                                  className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, 1)}
+                                  disabled={!status.canBook || count >= maxAllowed}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              {maxAllowed > 5 && status.canBook && (
+                                <div className="flex items-center gap-1">
+                                  {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
+                                    <button
+                                      key={step}
+                                      type="button"
+                                      onClick={() => handleSetCount(tier.id, count + step)}
+                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
+                                    >
+                                      +{step}
+                                    </button>
+                                  ))}
+                                  {count < maxAllowed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetCount(tier.id, maxAllowed)}
+                                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
+                                    >
+                                      Max ({maxAllowed})
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1714,7 +1789,7 @@ export function CheckoutModal({
                           const reserved = Number(tier.reserved_count) || 0;
                           const othersReserved = Math.max(0, reserved - count);
                           const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                          const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                          const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
                           const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                           return (
                             <div
@@ -1741,24 +1816,60 @@ export function CheckoutModal({
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, -1)}
-                                  disabled={count === 0}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  -
-                                </button>
-                                <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, 1)}
-                                  disabled={!status.canBook || count >= maxAllowed}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  +
-                                </button>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCountChange(tier.id, -1)}
+                                    disabled={count === 0}
+                                    className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={maxAllowed}
+                                    value={count}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      handleSetCount(tier.id, isNaN(val) ? 0 : val);
+                                    }}
+                                    disabled={!status.canBook}
+                                    className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCountChange(tier.id, 1)}
+                                    disabled={!status.canBook || count >= maxAllowed}
+                                    className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                {maxAllowed > 5 && status.canBook && (
+                                  <div className="flex items-center gap-1">
+                                    {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
+                                      <button
+                                        key={step}
+                                        type="button"
+                                        onClick={() => handleSetCount(tier.id, count + step)}
+                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
+                                      >
+                                        +{step}
+                                      </button>
+                                    ))}
+                                    {count < maxAllowed && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSetCount(tier.id, maxAllowed)}
+                                        className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
+                                      >
+                                        Max ({maxAllowed})
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -1779,7 +1890,7 @@ export function CheckoutModal({
                       const reserved = Number(tier.reserved_count) || 0;
                       const othersReserved = Math.max(0, reserved - count);
                       const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                      const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                      const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
                       const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                       return (
                         <div
@@ -1806,24 +1917,60 @@ export function CheckoutModal({
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleCountChange(tier.id, -1)}
-                              disabled={count === 0}
-                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                            >
-                              -
-                            </button>
-                            <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCountChange(tier.id, 1)}
-                              disabled={!status.canBook || count >= maxAllowed}
-                              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                            >
-                              +
-                            </button>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, -1)}
+                                disabled={count === 0}
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="0"
+                                max={maxAllowed}
+                                value={count}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  handleSetCount(tier.id, isNaN(val) ? 0 : val);
+                                }}
+                                disabled={!status.canBook}
+                                className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleCountChange(tier.id, 1)}
+                                disabled={!status.canBook || count >= maxAllowed}
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                +
+                              </button>
+                            </div>
+                            {maxAllowed > 5 && status.canBook && (
+                              <div className="flex items-center gap-1">
+                                {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
+                                  <button
+                                    key={step}
+                                    type="button"
+                                    onClick={() => handleSetCount(tier.id, count + step)}
+                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
+                                  >
+                                    +{step}
+                                  </button>
+                                ))}
+                                {count < maxAllowed && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetCount(tier.id, maxAllowed)}
+                                    className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
+                                  >
+                                    Max ({maxAllowed})
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -1848,7 +1995,7 @@ export function CheckoutModal({
                         const reserved = Number(tier.reserved_count) || 0;
                         const othersReserved = Math.max(0, reserved - count);
                         const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 10;
+                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
                         const maxAllowed = Math.min(tierMax, maxAvailableForUser);
                         return (
                           <div
@@ -1875,24 +2022,60 @@ export function CheckoutModal({
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, -1)}
-                                disabled={count === 0}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                -
-                              </button>
-                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= maxAllowed}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                +
-                              </button>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, -1)}
+                                  disabled={count === 0}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={maxAllowed}
+                                  value={count}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    handleSetCount(tier.id, isNaN(val) ? 0 : val);
+                                  }}
+                                  disabled={!status.canBook}
+                                  className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleCountChange(tier.id, 1)}
+                                  disabled={!status.canBook || count >= maxAllowed}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              {maxAllowed > 5 && status.canBook && (
+                                <div className="flex items-center gap-1">
+                                  {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
+                                    <button
+                                      key={step}
+                                      type="button"
+                                      onClick={() => handleSetCount(tier.id, count + step)}
+                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
+                                    >
+                                      +{step}
+                                    </button>
+                                  ))}
+                                  {count < maxAllowed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetCount(tier.id, maxAllowed)}
+                                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
+                                    >
+                                      Max ({maxAllowed})
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1920,6 +2103,40 @@ export function CheckoutModal({
                     </span>
                   )}
                 </div>
+
+                {/* Delegation / Bulk attendee helper */}
+                {attendees.length > 1 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 rounded-2xl text-xs">
+                    <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200">
+                      <Sparkles size={14} className="text-[#0758fc] shrink-0" />
+                      <span className="text-[11px] font-bold">Booking for a delegation or team?</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstAtt = attendees[0];
+                        if (!firstAtt) return;
+                        setAttendees((prev) =>
+                          prev.map((a, i) =>
+                            i === 0
+                              ? a
+                              : {
+                                  ...a,
+                                  memberType: firstAtt.memberType,
+                                  clubName: firstAtt.clubName,
+                                  customClubName: firstAtt.customClubName,
+                                  zone: firstAtt.zone,
+                                  designation: a.designation || firstAtt.designation,
+                                }
+                          )
+                        );
+                      }}
+                      className="px-2.5 py-1 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-300 dark:border-blue-700 text-[#0758fc] dark:text-blue-300 text-[10px] font-extrabold rounded-xl transition-all cursor-pointer shadow-2xs"
+                    >
+                      📋 Copy Club Affiliation to All ({attendees.length})
+                    </button>
+                  </div>
+                )}
 
                 <div className="space-y-4 max-h-[52vh] sm:max-h-[58vh] overflow-y-auto pr-1 sm:pr-2">
                   {attendees.map((att, idx) => {

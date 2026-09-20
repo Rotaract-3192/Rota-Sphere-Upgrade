@@ -102,7 +102,9 @@ export default async function DashboardPage(props: {
   // Ensure max_per_order, tags, upi, and bulk slab columns exist
   try {
     await executeSql(`
-      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 10;
+      ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS max_per_order INT DEFAULT 50;
+      ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
+      UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
       ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS is_bulk_slab BOOLEAN NOT NULL DEFAULT FALSE;
       ALTER TABLE saas_ticket_tiers ADD COLUMN IF NOT EXISTS bulk_slab_size INT DEFAULT NULL;
       ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
@@ -132,7 +134,7 @@ export default async function DashboardPage(props: {
             'allowed_audience', t.allowed_audience,
             'is_active', t.is_active,
             'is_visible', t.is_visible,
-            'max_per_order', COALESCE(t.max_per_order, 10),
+            'max_per_order', COALESCE(t.max_per_order, 50),
             'is_bulk_slab', COALESCE(t.is_bulk_slab, false),
             'bulk_slab_size', t.bulk_slab_size
           )
