@@ -1822,22 +1822,21 @@ export function OrganizerDashboardClient({
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <Link
-                        href={`/check-in?eventId=${evt.id}${evt.access_password ? `&pin=${evt.access_password}` : ""}`}
+                        href={`/check-in?eventId=${evt.id}`}
                         className="flex-1 inline-flex items-center justify-center gap-2 bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md hover:scale-[1.02]"
                       >
                         <QrCode size={15} /> Open Scanner
                       </Link>
                       <button
                         onClick={() => {
-                          const pinParam = evt.access_password ? `&pin=${evt.access_password}` : "";
-                          const url = `${window.location.origin}/check-in?eventId=${evt.id}${pinParam}`;
+                          const url = `${window.location.origin}/check-in?eventId=${evt.id}`;
                           navigator.clipboard.writeText(url);
                           setCopiedScannerEventId(evt.id);
-                          showToast("✓ Staff link with Gate PIN copied! Gate volunteers can scan immediately.");
+                          showToast("✓ Gate scanner link copied! Share with your team along with the Gate PIN.");
                           setTimeout(() => setCopiedScannerEventId(null), 2500);
                         }}
                         className="inline-flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer border border-gray-200"
-                        title="Copy direct gate link with pre-authorized PIN for volunteer check-in staff"
+                        title="Copy direct gate link for volunteer check-in staff"
                       >
                         {copiedScannerEventId === evt.id ? (
                           <>
@@ -1845,14 +1844,14 @@ export function OrganizerDashboardClient({
                           </>
                         ) : (
                           <>
-                            <Copy size={14} /> Copy Staff Link
+                            <Copy size={14} /> Copy Gate Link
                           </>
                         )}
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-600 pt-0.5">
                       <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
-                      <span>Protected gate · Auto-unlocked for Organizer or with 6-digit PIN</span>
+                      <span>Protected gate · 6-digit Gate Key required to unlock scanner</span>
                     </div>
                   </div>
                 ))}
