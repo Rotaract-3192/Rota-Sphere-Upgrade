@@ -698,7 +698,7 @@ export async function checkInEntireBulkGroupAction(params: {
 }
 
 export async function getScannerEventsAction(): Promise<{
-  events: Array<{ id: string; title: string; city: string; start_date: string }>;
+  events: Array<{ id: string; title: string; city: string; start_date: string; access_password?: string | null }>;
 }> {
   try {
     const user = await getCurrentUser();
@@ -715,7 +715,7 @@ export async function getScannerEventsAction(): Promise<{
     }
 
     const { data } = await executeSql(`
-      SELECT id, title, city, start_date 
+      SELECT id, title, city, start_date, access_password
       FROM saas_events 
       WHERE ${whereClause}
       ORDER BY start_date DESC 

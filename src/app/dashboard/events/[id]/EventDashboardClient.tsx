@@ -34,6 +34,7 @@ import {
   Send,
   ChevronRight,
   ShieldCheck,
+  Lock,
   X,
   Loader2,
   DollarSign,
@@ -85,6 +86,7 @@ export function EventDashboardClient({
   // Notifications
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
 
   // Modals & Action loading
@@ -581,6 +583,52 @@ export function EventDashboardClient({
                 )}
               </div>
             </div>
+
+            {/* ── Access Code Card ─────────────────────────────────────────── */}
+            {event.access_password && (
+              <div className="bg-white dark:bg-gray-900 border-2 border-amber-200 dark:border-amber-700/60 rounded-3xl p-6 sm:p-8 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center shrink-0">
+                      <Lock size={22} className="text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">
+                        Event Access Code
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                        Share this 6-digit code only with authorised attendees or your team. It controls access to restricted booking pages.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Code display + copy */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="font-mono text-3xl font-black tracking-[0.3em] text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-5 py-3 rounded-2xl select-all">
+                      {event.access_password}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(String(event.access_password));
+                        setCopiedCode(true);
+                        showToast("✓ Access code copied!");
+                        setTimeout(() => setCopiedCode(false), 2500);
+                      }}
+                      className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950 hover:bg-amber-100 dark:hover:bg-amber-900 border border-amber-200 dark:border-amber-700 flex items-center justify-center transition-all text-amber-600 dark:text-amber-400 cursor-pointer active:scale-95"
+                      title="Copy access code"
+                    >
+                      {copiedCode ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-amber-100 dark:border-amber-900/50 flex items-center gap-2 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                  <AlertCircle size={13} className="shrink-0" />
+                  <span>Do NOT share this code publicly — it controls who can access restricted passes for this event.</span>
+                </div>
+              </div>
+            )}
 
             {/* Ticket Tier Breakdown */}
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">

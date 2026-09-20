@@ -34,6 +34,7 @@ import {
   History,
   Keyboard,
   X,
+  Lock,
   ShieldCheck,
   Building,
   Check,
@@ -145,7 +146,7 @@ function CheckInScannerContent() {
   const isUrlLocked = initialEventId !== "";
 
   const [selectedEventId, setSelectedEventId] = useState(initialEventId);
-  const [eventsList, setEventsList] = useState<Array<{ id: string; title: string; city: string }>>([]);
+  const [eventsList, setEventsList] = useState<Array<{ id: string; title: string; city: string; access_password?: string | null }>>([]);
   const [gateName] = useState("Main Entrance");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -191,6 +192,41 @@ function CheckInScannerContent() {
   const lastScanTimestampRef = useRef<number>(0);
   const lastScannedTokenRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ── Access Code Gate ─────────────────────────────────────────────────────
+  const [pinUnlocked, setPinUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const [pinShake, setPinShake] = useState(false);
+
+  const selectedEvent = eventsList.find((e) => e.id === selectedEventId) || null;
+  const requiresPin = Boolean(selectedEvent?.access_password);
+  const isLocked = requiresPin && !pinUnlocked;
+
+  // Reset pin gate when a different event is selected
+  const prevEventIdRef = useRef(selectedEventId);
+  useEffect(() => {
+    if (prevEventIdRef.current !== selectedEventId) {
+      prevEventIdRef.current = selectedEventId;
+      setPinUnlocked(false);
+      setPinInput("");
+      setPinError(false);
+    }
+  }, [selectedEventId]);
+
+  function handlePinSubmit() {
+    const correct = selectedEvent?.access_password;
+    if (!correct) return;
+    if (pinInput.trim() === correct.trim()) {
+      setPinError(false);
+      setPinUnlocked(true);
+    } else {
+      setPinError(true);
+      setPinShake(true);
+      setPinInput("");
+      setTimeout(() => setPinShake(false), 600);
+    }
+  }
 
   // Load events list on mount
   useEffect(() => {
@@ -673,8 +709,69 @@ function CheckInScannerContent() {
         </header>
 
         {/* ── 2. CAMERA VIEWFINDER & SCAN OVERLAY ─────────────────────────── */}
-        <main className="relative flex-1 min-h-[400px] sm:min-h-[480px] bg-black rounded-3xl border border-gray-800 overflow-hidden shadow-2xl flex items-center justify-center">
-          
+        {isLocked ? (
+          /* ── ACCESS CODE PIN WALL ─────────────────────────────────────── */
+          <div className="flex-1 flex items-center justify-center px-4 py-8">
+            <div
+              className={`max-w-sm w-full bg-gray-900 border-2 ${pinError ? "border-red-500/60" : "border-gray-700"} rounded-3xl p-8 text-center space-y-6 shadow-2xl transition-all ${
+                pinShake ? "animate-[shake_0.4s_ease-in-out]" : ""
+              }`}
+            >
+              <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto">
+                <Lock size={30} className="text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white">Scanner Locked</h2>
+                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                  Enter the 6-digit access code for<br />
+                  <span className="font-bold text-gray-200">{selectedEvent?.title}</span>
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={pinInput}
+                  autoFocus
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setPinInput(val);
+                    setPinError(false);
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handlePinSubmit(); }}
+                  placeholder="──────"
+                  className={`w-full text-center font-mono text-3xl font-black tracking-[0.4em] bg-gray-800 border-2 ${
+                    pinError ? "border-red-500 text-red-400" : "border-gray-600 text-white focus:border-[#0758fc]"
+                  } rounded-2xl py-4 outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                />
+                {pinError && (
+                  <p className="text-xs font-bold text-red-400 flex items-center justify-center gap-1.5">
+                    <ShieldAlert size={13} />
+                    Incorrect code — try again
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={pinInput.length !== 6}
+                onClick={handlePinSubmit}
+                className="w-full bg-[#0758fc] hover:bg-[#054fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm py-3.5 rounded-2xl transition-all shadow-lg shadow-[#0758fc]/30 active:scale-95 cursor-pointer"
+              >
+                <ShieldCheck size={16} className="inline mr-2" />
+                Unlock Scanner
+              </button>
+
+              <p className="text-[11px] text-gray-500">
+                Contact your event organiser if you don&apos;t have the access code.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <main className="relative flex-1 min-h-[400px] sm:min-h-[480px] bg-black rounded-3xl border border-gray-800 overflow-hidden shadow-2xl flex items-center justify-center">
           {/* Html5Qrcode Hardware-Accelerated Scanner Viewport */}
           <div
             id="qr-reader-viewport"
@@ -1103,7 +1200,8 @@ function CheckInScannerContent() {
               </div>
             </div>
           )}
-        </main>
+          </main>
+        )}
 
         {/* ── 4. QUICK PASS SIMULATION & STATS BAR ───────────────────────── */}
         <div className="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2.5 text-xs">

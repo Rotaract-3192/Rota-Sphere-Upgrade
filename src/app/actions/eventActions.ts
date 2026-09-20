@@ -368,7 +368,14 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
       userEmail: user.email,
     });
 
-    // 2. Insert Event
+    // 2. Generate unique 6-digit access code
+    const accessCode = String(
+      typeof crypto !== "undefined" && crypto.getRandomValues
+        ? Number(crypto.getRandomValues(new Uint32Array(1))[0] % 900000) + 100000
+        : Math.floor(100000 + Math.random() * 900000)
+    );
+
+    // 3. Insert Event
     const insertEventSql = `
       INSERT INTO saas_events (
         organization_id,
@@ -404,6 +411,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         contact_phone,
         upi_id,
         upi_payee_name,
+        access_password,
         tags
       ) VALUES (
         ${escapeSql(organizationId)},
@@ -439,6 +447,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ${escapeSql(input.contactPhone)},
         ${escapeSql(input.upiId?.trim() || "rotaractdistrict3192@okaxis")},
         ${escapeSql(input.upiPayeeName?.trim() || input.hostingClub?.trim() || "District 3192 Rotaract")},
+        ${escapeSql(accessCode)},
         ${input.tags && input.tags.length > 0 ? `ARRAY[${input.tags.map((t) => escapeSql(t)).join(",")}]::text[]` : `ARRAY[]::text[]`}
       )
       RETURNING id, slug;
