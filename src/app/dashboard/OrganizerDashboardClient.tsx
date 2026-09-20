@@ -50,6 +50,7 @@ import {
   Building,
   Menu,
   KeyRound,
+  RefreshCw,
 } from "lucide-react";
 import {
   duplicateEventAction,
@@ -59,6 +60,7 @@ import {
   permanentDeleteEventAction,
   getEventRegistrationsAction,
 } from "@/app/actions/eventActions";
+import { regenerateEventGatePinAction } from "@/app/actions/checkInActions";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 import { CreateEventWizardModal } from "@/components/dashboard/CreateEventWizardModal";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
@@ -133,6 +135,27 @@ export function OrganizerDashboardClient({
   const [copiedScannerEventId, setCopiedScannerEventId] = useState<string | null>(null);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
   const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
+
+  // Gate PIN state and regeneration
+  const [eventGatePins, setEventGatePins] = useState<Record<string, string>>({});
+  const [regeneratingPinEventId, setRegeneratingPinEventId] = useState<string | null>(null);
+
+  async function handleRegeneratePin(eventId: string) {
+    setRegeneratingPinEventId(eventId);
+    try {
+      const res = await regenerateEventGatePinAction(eventId);
+      if (res.success && res.newPin) {
+        setEventGatePins((prev) => ({ ...prev, [eventId]: res.newPin! }));
+        showToast(`✓ New random Gate PIN (${res.newPin}) generated and saved!`);
+      } else {
+        showToast(`Failed to regenerate PIN: ${res.error || "Unknown error"}`);
+      }
+    } catch {
+      showToast("Connection error while generating PIN.");
+    } finally {
+      setRegeneratingPinEventId(null);
+    }
+  }
 
   function showToast(msg: string) {
     setToastMessage(msg);
@@ -1800,24 +1823,38 @@ export function OrganizerDashboardClient({
                       <div className="flex items-center gap-2">
                         <KeyRound size={16} className="text-amber-600 shrink-0" />
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Event Gate PIN</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Event Gate PIN / Key</p>
                           <p className="font-mono text-base font-black text-amber-950 tracking-widest leading-none mt-0.5">
-                            {evt.access_password || "123456"}
+                            {eventGatePins[evt.id] || evt.access_password || "••••••"}
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const pin = evt.access_password || "123456";
-                          navigator.clipboard.writeText(String(pin));
-                          showToast(`✓ Gate PIN (${pin}) copied to clipboard!`);
-                        }}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-950 bg-white hover:bg-amber-100/60 border border-amber-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer shadow-xs"
-                        title="Copy 6-digit Gate PIN"
-                      >
-                        <Copy size={12} /> Copy PIN
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleRegeneratePin(evt.id)}
+                          disabled={regeneratingPinEventId === evt.id}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                          title="Generate a new random 6-digit Gate PIN"
+                        >
+                          <RefreshCw size={11} className={regeneratingPinEventId === evt.id ? "animate-spin" : ""} />
+                          <span>New PIN</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const pin = eventGatePins[evt.id] || evt.access_password;
+                            if (pin) {
+                              navigator.clipboard.writeText(String(pin));
+                              showToast(`✓ Gate PIN (${pin}) copied to clipboard!`);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-950 bg-white hover:bg-amber-100/60 border border-amber-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer shadow-xs"
+                          title="Copy 6-digit Gate PIN"
+                        >
+                          <Copy size={12} /> Copy PIN
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-1">

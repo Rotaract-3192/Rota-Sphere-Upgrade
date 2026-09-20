@@ -87,7 +87,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       const { data: eventData } = await executeSql(`
         SELECT access_password, title FROM saas_events WHERE id = ${escapeSql(targetEventId)} LIMIT 1;
       `);
-      if (eventData && (eventData[0]?.access_password || "123456").trim() === providedPin) {
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === providedPin) {
         isAuthorized = true;
         authRole = "staff";
         scannerUserId = user?.profile?.full_name
@@ -505,7 +505,7 @@ export async function approveAndCheckInTicketAction(params: {
       const { data: eventData } = await executeSql(`
         SELECT access_password FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
       `);
-      if (eventData && (eventData[0]?.access_password || "123456").trim() === params.gatePin.trim()) {
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === params.gatePin.trim()) {
         isAuthorized = true;
         scannerUserId = user?.profile?.full_name
           ? `${user.profile.full_name} (Gate PIN)`
@@ -699,7 +699,7 @@ export async function checkInEntireBulkGroupAction(params: {
       const { data: eventData } = await executeSql(`
         SELECT access_password FROM saas_events WHERE id = ${escapeSql(params.eventId)} LIMIT 1;
       `);
-      if (eventData && (eventData[0]?.access_password || "123456").trim() === params.gatePin.trim()) {
+      if (eventData && eventData[0]?.access_password && eventData[0].access_password.trim() === params.gatePin.trim()) {
         isAuthorized = true;
         scannerUserId = user?.profile?.full_name
           ? `${user.profile.full_name} (Gate PIN)`
@@ -834,15 +834,22 @@ export async function verifyGateAccessAction(params: {
     const eventTitle = evt.title;
     const eventCity = evt.city;
     const startDate = evt.start_date;
-    const correctPin = (evt.access_password || "").trim();
+    // 2. Retrieve or dynamically generate unique random 6-digit Gate PIN
+    let correctPin = (evt.access_password || "").trim();
+    if (!correctPin) {
+      correctPin = String(Math.floor(100000 + Math.random() * 900000));
+      await executeSql(`
+        UPDATE saas_events 
+        SET access_password = ${escapeSql(correctPin)}
+        WHERE id = ${escapeSql(evt.id)};
+      `);
+    }
 
-    // 2. Validate 6-digit Gate Key
     const user = await getCurrentUser();
     const providedPin = (params.pin || "").trim();
-    const expectedPin = (evt.access_password || "123456").trim();
 
-    // Gate Scanner access strictly requires the event's 6-digit Gate Key / PIN
-    if (providedPin && providedPin === expectedPin) {
+    // Gate Scanner access strictly requires the event's random 6-digit Gate Key
+    if (providedPin && providedPin === correctPin) {
       const userRole = user?.profile?.role;
       const userName = user?.profile?.full_name || (user ? user.email : "Gate Staff");
       return {
@@ -872,4 +879,48 @@ export async function verifyGateAccessAction(params: {
     return { authorized: false, error: `Gate verification failed: ${err?.message || String(err)}` };
   }
 }
+
+/**
+ * Regenerate a secure random 6-digit Gate PIN for an event.
+ * Only authenticated users with organizer or admin roles can regenerate event PINs.
+ */
+export async function regenerateEventGatePinAction(eventId: string): Promise<{
+  success: boolean;
+  newPin?: string;
+  error?: string;
+}> {
+  try {
+    const cleanId = eventId?.trim();
+    if (!cleanId) {
+      return { success: false, error: "Event ID is required" };
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    // Generate cryptographically secure random 6-digit PIN
+    const newPin = String(
+      typeof crypto !== "undefined" && crypto.getRandomValues
+        ? Number(crypto.getRandomValues(new Uint32Array(1))[0] % 900000) + 100000
+        : Math.floor(100000 + Math.random() * 900000)
+    );
+
+    const { error } = await executeSql(`
+      UPDATE saas_events
+      SET access_password = ${escapeSql(newPin)}, updated_at = NOW()
+      WHERE id = ${escapeSql(cleanId)};
+    `);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, newPin };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
 
