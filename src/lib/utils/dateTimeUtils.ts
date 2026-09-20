@@ -312,3 +312,49 @@ export function formatCheckedInTime(dateInput: string | Date | number | null | u
   }
 }
 
+/**
+ * Determines whether an event has concluded based on its status and date range.
+ * Supports events with or without explicit end dates.
+ */
+export function isEventConcluded(
+  event: {
+    start_date?: string | Date | null;
+    startDate?: string | Date | null;
+    end_date?: string | Date | null;
+    endDate?: string | Date | null;
+    status?: string | null;
+  } | null | undefined,
+  referenceTime: Date = new Date()
+): boolean {
+  if (!event) return false;
+  const status = (event.status || "").toUpperCase();
+  if (status === "COMPLETED" || status === "ENDED" || status === "CANCELLED" || status === "REGISTRATION_CLOSED") {
+    return true;
+  }
+
+  const endVal = event.end_date ?? event.endDate;
+  const startVal = event.start_date ?? event.startDate;
+
+  const nowMs = referenceTime.getTime();
+
+  // If explicit end date is provided, check if it has passed
+  if (endVal) {
+    const endD = new Date(endVal);
+    if (!isNaN(endD.getTime())) {
+      return endD.getTime() < nowMs;
+    }
+  }
+
+  // If only start date is provided, check if the day of the event has concluded
+  if (startVal) {
+    const startD = new Date(startVal);
+    if (!isNaN(startD.getTime())) {
+      const endOfDay = new Date(startD);
+      endOfDay.setHours(23, 59, 59, 999);
+      return endOfDay.getTime() < nowMs;
+    }
+  }
+
+  return false;
+}
+

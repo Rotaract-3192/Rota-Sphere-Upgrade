@@ -54,6 +54,11 @@ export default function GalleryPage() {
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
+  const isLikedActive = activeItem ? !!likedMap[activeItem.id] : false;
+  const canDeleteActive = Boolean(
+    activeItem && (isSuperAdmin || (userEmail && userEmail === activeItem.uploader_email?.toLowerCase()))
+  );
+
   // Load photos from real database
   async function loadPhotos() {
     setLoading(true);
@@ -91,6 +96,11 @@ export default function GalleryPage() {
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, likes: it.likes + (wasLiked ? -1 : 1) } : it))
     );
+    if (activeItem && activeItem.id === id) {
+      setActiveItem((prev) =>
+        prev ? { ...prev, likes: Math.max(0, prev.likes + (wasLiked ? -1 : 1)) } : null
+      );
+    }
     if (!wasLiked) {
       await toggleGalleryPhotoLikeAction(id);
     }
@@ -329,15 +339,15 @@ export default function GalleryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setActiveItem(null)}
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4 md:p-6"
+            className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6"
           >
             <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-4xl bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row text-gray-900 dark:text-white max-h-[92vh] sm:max-h-none overflow-y-auto"
+              className="w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row text-gray-900 dark:text-white max-h-[90vh] overflow-y-auto"
             >
               {/* Modal Image Slider */}
               <div className="relative w-full md:w-3/5 aspect-4/3 sm:aspect-video md:aspect-auto min-h-[260px] sm:min-h-[380px] bg-black shrink-0 flex items-center justify-center">
@@ -386,25 +396,77 @@ export default function GalleryPage() {
                   </>
                 )}
                 
-                {/* Close Button on Mobile overlay */}
-                <button
-                  onClick={() => setActiveItem(null)}
-                  className="sm:hidden absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer shadow-lg active:scale-95 z-20"
-                >
-                  <X size={18} />
-                </button>
+                {/* Top-Right Action Controls (Delete, Share, Like, Close) */}
+                <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5 sm:gap-2 z-20">
+                  {canDeleteActive && (
+                    <button
+                      onClick={(e) => {
+                        handleDelete(activeItem.id, e);
+                      }}
+                      className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg cursor-pointer"
+                      aria-label="Delete moment"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={(e) => handleShare(activeItem, e)}
+                    className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg cursor-pointer"
+                    aria-label="Share photo"
+                  >
+                    <Share2 size={14} />
+                  </button>
+
+                  <button
+                    onClick={(e) => handleToggleLike(activeItem.id, e)}
+                    className={`w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg cursor-pointer ${
+                      isLikedActive
+                        ? "bg-[#0758fc] text-white shadow-[#0758fc]/40"
+                        : "bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200"
+                    }`}
+                    aria-label="Like moment"
+                  >
+                    <Heart size={15} fill={isLikedActive ? "currentColor" : "none"} />
+                  </button>
+
+                  <button
+                    onClick={() => setActiveItem(null)}
+                    className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-black/65 hover:bg-black/85 text-white backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg cursor-pointer"
+                    aria-label="Close modal"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
               </div>
 
               {/* Modal Meta Details */}
-              <div className="w-full md:w-2/5 p-5 sm:p-6 md:p-8 flex flex-col justify-between space-y-4 sm:space-y-6">
+              <div className="w-full md:w-2/5 p-5 sm:p-6 md:p-8 flex flex-col justify-between space-y-4">
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="hidden sm:flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#0758fc]/10 text-[#0758fc] tracking-wider">
-                      {activeItem.category}
-                    </span>
+                  {/* Top Header with Category & Likes */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-[#0758fc]/10 text-[#0758fc] tracking-wider">
+                        {activeItem.category}
+                      </span>
+                      <button
+                        onClick={(e) => handleToggleLike(activeItem.id, e)}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                          isLikedActive
+                            ? "bg-[#0758fc] text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                        aria-label="Like count"
+                      >
+                        <Heart size={12} fill={isLikedActive ? "currentColor" : "none"} />
+                        <span>{activeItem.likes}</span>
+                      </button>
+                    </div>
+
                     <button
                       onClick={() => setActiveItem(null)}
-                      className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                      className="hidden md:flex w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-900 dark:hover:text-white items-center justify-center cursor-pointer transition-colors"
+                      aria-label="Close modal"
                     >
                       <X size={16} />
                     </button>
@@ -436,22 +498,19 @@ export default function GalleryPage() {
                   </div>
                 </div>
 
+                {/* Bottom Action Footer: Share & Close */}
                 <div className="flex items-center gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <button
-                    onClick={(e) => handleToggleLike(activeItem.id, e)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer active:scale-95 touch-manipulation ${
-                      likedMap[activeItem.id]
-                        ? "bg-[#0758fc] text-white shadow-md shadow-[#0758fc]/20"
-                        : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
-                    }`}
+                    onClick={(e) => handleShare(activeItem, e)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-2xl text-xs font-bold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all cursor-pointer active:scale-95 touch-manipulation"
                   >
-                    <Heart size={15} fill={likedMap[activeItem.id] ? "currentColor" : "none"} />
-                    <span>{likedMap[activeItem.id] ? "Liked" : "Like Photo"}</span>
+                    <Share2 size={14} />
+                    <span>Share Moment</span>
                   </button>
 
                   <button
                     onClick={() => setActiveItem(null)}
-                    className="px-5 py-3 rounded-2xl bg-gray-900 dark:bg-gray-700 hover:bg-black text-white text-xs font-bold cursor-pointer active:scale-95"
+                    className="flex-1 sm:flex-none px-6 py-2.5 sm:py-3 rounded-2xl bg-gray-900 dark:bg-gray-700 hover:bg-black text-white text-xs font-bold cursor-pointer active:scale-95 transition-all text-center"
                   >
                     Close
                   </button>

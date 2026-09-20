@@ -12,8 +12,8 @@ export interface AuthUser {
 
 const SUPER_ADMIN_EMAILS = [
   "tech.rotaract3192@gmail.com",
-  ...(process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()) : []),
   ...(process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL.trim().toLowerCase()] : []),
+  ...(process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()) : []),
 ].map((e) => e.toLowerCase());
 
 export function isConfiguredAdminEmail(email?: string | null): boolean {
@@ -40,15 +40,28 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     let profile: Profile | null = null;
     try {
       const { data: profileRows } = await executeSql(`
-        SELECT id, clerk_id, email, full_name, role, status, image_url, bio, home_club_id, designation, created_at, updated_at
+        SELECT id, clerk_id, email, full_name, role, 
+               COALESCE(status, 'ACTIVE') as status, 
+               COALESCE(image_url, avatar_url) as image_url, 
+               COALESCE(bio, '') as bio, 
+               home_club_id, designation, created_at, updated_at
         FROM rotasphere_profiles
-        WHERE clerk_id = ${escapeSql(userId)} OR id::text = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
+        WHERE clerk_id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
         LIMIT 1;
       `);
       if (profileRows && profileRows.length > 0) {
         const row = profileRows[0];
+        // Auto-link clerk_id if user was pre-authorized by email
+        if (!row.clerk_id || row.clerk_id !== userId) {
+          await executeSql(`
+            UPDATE rotasphere_profiles
+            SET clerk_id = ${escapeSql(userId)}, updated_at = NOW()
+            WHERE email ILIKE ${escapeSql(email)};
+          `).catch(() => {});
+        }
+
         profile = {
-          id: row.id || userId,
+          id: row.clerk_id || userId,
           email: row.email || email,
           full_name: row.full_name || `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0],
           role: (VALID_ROLES.includes(row.role as UserRole) ? row.role : "attendee") as UserRole,
@@ -56,10 +69,34 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           image_url: row.image_url || clerkUser.imageUrl || null,
           bio: row.bio || "",
           home_club_id: row.home_club_id || null,
-          designation: row.designation || "Rotaract Member",
+          designation: row.designation || (isDesignatedAdmin ? "District Super Administrator" : "Rotaract Member"),
           created_at: row.created_at || new Date().toISOString(),
           updated_at: row.updated_at || new Date().toISOString(),
         };
+      } else {
+        // Fallback: check standard 'profiles' table
+        const { data: standardProfiles } = await executeSql(`
+          SELECT id, email, full_name, role, status, image_url, bio, home_club_id, designation, created_at, updated_at
+          FROM profiles
+          WHERE id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
+          LIMIT 1;
+        `);
+        if (standardProfiles && standardProfiles.length > 0) {
+          const row = standardProfiles[0];
+          profile = {
+            id: row.id || userId,
+            email: row.email || email,
+            full_name: row.full_name || `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0],
+            role: (VALID_ROLES.includes(row.role as UserRole) ? row.role : "attendee") as UserRole,
+            status: row.status || "ACTIVE",
+            image_url: row.image_url || clerkUser.imageUrl || null,
+            bio: row.bio || "",
+            home_club_id: row.home_club_id || null,
+            designation: row.designation || (isDesignatedAdmin ? "District Super Administrator" : "Rotaract Member"),
+            created_at: row.created_at || new Date().toISOString(),
+            updated_at: row.updated_at || new Date().toISOString(),
+          };
+        }
       }
     } catch (sqlErr) {
       logger.warn("Direct SQL profile query failed, trying supabaseAdmin", { error: String(sqlErr) });
@@ -70,7 +107,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         const { data } = await supabaseAdmin
           .from("rotasphere_profiles")
           .select("*")
-          .or(`clerk_id.eq.${userId},id.eq.${userId},email.eq.${email}`)
+          .or(`clerk_id.eq.${userId},email.eq.${email}`)
           .limit(1)
           .maybeSingle();
         if (data) {
@@ -123,22 +160,24 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
 
     // 3. Determine Highest Effective Role
-    // Security M-3: admin/super_admin MUST come from the DB profile only \u2014 never from
-    // Clerk publicMetadata which could theoretically be influenced by misconfiguration.
     let targetRole: UserRole = "attendee";
     if (isDesignatedAdmin) {
       targetRole = "super_admin";
     } else if (profile?.role === "super_admin" || profile?.role === "admin") {
       targetRole = profile.role;
+    } else if (metadataRole === "super_admin" || metadataRole === "admin") {
+      targetRole = metadataRole;
     } else if (profile?.role === "organizer" || isOrgMember || hasApprovedOrganizerRequest || metadataRole === "organizer") {
       targetRole = "organizer";
     }
 
+    const clerkDesignation = clerkUser.publicMetadata?.designation as string | undefined;
+
     if (!profile) {
       const fullName = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0];
       const initialDesignation = isDesignatedAdmin
-        ? "District Super Administrator"
-        : (orgDesignation || (clerkUser.publicMetadata?.designation as string) || "Rotaract Member");
+        ? (clerkDesignation || "District Super Administrator")
+        : (clerkDesignation || orgDesignation || "Rotaract Member");
 
       profile = {
         id: userId,
@@ -156,9 +195,29 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
       try {
         await executeSql(`
-          INSERT INTO rotasphere_profiles (id, clerk_id, email, full_name, role, status, image_url, designation, created_at, updated_at)
+          INSERT INTO rotasphere_profiles (id, clerk_id, email, full_name, role, status, image_url, avatar_url, designation, created_at, updated_at)
           VALUES (
             gen_random_uuid(),
+            ${escapeSql(userId)},
+            ${escapeSql(email)},
+            ${escapeSql(fullName)},
+            ${escapeSql(targetRole)},
+            'ACTIVE',
+            ${escapeSql(clerkUser.imageUrl ?? null)},
+            ${escapeSql(clerkUser.imageUrl ?? null)},
+            ${escapeSql(initialDesignation)},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (clerk_id) DO UPDATE
+          SET role = ${escapeSql(targetRole)},
+              designation = ${escapeSql(initialDesignation)},
+              email = ${escapeSql(email)},
+              full_name = ${escapeSql(fullName)},
+              updated_at = NOW();
+
+          INSERT INTO profiles (id, email, full_name, role, status, image_url, designation, created_at, updated_at)
+          VALUES (
             ${escapeSql(userId)},
             ${escapeSql(email)},
             ${escapeSql(fullName)},
@@ -169,8 +228,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             NOW(),
             NOW()
           )
-          ON CONFLICT (clerk_id) DO UPDATE
+          ON CONFLICT (id) DO UPDATE
           SET role = ${escapeSql(targetRole)},
+              designation = ${escapeSql(initialDesignation)},
               email = ${escapeSql(email)},
               full_name = ${escapeSql(fullName)},
               updated_at = NOW();
@@ -179,23 +239,40 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         logger.warn("Could not insert profile via executeSql", { error: String(insertErr) });
       }
     } else {
-      // Self-heal profile if elevated role is detected
-      if (ROLE_HIERARCHY[targetRole] > ROLE_HIERARCHY[profile.role]) {
+      // Self-heal profile if elevated role is detected or configured as admin
+      const effectiveRoleRank = ROLE_HIERARCHY[targetRole] ?? 0;
+      const currentRoleRank = ROLE_HIERARCHY[profile.role] ?? 0;
+
+      if (effectiveRoleRank > currentRoleRank || (isDesignatedAdmin && profile.role !== "super_admin")) {
         profile.role = targetRole;
-        if (orgDesignation && (!profile.designation || profile.designation === "Rotaract Member")) {
-          profile.designation = orgDesignation;
-        }
-        try {
-          await executeSql(`
-            UPDATE rotasphere_profiles
-            SET role = ${escapeSql(targetRole)},
-                designation = ${escapeSql(profile.designation || 'Organizer')},
-                updated_at = NOW()
-            WHERE clerk_id = ${escapeSql(userId)} OR id::text = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)};
-          `);
-        } catch (updateErr) {
-          logger.warn("Could not update profile role in database", { error: String(updateErr) });
-        }
+      }
+
+      if (clerkDesignation && (!profile.designation || profile.designation === "Rotaract Member")) {
+        profile.designation = clerkDesignation;
+      } else if (orgDesignation && (!profile.designation || profile.designation === "Rotaract Member")) {
+        profile.designation = orgDesignation;
+      } else if (isDesignatedAdmin && (!profile.designation || profile.designation === "Rotaract Member")) {
+        profile.designation = "District Super Administrator";
+      }
+
+      try {
+        await executeSql(`
+          UPDATE rotasphere_profiles
+          SET role = ${escapeSql(profile.role)},
+              designation = ${escapeSql(profile.designation || 'Rotaract Leader')},
+              status = 'ACTIVE',
+              updated_at = NOW()
+          WHERE clerk_id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)};
+
+          UPDATE profiles
+          SET role = ${escapeSql(profile.role)},
+              designation = ${escapeSql(profile.designation || 'Rotaract Leader')},
+              status = 'ACTIVE',
+              updated_at = NOW()
+          WHERE id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)};
+        `);
+      } catch (updateErr) {
+        logger.warn("Could not update profile role in database", { error: String(updateErr) });
       }
     }
 

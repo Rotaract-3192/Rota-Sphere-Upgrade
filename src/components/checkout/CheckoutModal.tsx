@@ -53,6 +53,12 @@ import {
 import { compressImageFile } from "@/lib/utils/imageCompressor";
 import { getDistrictClubsWithZones, getClubZone } from "@/lib/utils/zoneResolver";
 import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
+import {
+  sortTiersByAvailability,
+  getTierScheduleStatus,
+  formatCountdown,
+  type TierStatusInfo,
+} from "@/lib/utils/tierAvailability";
 import { SearchableClubSelect } from "@/components/ui/SearchableClubSelect";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
@@ -74,38 +80,6 @@ interface CheckoutModalProps {
   initialSelectedTierId?: string;
 }
 
-interface TierStatusInfo {
-  state: "UPCOMING" | "LIVE" | "CLOSED" | "SOLD_OUT";
-  badgeText: string;
-  badgeClass: string;
-  detailText: string;
-  canBook: boolean;
-  releaseDate?: Date;
-  diffMs?: number;
-}
-
-function formatCountdown(diffMs: number): string {
-  if (diffMs <= 0) return "Available Now";
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHrs = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHrs / 24);
-
-  if (diffDays > 0) {
-    const remHrs = diffHrs % 24;
-    return remHrs > 0 ? `Opens in ${diffDays}d ${remHrs}h` : `Opens in ${diffDays} day${diffDays > 1 ? "s" : ""}`;
-  }
-  if (diffHrs > 0) {
-    const remMins = diffMins % 60;
-    return remMins > 0 ? `Opens in ${diffHrs}h ${remMins}m` : `Opens in ${diffHrs}h`;
-  }
-  if (diffMins > 0) {
-    const remSecs = diffSecs % 60;
-    return `Opens in ${diffMins}m ${remSecs}s`;
-  }
-  return `Opens in ${diffSecs}s`;
-}
-
 export function formatSecondsToTimer(totalSecs: number | null | undefined, defaultSecs: number = 300): string {
   if (totalSecs === null || totalSecs === undefined) {
     const defaultMins = Math.floor(defaultSecs / 60);
@@ -116,93 +90,6 @@ export function formatSecondsToTimer(totalSecs: number | null | undefined, defau
   const mins = Math.floor(s / 60);
   const secs = s % 60;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-}
-
-function getTierScheduleStatus(
-  tier: SaasTicketTier,
-  currentTime: Date = new Date(),
-  userSelectedCount: number = 0
-): TierStatusInfo {
-  const cap = Number(tier.total_capacity) || 9999;
-  const sold = Number(tier.sold_count) || 0;
-  const reserved = Number(tier.reserved_count) || 0;
-
-  // Total unheld seats remaining in general (locked passes are immediately deducted from the count)
-  const slabSize = tier.is_bulk_slab && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
-  const remaining = Math.max(0, cap - (sold + reserved));
-
-  // Seats available for this active user session (accounting for tickets already held in user's current session)
-  const userSelectedSeats = userSelectedCount * slabSize;
-  const othersReserved = Math.max(0, reserved - userSelectedSeats);
-  const remainingForUser = Math.max(0, cap - (sold + othersReserved));
-
-  if (remainingForUser < slabSize) {
-    if (cap - sold >= slabSize) {
-      return {
-        state: "SOLD_OUT",
-        badgeText: "In Checkout",
-        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700",
-        detailText: tier.is_bulk_slab ? "All group passes currently locked in checkout" : "Remaining passes currently locked in checkout",
-        canBook: false,
-      };
-    }
-    return {
-      state: "SOLD_OUT",
-      badgeText: "Sold Out",
-      badgeClass: "bg-gray-100 dark:bg-gray-700 text-gray-500",
-      detailText: tier.is_bulk_slab ? "All group passes allocated" : "All seats allocated",
-      canBook: false,
-    };
-  }
-
-  if (tier.sales_start) {
-    const start = new Date(tier.sales_start);
-    if (currentTime.getTime() < start.getTime()) {
-      const diffMs = start.getTime() - currentTime.getTime();
-      return {
-        state: "UPCOMING",
-        badgeText: `🔒 ${formatCountdown(diffMs)}`,
-        badgeClass: "bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold",
-        detailText: `🔒 Locked: Releases on ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} at ${start.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`,
-        canBook: false,
-        releaseDate: start,
-        diffMs,
-      };
-    }
-  }
-
-  if (tier.sales_end) {
-    const end = new Date(tier.sales_end);
-    if (currentTime.getTime() > end.getTime()) {
-      return {
-        state: "CLOSED",
-        badgeText: "Closed",
-        badgeClass: "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800",
-        detailText: `Closed on ${end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
-        canBook: false,
-      };
-    } else {
-      const diffMs = end.getTime() - currentTime.getTime();
-      const diffHrs = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffHrs / 24);
-      const remainingTime = diffDays > 0 ? `${diffDays}d left` : `${Math.max(1, diffHrs)}h left`;
-      return {
-        state: "LIVE",
-        badgeText: `🔥 Ends in ${remainingTime}`,
-        badgeClass: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
-        detailText: `${remaining} seats left`,
-        canBook: true,
-      };
-    }
-  }
-
-  return {
-    state: "LIVE",
-    badgeText: "Available",
-    badgeClass: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
-    detailText: `${remaining} seats left`,
-    canBook: true,
-  };
 }
 
 export function CheckoutModal({
@@ -236,7 +123,8 @@ export function CheckoutModal({
         return initial;
       }
     }
-    const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
+    const sorted = sortTiersByAvailability(tiers);
+    const firstBookable = sorted.find((t) => getTierScheduleStatus(t).canBook);
     if (firstBookable) {
       initial[firstBookable.id] = 1;
     }
@@ -251,7 +139,7 @@ export function CheckoutModal({
         targetTier = currentTiers.find((t) => t.id === initialSelectedTierId);
       }
       if (!targetTier || !getTierScheduleStatus(targetTier, currentTime).canBook) {
-        targetTier = currentTiers.find((t) => getTierScheduleStatus(t, currentTime).canBook);
+        targetTier = sortTiersByAvailability(currentTiers, currentTime).find((t) => getTierScheduleStatus(t, currentTime).canBook);
       }
 
       if (targetTier && getTierScheduleStatus(targetTier, currentTime).canBook) {
@@ -307,37 +195,18 @@ export function CheckoutModal({
     }
   }, []);
 
-  // Tier Staggering & Categorization (Bulk Slabs -> Early Bird -> General Release Dropdown -> VIP)
-  const bulkTiers = currentTiers.filter((t) => t.is_bulk_slab === true || t.tier_type === "BULK");
-  const regularTiers = currentTiers.filter((t) => !t.is_bulk_slab && t.tier_type !== "BULK");
+  // Tier Staggering & Categorization
+  // ALWAYS prioritize AVAILABLE slabs at the top!
+  const sortedCurrentTiers = sortTiersByAvailability(currentTiers, currentTime);
+  const availableTiers = sortedCurrentTiers.filter((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const unavailableTiers = sortedCurrentTiers.filter((t) => !getTierScheduleStatus(t, currentTime).canBook);
 
-  const earlyBirdTiers = regularTiers.filter((t) => /early/i.test(t.name) || t.tier_type === "EARLY_BIRD");
-  const generalTiers = regularTiers.filter(
-    (t) =>
-      (/(general|normal|standard|regular)/i.test(t.name) || t.tier_type === "REGULAR") &&
-      !/early/i.test(t.name) &&
-      t.tier_type !== "EARLY_BIRD"
-  );
-  const otherTiers = regularTiers.filter(
-    (t) =>
-      !/early/i.test(t.name) &&
-      t.tier_type !== "EARLY_BIRD" &&
-      !/(general|normal|standard|regular)/i.test(t.name) &&
-      t.tier_type !== "REGULAR"
-  );
-
-  const isEarlyBirdAvailable =
-    earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
-
-  const hasAnyBookableTier = currentTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = availableTiers.length > 0;
 
   const earliestUpcoming = currentTiers
     .map((t) => ({ tier: t, status: getTierScheduleStatus(t, currentTime) }))
     .filter((x) => x.status.state === "UPCOMING" && x.status.releaseDate)
     .sort((a, b) => (a.status.releaseDate!.getTime() - b.status.releaseDate!.getTime()))[0];
-
-  const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
 
   // Custom questions state
   const [customQuestions, setCustomQuestions] = useState<any[]>([]);
@@ -367,7 +236,8 @@ export function CheckoutModal({
       customAnswers?: Record<string, any>;
     }>
   >(() => {
-    const firstBookable = tiers.find((t) => getTierScheduleStatus(t).canBook);
+    const sorted = sortTiersByAvailability(tiers);
+    const firstBookable = sorted.find((t) => getTierScheduleStatus(t).canBook);
     if (firstBookable) {
       return [
         {
@@ -534,8 +404,9 @@ export function CheckoutModal({
     totalTicketCount += count * slabMultiplier;
   });
 
-  const holdDurationSeconds = hasBulkSelected ? 600 : 300;
-  const holdDurationMinutes = hasBulkSelected ? 10 : 5;
+  const isExtendedHold = totalTicketCount > 10 || hasBulkSelected;
+  const holdDurationSeconds = isExtendedHold ? 600 : 300;
+  const holdDurationMinutes = isExtendedHold ? 10 : 5;
 
   const discountAmount = couponApplied ? (subtotal * discountPercent) / 100 : 0;
   const fees = calculateOrderFees({
@@ -544,6 +415,26 @@ export function CheckoutModal({
   });
 
   const isFreeOrder = fees.totalPayable === 0;
+
+  // Helper to compute requested duration (10 min / 600s if > 10 tickets or bulk tier; 5 min / 300s otherwise)
+  const getComputedHoldDuration = useCallback(
+    (counts: Record<string, number>) => {
+      let totalTickets = 0;
+      let hasBulk = false;
+      currentTiers.forEach((t) => {
+        const c = counts[t.id] || 0;
+        if (c > 0) {
+          const slab = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
+          totalTickets += c * slab;
+          if (t.is_bulk_slab || t.tier_type === "BULK") {
+            hasBulk = true;
+          }
+        }
+      });
+      return totalTickets > 10 || hasBulk ? 600 : 300;
+    },
+    [currentTiers]
+  );
 
   // Robust ticket hold synchronization function
   const syncTicketHold = useCallback(
@@ -564,10 +455,7 @@ export function CheckoutModal({
         return;
       }
 
-      const isBulkInCounts = currentTiers.some(
-        (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (countsToReserve[t.id] || 0) > 0
-      );
-      const requestedDuration = isBulkInCounts ? 600 : 300;
+      const requestedDuration = getComputedHoldDuration(countsToReserve);
 
       try {
         const res = await reserveTicketHoldAction({
@@ -595,17 +483,14 @@ export function CheckoutModal({
         console.error("Hold reservation sync error:", err);
       }
     },
-    [event.id, userEmail, completedOrder, isFreeOrder, currentTiers, onTiersUpdate]
+    [event.id, userEmail, completedOrder, isFreeOrder, currentTiers, onTiersUpdate, getComputedHoldDuration]
   );
 
   async function handleRenewHold() {
     setIsRenewingHold(true);
     setErrorMessage(null);
     try {
-      const isBulkInCounts = currentTiers.some(
-        (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (selectedCounts[t.id] || 0) > 0
-      );
-      const requestedDuration = isBulkInCounts ? 600 : 300;
+      const requestedDuration = getComputedHoldDuration(selectedCounts);
       const sid = checkoutSessionIdRef.current || holdSessionId;
       const res = await reserveTicketHoldAction({
         eventId: event.id,
@@ -963,10 +848,8 @@ export function CheckoutModal({
           debounceHoldTimerRef.current = null;
         }
 
-        const isBulkInCounts = currentTiers.some(
-          (t) => (t.is_bulk_slab || t.tier_type === "BULK") && (selectedCounts[t.id] || 0) > 0
-        );
-        const requestedDuration = isBulkInCounts ? 600 : 300;
+        const requestedDuration = getComputedHoldDuration(selectedCounts);
+        const isExtended = requestedDuration === 600;
 
         const sid = checkoutSessionIdRef.current || holdSessionId;
         const holdRes = await reserveTicketHoldAction({
@@ -981,8 +864,8 @@ export function CheckoutModal({
           setLoading(false);
           setErrorMessage(
             holdRes.error ||
-              (isBulkInCounts
-                ? "All remaining group passes for this tier are currently locked in checkout by other attendees. Please wait 10 minutes and check again."
+              (isExtended
+                ? "All remaining passes for this tier are currently locked in checkout by other attendees. Please wait 10 minutes and check again."
                 : "All remaining passes for this tier are currently locked in checkout by other attendees. Please wait 5 minutes and check again.")
           );
           return;
@@ -1106,6 +989,135 @@ export function CheckoutModal({
     }
   }
 
+  const renderTierItem = (tier: SaasTicketTier) => {
+    const count = selectedCounts[tier.id] || 0;
+    const status = getTierScheduleStatus(tier, currentTime, count);
+    const isBulk = tier.is_bulk_slab === true || tier.tier_type === "BULK";
+    const slabSize = isBulk && tier.bulk_slab_size ? Number(tier.bulk_slab_size) : 1;
+    const cap = Number(tier.total_capacity) || 9999;
+    const sold = Number(tier.sold_count) || 0;
+    const reserved = Number(tier.reserved_count) || 0;
+    const othersReserved = Math.max(0, reserved - (count * slabSize));
+    const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
+    const tierMax = isBulk ? 5 : (tier.max_per_order ? Number(tier.max_per_order) : 50);
+    const maxAllowed = Math.min(tierMax, maxAvailableForUser);
+    const totalPrice = Number(tier.price) * slabSize;
+
+    return (
+      <div
+        key={tier.id}
+        className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+          count > 0
+            ? isBulk
+              ? "border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/40 shadow-xs"
+              : "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs"
+            : !status.canBook
+            ? "border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 opacity-75"
+            : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
+        }`}
+      >
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+            {isBulk && (
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
+                👥 Group of {slabSize}
+              </span>
+            )}
+            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
+              {status.badgeText}
+            </span>
+            {!isBulk && Number(tier.max_per_order) === 1 && (
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                🔒 Limit 1
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+            {isBulk ? (
+              <>
+                Generates {slabSize} attendee entry passes
+                {maxAvailableForUser > 0 && (
+                  <span className="ml-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
+                    · {maxAvailableForUser} group{maxAvailableForUser !== 1 ? "s" : ""} left
+                  </span>
+                )}
+              </>
+            ) : (
+              status.detailText
+            )}
+          </p>
+          <div className="flex items-baseline gap-1.5">
+            <span className={`text-sm font-black ${isBulk ? "text-indigo-600 dark:text-indigo-400" : "text-[#0758fc] dark:text-blue-400"}`}>
+              {totalPrice === 0 ? (isBulk ? "Free Entry" : "Free Pass") : `₹${Number(tier.price).toFixed(2)}`}
+            </span>
+            {isBulk && Number(tier.price) > 0 && (
+              <span className="text-[11px] text-gray-400 font-normal">
+                (₹{Number(tier.price).toLocaleString("en-IN")}/person)
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => handleCountChange(tier.id, -1)}
+              disabled={count === 0}
+              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="0"
+              max={maxAllowed}
+              value={count}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                handleSetCount(tier.id, isNaN(val) ? 0 : val);
+              }}
+              disabled={!status.canBook}
+              className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
+            />
+            <button
+              type="button"
+              onClick={() => handleCountChange(tier.id, 1)}
+              disabled={!status.canBook || count >= maxAllowed}
+              className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              +
+            </button>
+          </div>
+          {maxAllowed > 5 && status.canBook && (
+            <div className="flex items-center gap-1">
+              {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => handleSetCount(tier.id, count + step)}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
+                >
+                  +{step}
+                </button>
+              ))}
+              {count < maxAllowed && (
+                <button
+                  type="button"
+                  onClick={() => handleSetCount(tier.id, maxAllowed)}
+                  className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
+                >
+                  Max ({maxAllowed})
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in-50">
       {/* Explicit backdrop element */}
@@ -1156,7 +1168,7 @@ export function CheckoutModal({
                     <Clock size={14} className="text-red-400 animate-pulse" />
                     <span className="text-red-300 font-extrabold">{formatSecondsToTimer(holdSecondsRemaining, holdDurationSeconds)}</span>
                     <span className="hidden sm:inline text-[9px] uppercase font-black tracking-widest text-red-300 bg-red-900/60 px-1.5 py-0.5 rounded border border-red-500/30">
-                      {hasBulkSelected ? "10M LOCK" : "LOCK"}
+                      {isExtendedHold ? "10M LOCK" : "LOCK"}
                     </span>
                   </div>
                 ) : (
@@ -1557,529 +1569,28 @@ export function CheckoutModal({
                 Select Entry Passes &amp; Time Slabs
               </span>
               <div className="space-y-3">
-                {/* 0. Group & Bulk Passes */}
-                {bulkTiers.length > 0 && (
+                {/* 1. All Available Slabs & Passes (ALWAYS AT THE TOP) */}
+                {availableTiers.length > 0 && (
                   <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                      <Users size={11} /> 👥 Group &amp; Bulk Passes
+                    {availableTiers.map(renderTierItem)}
+                  </div>
+                )}
+
+                {/* 2. If absolutely no tier is currently bookable, render all sorted tiers */}
+                {!hasAnyBookableTier && (
+                  <div className="space-y-2">
+                    {sortedCurrentTiers.map(renderTierItem)}
+                  </div>
+                )}
+
+                {/* 3. Sold Out & Closed Passes (ALWAYS AT THE VERY BOTTOM) */}
+                {hasAnyBookableTier && unavailableTiers.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-gray-800/80">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-2.5 py-1 rounded-full inline-block">
+                      🔒 Sold Out &amp; Closed Passes
                     </span>
                     <div className="space-y-2">
-                      {bulkTiers.map((tier) => {
-                        const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier, currentTime, count);
-                        const slabSize = tier.bulk_slab_size || 1;
-                        const totalPrice = Number(tier.price) * slabSize;
-                        const cap = Number(tier.total_capacity) || 9999;
-                        const sold = Number(tier.sold_count) || 0;
-                        const reserved = Number(tier.reserved_count) || 0;
-                        const othersReserved = Math.max(0, reserved - (count * slabSize));
-                        const maxAvailableForUser = Math.max(0, Math.floor((cap - (sold + othersReserved)) / slabSize));
-                        const maxAllowed = Math.min(5, maxAvailableForUser);
-                        return (
-                          <div
-                            key={tier.id}
-                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                              count > 0
-                                ? "border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/40 shadow-xs"
-                                : !status.canBook
-                                ? "border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 opacity-75"
-                                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
-                            }`}
-                          >
-                            <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
-                                  👥 Group of {slabSize}
-                                </span>
-                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
-                                  {status.badgeText}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                                Generates {slabSize} attendee entry passes
-                                {maxAvailableForUser > 0 && (
-                                  <span className="ml-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
-                                    · {maxAvailableForUser} group{maxAvailableForUser !== 1 ? "s" : ""} left
-                                  </span>
-                                )}
-                              </p>
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                                  {totalPrice === 0 ? "Free Entry" : `₹${totalPrice.toLocaleString("en-IN")}`}
-                                </span>
-                                {Number(tier.price) > 0 && (
-                                  <span className="text-[11px] text-gray-400 font-normal">
-                                    (₹{Number(tier.price).toLocaleString("en-IN")}/person)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, -1)}
-                                disabled={count === 0}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                -
-                              </button>
-                              <span className="text-xs font-extrabold text-gray-900 dark:text-white w-4 text-center">{count}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= maxAllowed}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 1. Early Bird Tiers */}
-                {earlyBirdTiers.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full inline-block">
-                      🔥 Early Bird Release
-                    </span>
-                    <div className="space-y-2">
-                      {earlyBirdTiers.map((tier) => {
-                        const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier, currentTime, count);
-                        const cap = Number(tier.total_capacity) || 9999;
-                        const sold = Number(tier.sold_count) || 0;
-                        const reserved = Number(tier.reserved_count) || 0;
-                        const othersReserved = Math.max(0, reserved - count);
-                        const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
-                        const maxAllowed = Math.min(tierMax, maxAvailableForUser);
-                        return (
-                          <div
-                            key={tier.id}
-                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                              count > 0
-                                ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs"
-                                : !status.canBook
-                                ? "border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 opacity-75"
-                                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
-                            }`}
-                          >
-                            <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
-                                  {status.badgeText}
-                                </span>
-                                {Number(tier.max_per_order) === 1 && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                                    🔒 Limit 1
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
-                              <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
-                                {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, -1)}
-                                  disabled={count === 0}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={maxAllowed}
-                                  value={count}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    handleSetCount(tier.id, isNaN(val) ? 0 : val);
-                                  }}
-                                  disabled={!status.canBook}
-                                  className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, 1)}
-                                  disabled={!status.canBook || count >= maxAllowed}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  +
-                                </button>
-                              </div>
-                              {maxAllowed > 5 && status.canBook && (
-                                <div className="flex items-center gap-1">
-                                  {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
-                                    <button
-                                      key={step}
-                                      type="button"
-                                      onClick={() => handleSetCount(tier.id, count + step)}
-                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                    >
-                                      +{step}
-                                    </button>
-                                  ))}
-                                  {count < maxAllowed && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSetCount(tier.id, maxAllowed)}
-                                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
-                                    >
-                                      Max ({maxAllowed})
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Dropdown under Early Bird for General Release Passes */}
-                {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/40">
-                    <button
-                      type="button"
-                      onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
-                      className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/70 dark:hover:bg-gray-800/80 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-900 dark:text-white">General Release Passes</span>
-                        {isEarlyBirdAvailable ? (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                            Unlocks after Early Bird
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                            Now Active
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs font-extrabold text-[#0758fc] dark:text-blue-400 flex items-center gap-1">
-                        {showGeneralDropdown ? (
-                          <>Hide General Tickets <ChevronUp size={14} /></>
-                        ) : (
-                          <>View General Tickets <ChevronDown size={14} /></>
-                        )}
-                      </span>
-                    </button>
-
-                    {showGeneralDropdown && (
-                      <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-white dark:bg-gray-900">
-                        {generalTiers.map((tier) => {
-                          const count = selectedCounts[tier.id] || 0;
-                          const status = getTierScheduleStatus(tier, currentTime, count);
-                          const cap = Number(tier.total_capacity) || 9999;
-                          const sold = Number(tier.sold_count) || 0;
-                          const reserved = Number(tier.reserved_count) || 0;
-                          const othersReserved = Math.max(0, reserved - count);
-                          const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                          const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
-                          const maxAllowed = Math.min(tierMax, maxAvailableForUser);
-                          return (
-                            <div
-                              key={tier.id}
-                              className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                                count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
-                              }`}
-                            >
-                              <div className="space-y-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
-                                    {status.badgeText}
-                                  </span>
-                                  {Number(tier.max_per_order) === 1 && (
-                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                                      🔒 Limit 1
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
-                                <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
-                                  {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col items-end gap-1 shrink-0">
-                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCountChange(tier.id, -1)}
-                                    disabled={count === 0}
-                                    className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                  >
-                                    -
-                                  </button>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={maxAllowed}
-                                    value={count}
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value, 10);
-                                      handleSetCount(tier.id, isNaN(val) ? 0 : val);
-                                    }}
-                                    disabled={!status.canBook}
-                                    className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCountChange(tier.id, 1)}
-                                    disabled={!status.canBook || count >= maxAllowed}
-                                    className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                                {maxAllowed > 5 && status.canBook && (
-                                  <div className="flex items-center gap-1">
-                                    {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
-                                      <button
-                                        key={step}
-                                        type="button"
-                                        onClick={() => handleSetCount(tier.id, count + step)}
-                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                      >
-                                        +{step}
-                                      </button>
-                                    ))}
-                                    {count < maxAllowed && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleSetCount(tier.id, maxAllowed)}
-                                        className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
-                                      >
-                                        Max ({maxAllowed})
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 3. If NO Early Bird exists, render General Tiers normally */}
-                {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
-                  <div className="space-y-2">
-                    {generalTiers.map((tier) => {
-                      const count = selectedCounts[tier.id] || 0;
-                      const status = getTierScheduleStatus(tier, currentTime, count);
-                      const cap = Number(tier.total_capacity) || 9999;
-                      const sold = Number(tier.sold_count) || 0;
-                      const reserved = Number(tier.reserved_count) || 0;
-                      const othersReserved = Math.max(0, reserved - count);
-                      const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                      const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
-                      const maxAllowed = Math.min(tierMax, maxAvailableForUser);
-                      return (
-                        <div
-                          key={tier.id}
-                          className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                            count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
-                          }`}
-                        >
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
-                                {status.badgeText}
-                              </span>
-                              {Number(tier.max_per_order) === 1 && (
-                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                                  🔒 Limit 1
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
-                            <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
-                              {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, -1)}
-                                disabled={count === 0}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
-                                max={maxAllowed}
-                                value={count}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value, 10);
-                                  handleSetCount(tier.id, isNaN(val) ? 0 : val);
-                                }}
-                                disabled={!status.canBook}
-                                className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleCountChange(tier.id, 1)}
-                                disabled={!status.canBook || count >= maxAllowed}
-                                className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                              >
-                                +
-                              </button>
-                            </div>
-                            {maxAllowed > 5 && status.canBook && (
-                              <div className="flex items-center gap-1">
-                                {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
-                                  <button
-                                    key={step}
-                                    type="button"
-                                    onClick={() => handleSetCount(tier.id, count + step)}
-                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                  >
-                                    +{step}
-                                  </button>
-                                ))}
-                                {count < maxAllowed && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSetCount(tier.id, maxAllowed)}
-                                    className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
-                                  >
-                                    Max ({maxAllowed})
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* 4. VIP & Other Tiers */}
-                {otherTiers.length > 0 && (
-                  <div className="space-y-2 pt-1">
-                    {earlyBirdTiers.length > 0 && (
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 px-2.5 py-1 rounded-full inline-block">
-                        ⭐ Special &amp; VIP Passes
-                      </span>
-                    )}
-                    <div className="space-y-2">
-                      {otherTiers.map((tier) => {
-                        const count = selectedCounts[tier.id] || 0;
-                        const status = getTierScheduleStatus(tier, currentTime, count);
-                        const cap = Number(tier.total_capacity) || 9999;
-                        const sold = Number(tier.sold_count) || 0;
-                        const reserved = Number(tier.reserved_count) || 0;
-                        const othersReserved = Math.max(0, reserved - count);
-                        const maxAvailableForUser = Math.max(0, cap - (sold + othersReserved));
-                        const tierMax = tier.max_per_order ? Number(tier.max_per_order) : 50;
-                        const maxAllowed = Math.min(tierMax, maxAvailableForUser);
-                        return (
-                          <div
-                            key={tier.id}
-                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                              count > 0 ? "border-[#0758fc] bg-blue-50/20 dark:bg-blue-950/40 shadow-xs" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80"
-                            }`}
-                          >
-                            <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-sm font-bold text-gray-900 dark:text-white">{tier.name}</h4>
-                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${status.badgeClass}`}>
-                                  {status.badgeText}
-                                </span>
-                                {Number(tier.max_per_order) === 1 && (
-                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                                    🔒 Limit 1
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{status.detailText}</p>
-                              <p className="text-sm font-black text-[#0758fc] dark:text-blue-400">
-                                {Number(tier.price) === 0 ? "Free Pass" : `₹${Number(tier.price).toFixed(2)}`}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-xl">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, -1)}
-                                  disabled={count === 0}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={maxAllowed}
-                                  value={count}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    handleSetCount(tier.id, isNaN(val) ? 0 : val);
-                                  }}
-                                  disabled={!status.canBook}
-                                  className="text-xs font-extrabold text-gray-900 dark:text-white w-8 text-center bg-transparent outline-none focus:bg-white dark:focus:bg-gray-800 rounded py-0.5"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleCountChange(tier.id, 1)}
-                                  disabled={!status.canBook || count >= maxAllowed}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center shadow-xs disabled:opacity-30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  +
-                                </button>
-                              </div>
-                              {maxAllowed > 5 && status.canBook && (
-                                <div className="flex items-center gap-1">
-                                  {[5, 10].filter((step) => count + step <= maxAllowed).map((step) => (
-                                    <button
-                                      key={step}
-                                      type="button"
-                                      onClick={() => handleSetCount(tier.id, count + step)}
-                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                    >
-                                      +{step}
-                                    </button>
-                                  ))}
-                                  {count < maxAllowed && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSetCount(tier.id, maxAllowed)}
-                                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-[#0758fc] dark:text-blue-300 cursor-pointer transition-colors"
-                                    >
-                                      Max ({maxAllowed})
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {unavailableTiers.map(renderTierItem)}
                     </div>
                   </div>
                 )}
@@ -2093,7 +1604,7 @@ export function CheckoutModal({
                   <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                     Delegate Details ({attendees.length} Attendee{attendees.length > 1 ? "s" : ""})
                   </span>
-                  {hasBulkSelected ? (
+                  {isExtendedHold ? (
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
                       <span>⏱️</span> 10-Minute Lock Active
                     </span>

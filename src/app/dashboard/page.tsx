@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth/getUser";
+import { getCurrentUser, isConfiguredAdminEmail } from "@/lib/auth/getUser";
 import { executeSql } from "@/lib/db/directDb";
 import { OrganizerDashboardClient } from "./OrganizerDashboardClient";
 import { ApplyOrganizerClient } from "@/components/dashboard/ApplyOrganizerClient";
@@ -29,7 +29,8 @@ export default async function DashboardPage(props: {
   const isSuperAdmin =
     userRole === "super_admin" ||
     userRole === "admin" ||
-    user.email === "tech.rotaract3192@gmail.com";
+    user.email === "tech.rotaract3192@gmail.com" ||
+    isConfiguredAdminEmail(user.email);
   const isOrganizerOrAdmin =
     userRole === "organizer" ||
     isSuperAdmin ||

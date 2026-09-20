@@ -16,6 +16,7 @@ import { useUser } from "@clerk/nextjs";
 import { Clock, AlertCircle, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import type { TicketTier, EventStatus } from "@/types/database";
 import { useServerSyncedTime } from "@/lib/utils/useServerSyncedTime";
+import { sortTiersByAvailability } from "@/lib/utils/tierAvailability";
 
 interface ReservationCardProps {
   event: {
@@ -114,23 +115,16 @@ export function ReservationCard({ event, tiers, initialServerTime }: Reservation
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
-  const publicTiers = tiers.filter((t) => t.enabled && t.visibility === "PUBLIC");
+  const publicTiers = sortTiersByAvailability(
+    tiers.filter((t) => t.enabled && t.visibility === "PUBLIC"),
+    currentTime
+  );
   const isRegistrationOpen = event.status === "REGISTRATION_OPEN" && !event.registrations_disabled;
   const isClosed = event.status === "REGISTRATION_CLOSED" || event.status === "COMPLETED";
 
-  const earlyBirdTiers = publicTiers.filter((t) => /early/i.test(t.name));
-  const generalTiers = publicTiers.filter((t) => /(general|normal|standard|regular)/i.test(t.name));
-  const otherTiers = publicTiers.filter(
-    (t) => !/early/i.test(t.name) && !/(general|normal|standard|regular)/i.test(t.name)
-  );
-
-  const isEarlyBirdAvailable =
-    earlyBirdTiers.length > 0 &&
-    earlyBirdTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
-
-  const hasAnyBookableTier = publicTiers.some((t) => getTierScheduleStatus(t, currentTime).canBook);
-
-  const [showGeneralDropdown, setShowGeneralDropdown] = useState(!isEarlyBirdAvailable);
+  const availableTiers = publicTiers.filter((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const unavailableTiers = publicTiers.filter((t) => !getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = availableTiers.length > 0;
 
   const renderTierCard = (tier: TicketTier) => {
     const available = tier.capacity - tier.sold_count - tier.reserved_count;
@@ -282,60 +276,29 @@ export function ReservationCard({ event, tiers, initialServerTime }: Reservation
       {/* Tier selection */}
       {isRegistrationOpen && publicTiers.length > 0 && (
         <div className="space-y-3">
-          {/* 1. Early Bird Tiers */}
-          {earlyBirdTiers.length > 0 && (
+          {/* 1. Available Passes (ALWAYS AT THE TOP) */}
+          {availableTiers.length > 0 && (
             <div className="space-y-2">
-              <span className="text-[10px] font-black text-[#0758fc] uppercase tracking-wider block">
-                Early Bird Release
+              {availableTiers.map(renderTierCard)}
+            </div>
+          )}
+
+          {/* 2. If NO passes are bookable, render all sorted tiers */}
+          {!hasAnyBookableTier && (
+            <div className="space-y-2">
+              {publicTiers.map(renderTierCard)}
+            </div>
+          )}
+
+          {/* 3. Sold Out & Closed Passes (ALWAYS AT THE VERY BOTTOM) */}
+          {hasAnyBookableTier && unavailableTiers.length > 0 && (
+            <div className="pt-2 space-y-2 border-t border-gray-100">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 block">
+                🔒 Sold Out &amp; Closed Passes
               </span>
-              {earlyBirdTiers.map(renderTierCard)}
-            </div>
-          )}
-
-          {/* 2. Dropdown for General Release Passes */}
-          {generalTiers.length > 0 && earlyBirdTiers.length > 0 && (
-            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50">
-              <button
-                type="button"
-                onClick={() => setShowGeneralDropdown(!showGeneralDropdown)}
-                className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100 transition-colors"
-              >
-                <span className="text-xs font-bold text-gray-900">
-                  General Release {isEarlyBirdAvailable ? "(Unlocks after Early Bird)" : "(Active)"}
-                </span>
-                <span className="text-xs font-bold text-[#0758fc] flex items-center gap-1">
-                  {showGeneralDropdown ? (
-                    <>Hide <ChevronUp size={14} /></>
-                  ) : (
-                    <>View <ChevronDown size={14} /></>
-                  )}
-                </span>
-              </button>
-
-              {showGeneralDropdown && (
-                <div className="p-3 border-t border-gray-200 space-y-2 bg-white">
-                  {generalTiers.map(renderTierCard)}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. If NO Early Bird exists, render General Tiers normally */}
-          {generalTiers.length > 0 && earlyBirdTiers.length === 0 && (
-            <div className="space-y-2">
-              {generalTiers.map(renderTierCard)}
-            </div>
-          )}
-
-          {/* 4. VIP & Other Tiers */}
-          {otherTiers.length > 0 && (
-            <div className="space-y-2 pt-1">
-              {earlyBirdTiers.length > 0 && (
-                <span className="text-[10px] font-black text-purple-600 uppercase tracking-wider block">
-                  Special &amp; VIP Passes
-                </span>
-              )}
-              {otherTiers.map(renderTierCard)}
+              <div className="space-y-2">
+                {unavailableTiers.map(renderTierCard)}
+              </div>
             </div>
           )}
         </div>

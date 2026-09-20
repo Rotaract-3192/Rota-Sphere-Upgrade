@@ -189,7 +189,15 @@ export async function getEventTiersAction(eventId: string) {
         GROUP BY ticket_tier_id
       ) tc ON tc.ticket_tier_id = t.id
       WHERE t.event_id = ${escapeSql(eventId)} AND t.is_active = true AND t.is_visible = true
-      ORDER BY t.price ASC, t.name ASC;
+      ORDER BY 
+        CASE 
+          WHEN (t.total_capacity > 0 AND (GREATEST(COALESCE(t.sold_count, 0), COALESCE(tc.sold_cnt, 0)) + COALESCE(t.reserved_count, 0)) >= t.total_capacity) THEN 2
+          WHEN (t.sales_end IS NOT NULL AND NOW() > t.sales_end) THEN 3
+          WHEN (t.sales_start IS NOT NULL AND NOW() < t.sales_start) THEN 1
+          ELSE 0
+        END ASC,
+        t.price ASC, 
+        t.name ASC;
     `);
     return { success: true, tiers: (tiers || []) as unknown as SaasTicketTier[] };
   } catch (err: any) {
@@ -456,18 +464,31 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
         error: "You must be signed in to reserve tickets. Please log in and try again.",
       };
     }
-    // Default duration: 600 seconds (10 minutes) for bulk tiers, 300 seconds (5 minutes) for regular tiers
+    // Default duration: 600 seconds (10 minutes) for bulk tiers or orders with > 10 tickets,
+    // 300 seconds (5 minutes) for standard orders (<= 10 tickets)
     let defaultDuration = 300;
+    let totalRequestedTickets = 0;
+    let hasBulkTier = false;
+
     const requestedTierIds = Object.keys(input.selectedCounts).filter((id) => (input.selectedCounts[id] || 0) > 0);
     if (requestedTierIds.length > 0) {
       const cleanIds = requestedTierIds.map((id) => escapeSql(id)).join(",");
-      const { data: bulkCheck } = await executeSql(`
-        SELECT id FROM saas_ticket_tiers 
-        WHERE id IN (${cleanIds}) AND (is_bulk_slab = true OR tier_type = 'BULK')
-        LIMIT 1;
+      const { data: tiersData } = await executeSql(`
+        SELECT id, is_bulk_slab, bulk_slab_size, tier_type FROM saas_ticket_tiers 
+        WHERE id IN (${cleanIds});
       `);
-      if (bulkCheck && bulkCheck.length > 0) {
-        defaultDuration = 600; // 10 Minutes for bulk bookings
+      if (tiersData && tiersData.length > 0) {
+        for (const t of tiersData) {
+          const count = Number(input.selectedCounts[t.id]) || 0;
+          const slabSize = (t.is_bulk_slab && t.bulk_slab_size) ? Number(t.bulk_slab_size) : 1;
+          totalRequestedTickets += count * slabSize;
+          if (t.is_bulk_slab || t.tier_type === "BULK") {
+            hasBulkTier = true;
+          }
+        }
+      }
+      if (totalRequestedTickets > 10 || hasBulkTier) {
+        defaultDuration = 600; // 10 Minutes when buying more than 10 tickets or bulk passes
       }
     }
     const durationSec = Math.max(30, Math.min(900, input.holdDurationSeconds || defaultDuration));

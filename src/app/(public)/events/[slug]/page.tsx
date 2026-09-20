@@ -24,6 +24,7 @@ import {
   formatTimezoneLabel,
   formatEventDateDisplay,
   formatEventTimeDisplay,
+  isEventConcluded,
 } from "@/lib/utils/dateTimeUtils";
 import { EventJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { EventBookingClient } from "./EventBookingClient";
@@ -168,7 +169,15 @@ export default async function EventDetailPage({ params }: PageProps) {
       GROUP BY ticket_tier_id
     ) tc ON tc.ticket_tier_id = t.id
     WHERE t.event_id = '${event.id}' AND t.is_active = true AND t.is_visible = true
-    ORDER BY t.price ASC;
+    ORDER BY 
+      CASE 
+        WHEN (t.total_capacity > 0 AND (GREATEST(COALESCE(t.sold_count, 0), COALESCE(tc.sold_cnt, 0)) + COALESCE(t.reserved_count, 0)) >= t.total_capacity) THEN 2
+        WHEN (t.sales_end IS NOT NULL AND NOW() > t.sales_end) THEN 3
+        WHEN (t.sales_start IS NOT NULL AND NOW() < t.sales_start) THEN 1
+        ELSE 0
+      END ASC,
+      t.price ASC,
+      t.name ASC;
   `);
   const tiers = (tierRows || []) as unknown as SaasTicketTier[];
 
@@ -240,6 +249,11 @@ export default async function EventDetailPage({ params }: PageProps) {
     : null;
 
   const hostingClub = (event as any).org_name || (event as any).organization_name || "Rotaract District 3192";
+  const isEnded = isEventConcluded({
+    start_date: event.start_date,
+    end_date: event.end_date,
+    status: event.status,
+  });
 
   return (
     <>
@@ -274,10 +288,17 @@ export default async function EventDetailPage({ params }: PageProps) {
 
         <div className="absolute bottom-0 inset-x-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 text-white space-y-4">
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-medium">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-              <span className="font-bold uppercase tracking-wider text-[11px]">{event.event_type || "Event"}</span>
-            </span>
+            {isEnded ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-600/60">
+                <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
+                <span className="font-bold uppercase tracking-wider text-[11px]">Event Concluded</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/15">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                <span className="font-bold uppercase tracking-wider text-[11px]">{event.event_type || "Event"}</span>
+              </span>
+            )}
             {((event as any).org_name || (event as any).organization_name) && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-gray-200 border border-white/10">
                 <span>🏛️ {(event as any).org_name || (event as any).organization_name}</span>

@@ -151,7 +151,9 @@ export function SuperAdminDashboardClient({
   // Council Executive Delegation State
   const [profiles, setProfiles] = useState<any[]>(initialProfiles);
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [councilDesignation, setCouncilDesignation] = useState("District Treasurer");
+  const [targetEmailInput, setTargetEmailInput] = useState("");
+  const [entryMode, setEntryMode] = useState<"email" | "select">("email");
+  const [councilDesignation, setCouncilDesignation] = useState("District Governance Officer");
   const [customDesignation, setCustomDesignation] = useState("");
   const [selectedAdminRole, setSelectedAdminRole] = useState<"super_admin" | "admin">("super_admin");
   const [grantingAccess, setGrantingAccess] = useState(false);
@@ -297,8 +299,11 @@ export function SuperAdminDashboardClient({
 
   async function handleGrantSuperAdmin(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedUserId) {
-      setGrantMessage({ type: "error", text: "Please select a registered user first." });
+    const finalEmail = entryMode === "email" ? targetEmailInput.trim().toLowerCase() : "";
+    const finalUserId = entryMode === "select" ? selectedUserId : "";
+
+    if (!finalEmail && !finalUserId) {
+      setGrantMessage({ type: "error", text: "Please enter an email address or select a user from the registry." });
       return;
     }
     const finalDesignation = councilDesignation === "custom" ? customDesignation.trim() : councilDesignation;
@@ -311,48 +316,45 @@ export function SuperAdminDashboardClient({
     setGrantMessage(null);
 
     const res = await grantSuperAdminAccessAction({
-      userId: selectedUserId,
+      userId: finalUserId || undefined,
+      email: finalEmail || undefined,
       role: selectedAdminRole,
       designation: finalDesignation,
     });
 
     setGrantingAccess(false);
     if (res.success) {
-      setProfiles((prev) =>
-        prev.map((p) =>
-          p.id === selectedUserId || p.clerk_id === selectedUserId
-            ? { ...p, role: selectedAdminRole, designation: finalDesignation, status: "ACTIVE" }
-            : p
-        )
-      );
       setGrantMessage({
         type: "success",
         text: `Successfully granted ${selectedAdminRole === "super_admin" ? "Super Admin" : "Admin"} access with title "${finalDesignation}".`,
       });
       setSelectedUserId("");
+      setTargetEmailInput("");
       setCustomDesignation("");
+      handleRefreshUsers();
     } else {
       setGrantMessage({ type: "error", text: res.error || "Failed to grant super admin access." });
     }
   }
 
-  async function handleRevokeSuperAdmin(userId: string, userName: string) {
+  async function handleRevokeSuperAdmin(userId: string, userEmail: string, userName: string) {
     if (!confirm(`Are you sure you want to revoke Super Admin panel access from ${userName}?`)) {
       return;
     }
-    setRevokingUserId(userId);
-    const res = await revokeSuperAdminAccessAction({ userId });
+    setRevokingUserId(userId || userEmail);
+    const res = await revokeSuperAdminAccessAction({ userId, email: userEmail });
     setRevokingUserId(null);
 
     if (res.success) {
       setProfiles((prev) =>
         prev.map((p) =>
-          p.id === userId || p.clerk_id === userId
+          (userId && (p.id === userId || p.clerk_id === userId)) || (userEmail && p.email?.toLowerCase() === userEmail.toLowerCase())
             ? { ...p, role: "attendee", designation: "Rotaract Member" }
             : p
         )
       );
       setGrantMessage({ type: "success", text: `Successfully revoked / reset admin access for ${userName}.` });
+      handleRefreshUsers();
     } else {
       alert(res.error || "Failed to revoke admin access.");
     }
@@ -2883,31 +2885,95 @@ export function SuperAdminDashboardClient({
               </div>
 
               <form onSubmit={handleGrantSuperAdmin} className="space-y-5">
+                {/* Input Mode Selector */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-gray-150 dark:border-gray-800 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setEntryMode("email")}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      entryMode === "email"
+                        ? "bg-[#0758fc] text-white shadow-xs"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    ✉️ Enter Email Address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEntryMode("select")}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      entryMode === "select"
+                        ? "bg-[#0758fc] text-white shadow-xs"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    👥 Select from Registry ({profiles.length})
+                  </button>
+
+                  {user?.email && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEntryMode("email");
+                        setTargetEmailInput(user.email);
+                        setCouncilDesignation("District Governance Officer");
+                        setSelectedAdminRole("super_admin");
+                      }}
+                      className="sm:ml-auto text-[11px] font-extrabold text-[#0758fc] hover:underline cursor-pointer bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 flex items-center gap-1.5"
+                    >
+                      <span>⚡ Quick Add / Update Myself ({user.email})</span>
+                    </button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  {/* Select User */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Select Registered User *
-                    </label>
-                    <div className="relative">
-                      <select
+                  {/* User Entry / Select Field */}
+                  {entryMode === "email" ? (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Administrator Email Address *
+                      </label>
+                      <input
+                        type="email"
                         required
-                        value={selectedUserId}
-                        onChange={(e) => setSelectedUserId(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800 cursor-pointer"
-                      >
-                        <option value="">-- Choose a user account ({profiles.length} registered) --</option>
-                        {profiles.map((p) => (
-                          <option key={p.id || p.clerk_id} value={p.id || p.clerk_id}>
-                            {p.full_name || "Rotaractor"} ({p.email}) — [{p.role?.toUpperCase() || "ATTENDEE"}] {p.designation ? `• ${p.designation}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="e.g. user@gmail.com or district council email"
+                        value={targetEmailInput}
+                        onChange={(e) => setTargetEmailInput(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800"
+                      />
+                      <p className="text-[11px] text-gray-400">
+                        Enter any registered email to grant immediate Super Admin or Admin access.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-gray-400">
-                      Users who have registered / logged in to RotaSphere are available in this registry.
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Select Registered User *
+                      </label>
+                      <div className="relative">
+                        <select
+                          required
+                          value={selectedUserId}
+                          onChange={(e) => {
+                            setSelectedUserId(e.target.value);
+                            const found = profiles.find((p) => (p.id || p.clerk_id) === e.target.value);
+                            if (found?.email) setTargetEmailInput(found.email);
+                          }}
+                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-800 cursor-pointer"
+                        >
+                          <option value="">-- Choose a user account ({profiles.length} registered) --</option>
+                          {profiles.map((p) => (
+                            <option key={p.id || p.clerk_id} value={p.id || p.clerk_id}>
+                              {p.full_name || "Rotaractor"} ({p.email}) — [{p.role?.toUpperCase() || "ATTENDEE"}] {p.designation ? `• ${p.designation}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        Select a user from the live RotaSphere user registry.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Access Level */}
                   <div className="space-y-2">
@@ -2937,6 +3003,7 @@ export function SuperAdminDashboardClient({
                   {/* Quick Preset Buttons */}
                   <div className="flex flex-wrap gap-2">
                     {[
+                      { label: "District Governance Officer", icon: "⚖️" },
                       { label: "District Treasurer", icon: "💼" },
                       { label: "District Secretary - Administration", icon: "🏛️" },
                       { label: "District Secretary - Operations", icon: "⚙️" },
@@ -2985,7 +3052,7 @@ export function SuperAdminDashboardClient({
                 <div className="pt-2 flex justify-end">
                   <button
                     type="submit"
-                    disabled={grantingAccess || !selectedUserId}
+                    disabled={grantingAccess || (entryMode === "email" ? !targetEmailInput.trim() : !selectedUserId)}
                     className="bg-[#0758fc] hover:bg-blue-600 text-white font-extrabold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-98"
                   >
                     {grantingAccess ? (
@@ -3012,7 +3079,7 @@ export function SuperAdminDashboardClient({
                   </p>
                 </div>
                 <span className="text-xs font-extrabold bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full self-start sm:self-auto">
-                  {profiles.filter((p) => p.role === "super_admin" || p.role === "admin").length} Active Administrators
+                  {profiles.filter((p) => p.role === "super_admin" || p.role === "admin" || p.email?.toLowerCase() === "tech.rotaract3192@gmail.com").length} Active Administrators
                 </span>
               </div>
 
@@ -3029,10 +3096,11 @@ export function SuperAdminDashboardClient({
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-medium">
                     {profiles
-                      .filter((p) => p.role === "super_admin" || p.role === "admin")
+                      .filter((p) => p.role === "super_admin" || p.role === "admin" || p.email?.toLowerCase() === "tech.rotaract3192@gmail.com")
                       .map((adm) => {
-                        const isRootAdmin =
-                          adm.email?.toLowerCase() === "tech.rotaract3192@gmail.com";
+                        const isRootAdmin = adm.email?.toLowerCase() === "tech.rotaract3192@gmail.com";
+                        const displayRole = adm.role === "admin" ? "admin" : "super_admin";
+                        const displayDesignation = adm.designation || (adm.role === "super_admin" ? "District Super Administrator" : "District Executive");
                         return (
                           <tr key={adm.id || adm.clerk_id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                             <td className="px-6 py-4">
@@ -3049,19 +3117,19 @@ export function SuperAdminDashboardClient({
 
                             <td className="px-6 py-4">
                               <span className="font-extrabold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-xl text-[11px] inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700">
-                                {adm.designation || "District Executive"}
+                                {displayDesignation}
                               </span>
                             </td>
 
                             <td className="px-6 py-4">
                               <span
                                 className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
-                                  adm.role === "super_admin"
+                                  displayRole === "super_admin"
                                     ? "bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
                                     : "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
                                 }`}
                               >
-                                {adm.role === "super_admin" ? "👑 SUPER ADMIN" : "🛡️ ADMIN"}
+                                {displayRole === "super_admin" ? "👑 SUPER ADMIN" : "🛡️ ADMIN"}
                               </span>
                             </td>
 
@@ -3077,7 +3145,7 @@ export function SuperAdminDashboardClient({
                                 type="button"
                                 disabled={revokingUserId === (adm.id || adm.clerk_id)}
                                 onClick={() =>
-                                  handleRevokeSuperAdmin(adm.id || adm.clerk_id, adm.full_name || adm.email)
+                                  handleRevokeSuperAdmin(adm.id || adm.clerk_id, adm.email || "", adm.full_name || adm.email)
                                 }
                                 className="text-amber-700 dark:text-amber-300 hover:text-amber-800 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
                                 title={isRootAdmin ? "Reset portfolio designation to default" : "Demote from super admin to regular attendee"}

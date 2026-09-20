@@ -20,6 +20,7 @@ export interface EventWithPrice {
   city: string | null;
   start_date: string;
   end_date?: string | null;
+  status?: string | null;
   event_type?: string;
   minPrice: number | null;
   hasFreeTickets: boolean;
@@ -70,6 +71,7 @@ export function formatEvents(rawEvents: any[]): EventWithPrice[] {
       city: evt.city || null,
       start_date: evt.start_date,
       end_date: evt.end_date || null,
+      status: evt.status || null,
       event_type: evt.event_type || "OFFLINE",
       minPrice,
       hasFreeTickets,
@@ -112,6 +114,7 @@ export function EventGrid(props: EventGridProps) {
           city={event.city}
           startDate={event.start_date}
           endDate={event.end_date}
+          status={event.status}
           eventType={event.event_type}
           categoryName={event.category_name}
           price={event.minPrice}

@@ -96,6 +96,14 @@ export function OrganizerDashboardClient({
     organization?.id === "328ed943-f625-4fec-82a0-0c92dd7ec592" ||
     organization?.slug === "district-3192-hub";
 
+  const isSuperAdminUser =
+    user?.profile?.role === "super_admin" ||
+    user?.email === "tech.rotaract3192@gmail.com";
+
+  const isAdminUser =
+    isSuperAdminUser ||
+    user?.profile?.role === "admin";
+
   const [events, setEvents] = useState(initialEvents);
   const [orders, setOrders] = useState(initialOrders);
   const [tickets, setTickets] = useState(initialTickets);
@@ -429,7 +437,7 @@ export function OrganizerDashboardClient({
                   </div>
                   <div>
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#3b82f6] block">
-                      ORGANIZER HUB
+                      {isSuperAdminUser ? "👑 SUPER ADMIN" : isAdminUser ? "🛡️ DISTRICT ADMIN" : "ORGANIZER HUB"}
                     </span>
                     <span className="text-sm font-black text-white leading-tight block truncate max-w-[170px]">
                       {organization?.name || "District 3192"}
@@ -447,7 +455,7 @@ export function OrganizerDashboardClient({
               </div>
 
               {/* Active Portal Switch / Return */}
-              {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+              {!isDistrictHub && isAdminUser && (
                 <div className="px-3 pt-2">
                   <Link
                     href="/dashboard"
@@ -461,8 +469,7 @@ export function OrganizerDashboardClient({
 
 
               {/* Super Admin Switcher (if applicable) */}
-              {(user?.profile?.role === "super_admin" ||
-                user?.email === "tech.rotaract3192@gmail.com") && (
+              {isAdminUser && (
                 <div className="px-3 pt-2">
                   <Link
                     href="/admin"
@@ -643,8 +650,14 @@ export function OrganizerDashboardClient({
                   />
                 </div>
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#3b82f6] block leading-none">
-                    ORGANIZER
+                  <span className="text-[9px] font-black uppercase tracking-widest block leading-none">
+                    {isSuperAdminUser ? (
+                      <span className="text-amber-400 flex items-center gap-1">👑 SUPER ADMIN</span>
+                    ) : isAdminUser ? (
+                      <span className="text-blue-400 flex items-center gap-1">🛡️ DISTRICT ADMIN</span>
+                    ) : (
+                      <span className="text-[#3b82f6]">ORGANIZER</span>
+                    )}
                   </span>
                   <span className="text-[11px] font-extrabold text-white leading-none">
                     District 3192
@@ -664,7 +677,7 @@ export function OrganizerDashboardClient({
             </h1>
 
             {/* Return to District Hub (Super Admin) */}
-            {!isDistrictHub && (user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com") && (
+            {!isDistrictHub && isAdminUser && (
               <div className="pt-1">
                 <Link
                   href="/dashboard"
@@ -678,8 +691,7 @@ export function OrganizerDashboardClient({
 
 
             {/* Super Admin Switcher banner */}
-            {(user?.profile?.role === "super_admin" ||
-              user?.email === "tech.rotaract3192@gmail.com") && (
+            {isAdminUser && (
               <Link
                 href="/admin"
                 className="w-full flex items-center justify-center gap-2 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-white border border-amber-400/30 font-bold text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
@@ -766,11 +778,14 @@ export function OrganizerDashboardClient({
         {/* User Card with Exit Link */}
         <div className="space-y-2 pt-6">
           <div className="p-3 bg-gray-800/80 rounded-2xl flex items-center gap-3 border border-gray-700/50">
-            <div className="w-8 h-8 rounded-full bg-[#0758fc] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-[#0758fc] text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
               {user?.profile?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "O"}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white truncate">{user?.profile?.full_name || "Rotaract Leader"}</p>
+              <p className="text-[10px] font-extrabold truncate text-amber-400">
+                {user?.profile?.designation || (isSuperAdminUser ? "District Governance Officer" : "District Leader")}
+              </p>
               <p className="text-[10px] text-gray-400 truncate">{user?.email || "organizer@rotasphere.org"}</p>
             </div>
           </div>

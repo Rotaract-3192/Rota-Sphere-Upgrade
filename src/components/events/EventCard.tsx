@@ -19,6 +19,7 @@ import {
   Users,
   Globe,
 } from "lucide-react";
+import { isEventConcluded } from "@/lib/utils/dateTimeUtils";
 
 export interface EventCardProps {
   id?: string;
@@ -30,6 +31,7 @@ export interface EventCardProps {
   city?: string | null;
   startDate: string;
   endDate?: string | null;
+  status?: string | null;
   eventType?: string | null;
   categoryName?: string | null;
   price: number | null;
@@ -47,6 +49,8 @@ export function EventCard({
   venueName,
   city,
   startDate,
+  endDate,
+  status,
   eventType = "OFFLINE",
   categoryName,
   price,
@@ -55,6 +59,13 @@ export function EventCard({
   allowNonRotaract = true,
 }: EventCardProps) {
   const [saved, setSaved] = useState(false);
+
+  // Check if event has concluded / ended
+  const isEnded = isEventConcluded({
+    startDate,
+    endDate,
+    status,
+  });
 
   // Formatted date (e.g., "27 Sep 2026")
   const dateObj = new Date(startDate);
@@ -126,7 +137,9 @@ export function EventCard({
               alt={title}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              className={`object-cover group-hover:scale-105 transition-transform duration-500 ease-out ${
+                isEnded ? "grayscale-[25%] opacity-90" : ""
+              }`}
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 font-black bg-gradient-to-br from-gray-900 via-[#0758fc]/20 to-gray-950 text-sm p-4 text-center">
@@ -140,7 +153,12 @@ export function EventCard({
 
           {/* Top-Left: Category & Event Format Badges */}
           <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-10">
-            {categoryName ? (
+            {isEnded ? (
+              <span className="flex items-center gap-1 bg-zinc-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-zinc-300 border border-zinc-700/60 shadow-xs">
+                <Clock size={11} className="text-zinc-400" />
+                Concluded
+              </span>
+            ) : categoryName ? (
               <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-white border border-white/20 shadow-xs">
                 <Sparkles size={11} className="text-blue-400" />
                 {categoryName}
@@ -155,10 +173,10 @@ export function EventCard({
             <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-200 border border-white/15 shadow-xs">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
+                  isEnded ? "bg-zinc-400" : isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
                 }`}
               />
-              {isVirtual ? "Virtual" : "In-Person"}
+              {isEnded ? "Ended" : isVirtual ? "Virtual" : "In-Person"}
             </span>
           </div>
 
@@ -182,17 +200,24 @@ export function EventCard({
           {/* Bottom Floating Overlay: Price Tag & Date Chip */}
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white z-10 pointer-events-none">
             <div className="flex items-center gap-1.5">
-              <span
-                className={`text-xs font-mono font-extrabold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm ${
-                  isFree
-                    ? "bg-emerald-500/90 text-white border-emerald-400/40"
-                    : "bg-[#0758fc]/90 text-white border-blue-400/40"
-                }`}
-              >
-                {isFree ? "Free Entry" : `From ${priceDisplay}`}
-              </span>
+              {isEnded ? (
+                <span className="text-xs font-bold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm bg-black/75 text-zinc-300 border-white/20 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                  Event Over
+                </span>
+              ) : (
+                <span
+                  className={`text-xs font-mono font-extrabold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm ${
+                    isFree
+                      ? "bg-emerald-500/90 text-white border-emerald-400/40"
+                      : "bg-[#0758fc]/90 text-white border-blue-400/40"
+                  }`}
+                >
+                  {isFree ? "Free Entry" : `From ${priceDisplay}`}
+                </span>
+              )}
 
-              {hasGroupPasses && (
+              {!isEnded && hasGroupPasses && (
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold bg-purple-500/90 backdrop-blur-md text-white px-2 py-1 rounded-lg border border-purple-400/40 shadow-xs">
                   <Users size={11} /> Group Deals
                 </span>
@@ -200,7 +225,7 @@ export function EventCard({
             </div>
 
             <span className="text-[11px] font-bold text-gray-200 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/15">
-              <Calendar size={12} className="text-amber-400 shrink-0" />
+              <Calendar size={12} className={isEnded ? "text-gray-400 shrink-0" : "text-amber-400 shrink-0"} />
               {formattedDate}
             </span>
           </div>
@@ -222,7 +247,7 @@ export function EventCard({
           </h3>
         </Link>
 
-        {/* Event Summary / Description Excerpt (Answers "does not tell anything about event") */}
+        {/* Event Summary / Description Excerpt */}
         <p className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed font-normal">
           {displaySummary}
         </p>
@@ -242,9 +267,15 @@ export function EventCard({
           )}
         </div>
 
-        {/* Feature Tags: Bulk Slabs / Open to All */}
+        {/* Feature Tags: Bulk Slabs / Open to All / Concluded */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {hasGroupPasses && (
+          {isEnded && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+              <Clock size={11} /> Event Concluded
+            </span>
+          )}
+
+          {!isEnded && hasGroupPasses && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
               <Users size={11} /> Group / Club Pass
             </span>
@@ -265,19 +296,23 @@ export function EventCard({
         <div data-tour="event-card-action" className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
-              {isFree ? "Admission" : "Pass Starts At"}
+              {isEnded ? "Event Status" : isFree ? "Admission" : "Pass Starts At"}
             </span>
-            <span className="text-sm sm:text-base font-black text-gray-900 dark:text-white font-mono leading-none">
-              {priceDisplay}
+            <span className={`text-sm sm:text-base font-black leading-none ${isEnded ? "text-gray-500 dark:text-gray-400 font-sans text-xs sm:text-sm" : "text-gray-900 dark:text-white font-mono"}`}>
+              {isEnded ? "Concluded" : priceDisplay}
             </span>
           </div>
 
           <Link
             href={`/events/${slug}`}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0758fc] hover:bg-[#054fe0] active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer group/btn"
+            className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer group/btn ${
+              isEnded
+                ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 shadow-xs"
+                : "bg-[#0758fc] hover:bg-[#054fe0] active:scale-95 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
+            }`}
           >
-            <span>Book Pass</span>
-            <ArrowRight size={13} className="group-hover/btn:translate-x-0.5 transition-transform" />
+            <span>{isEnded ? "Event Over" : "Book Pass"}</span>
+            <ArrowRight size={13} className="group-hover/btn:translate-x-0.5 transition-transform opacity-70" />
           </Link>
         </div>
       </div>
