@@ -5,10 +5,11 @@
  * Supports Clerk authentication and fallback standalone preview mode.
  */
 
-import { SignIn, useAuth } from "@clerk/nextjs";
+import { SignIn } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Sparkles, ArrowRight, Shield } from "lucide-react";
+import { ArrowRight, Shield } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -53,9 +54,6 @@ export default function SignInPage() {
             Rota<span className="text-[#3b82f6]">Sphere</span>
           </span>
         </Link>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
-          <Sparkles size={13} /> District 3192 Single Sign-On
-        </div>
       </div>
 
       {hasClerkKey ? (
@@ -66,18 +64,31 @@ export default function SignInPage() {
             signUpUrl="/sign-up"
             fallbackRedirectUrl={redirectUrl}
             appearance={{
+              theme: dark,
+              variables: {
+                colorPrimary: "#0758fc",
+                colorBackground: "#121620",
+                colorInput: "#090d16",
+                colorInputForeground: "#ffffff",
+                colorForeground: "#ffffff",
+                colorMutedForeground: "#94a3b8",
+                borderRadius: "0.875rem",
+              },
               elements: {
                 rootBox: "w-full max-w-[440px] mx-auto",
                 card: "rounded-3xl shadow-2xl border border-white/10 bg-[#121620] backdrop-blur-xl",
                 headerTitle: "text-white text-xl font-bold",
-                headerSubtitle: "text-gray-400 text-sm",
-                socialButtonsBlockButton: "bg-white/10 border-white/15 text-white hover:bg-white/15",
-                formButtonPrimary: "bg-[#0758fc] hover:bg-[#054fe0] text-white font-semibold text-sm rounded-xl py-3",
-                footerActionLink: "text-amber-400 hover:text-amber-300 font-semibold",
-                formFieldInput: "bg-black/50 border-white/15 text-white rounded-xl",
-                formFieldLabel: "text-gray-300 text-xs font-semibold uppercase tracking-wider",
+                headerSubtitle: "text-slate-400 text-sm",
+                socialButtonsBlockButton: "bg-white/5 border border-white/15 text-white hover:bg-white/10 transition-all rounded-xl",
+                socialButtonsBlockButtonText: "text-white font-medium text-sm",
+                formButtonPrimary: "bg-[#0758fc] hover:bg-[#054fe0] text-white font-semibold text-sm rounded-xl py-3 shadow-lg shadow-blue-500/25 transition-all",
+                footerActionLink: "text-[#3b82f6] hover:text-blue-400 font-semibold",
+                formFieldInput: "bg-[#090d16] border border-white/15 text-white rounded-xl focus:border-[#0758fc]",
+                formFieldLabel: "text-slate-300 text-xs font-semibold uppercase tracking-wider",
                 dividerLine: "bg-white/10",
-                dividerText: "text-gray-400 text-xs",
+                dividerText: "text-slate-400 text-xs uppercase tracking-wider",
+                footer: "border-t border-white/10 bg-transparent",
+                footerActionText: "text-slate-400 text-xs",
               },
             }}
           />
@@ -101,7 +112,7 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="rotaractor@district3192.org"
-                className="w-full bg-black/40 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-amber-400 transition-colors"
+                className="w-full bg-[#090d16] border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-[#0758fc] transition-colors"
               />
             </div>
 
@@ -116,14 +127,14 @@ export default function SignInPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-black/40 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-amber-400 transition-colors"
+                className="w-full bg-[#090d16] border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-[#0758fc] transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold text-sm py-3.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+              className="w-full bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-sm py-3.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 cursor-pointer"
             >
               {loading ? "Signing in..." : "Continue to RotaSphere"}
               <ArrowRight size={16} />
@@ -132,7 +143,7 @@ export default function SignInPage() {
             <div className="pt-4 border-t border-white/10 text-center">
               <p className="text-xs text-gray-400">
                 Don&apos;t have an account?{" "}
-                <Link href="/sign-up" className="text-amber-400 hover:underline font-semibold">
+                <Link href="/sign-up" className="text-[#3b82f6] hover:underline font-semibold">
                   Sign up
                 </Link>
               </p>
@@ -142,7 +153,7 @@ export default function SignInPage() {
       )}
 
       <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
-        <Shield size={14} /> Rotaract District 3192 Secure Single Sign-On
+        <Shield size={14} /> Rotaract District 3192 Official Platform
       </div>
     </div>
   );

@@ -9,6 +9,7 @@
 import type { Metadata } from "next";
 import { Inter, Open_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import "./globals.css";
 
 import { RootJsonLd } from "@/components/seo/JsonLd";
@@ -178,7 +179,36 @@ export default function RootLayout({
   );
 
   if (isKeyConfigured) {
-    return <ClerkProvider publishableKey={envKey}>{content}</ClerkProvider>;
+    return (
+      <ClerkProvider
+        publishableKey={envKey}
+        appearance={{
+          theme: dark,
+          variables: {
+            colorPrimary: "#0758fc",
+            colorBackground: "#121620",
+            colorInput: "#090d16",
+            colorInputForeground: "#ffffff",
+            colorForeground: "#ffffff",
+            colorMutedForeground: "#94a3b8",
+            colorNeutral: "#ffffff",
+            borderRadius: "0.875rem",
+            colorDanger: "#ef4444",
+          },
+          elements: {
+            card: "bg-[#121620] border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl",
+            headerTitle: "text-white font-bold text-xl",
+            headerSubtitle: "text-slate-400 text-sm",
+            socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all rounded-xl",
+            socialButtonsBlockButtonText: "text-white font-medium text-sm",
+            formButtonPrimary: "bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold rounded-xl py-3 shadow-lg shadow-blue-500/20 transition-all",
+            footerActionLink: "text-[#3b82f6] hover:text-blue-400 font-semibold",
+          },
+        }}
+      >
+        {content}
+      </ClerkProvider>
+    );
   }
 
   return content;
