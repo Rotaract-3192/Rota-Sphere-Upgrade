@@ -144,6 +144,56 @@ function playSound(type: "SUCCESS" | "DUPLICATE" | "PENDING" | "INVALID") {
   }
 }
 
+// ── Persistent Gate Key Storage (Cache Storage API + LocalStorage) ─────────────
+// Stores the authorized Gate Key so volunteers and gate staff don't have to re-enter
+// it repeatedly if their mobile screen reloads or they refresh the scanner page.
+async function saveGateKeyToStorage(eventId: string, pin: string): Promise<void> {
+  try {
+    localStorage.setItem(`rotasphere_gate_key_${eventId}`, pin);
+  } catch {}
+  if (typeof window !== "undefined" && "caches" in window) {
+    try {
+      const cache = await caches.open("rotasphere-gate-cache");
+      await cache.put(
+        new Request(`/api/gate-pin/${eventId}`),
+        new Response(JSON.stringify({ pin, cachedAt: Date.now() }), {
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    } catch {}
+  }
+}
+
+async function getGateKeyFromStorage(eventId: string): Promise<string> {
+  let pin = "";
+  try {
+    pin = localStorage.getItem(`rotasphere_gate_key_${eventId}`) || "";
+  } catch {}
+  if (!pin && typeof window !== "undefined" && "caches" in window) {
+    try {
+      const cache = await caches.open("rotasphere-gate-cache");
+      const matched = await cache.match(new Request(`/api/gate-pin/${eventId}`));
+      if (matched) {
+        const data = await matched.json();
+        pin = data?.pin || "";
+      }
+    } catch {}
+  }
+  return pin;
+}
+
+async function removeGateKeyFromStorage(eventId: string): Promise<void> {
+  try {
+    localStorage.removeItem(`rotasphere_gate_key_${eventId}`);
+  } catch {}
+  if (typeof window !== "undefined" && "caches" in window) {
+    try {
+      const cache = await caches.open("rotasphere-gate-cache");
+      await cache.delete(new Request(`/api/gate-pin/${eventId}`));
+    } catch {}
+  }
+}
+
 function CheckInScannerContent() {
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId") || "";
@@ -156,8 +206,8 @@ function CheckInScannerContent() {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // ── Authorization & Gate Security State ─────────────────────────────────
-  // ALWAYS starts locked — entering the 6-digit Gate Key is strictly required to operate scanner!
-  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "locked">("locked");
+  // Checks browser cache first; if cached Gate Key is valid, restores session across refreshes!
+  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "locked">("checking");
   const [authorizedRole, setAuthorizedRole] = useState<string | null>(null);
   const [operatorIdentity, setOperatorIdentity] = useState<string | null>(null);
   const [gateEventMeta, setGateEventMeta] = useState<{ id: string; title: string; city: string; startDate?: string } | null>(null);
@@ -213,45 +263,82 @@ function CheckInScannerContent() {
   const lastScannedTokenRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load events list and event metadata on mount / when selected event changes (ALWAYS stays locked)
+  // Load events list and check cached Gate Key on mount / when target event changes
   useEffect(() => {
     let isMounted = true;
 
     async function initEvents() {
+      let targetId = selectedEventId;
+
+      // 1. Fetch scanner events if not already present
       try {
         const res = await getScannerEventsAction();
         if (isMounted && res.events && res.events.length > 0) {
           setEventsList(res.events);
-          if (!selectedEventId) {
-            const firstEvt = res.events[0];
-            setSelectedEventId(firstEvt.id);
+          if (!targetId) {
+            targetId = res.events[0].id;
+            setSelectedEventId(targetId);
             setGateEventMeta({
-              id: firstEvt.id,
-              title: firstEvt.title,
-              city: firstEvt.city,
-              startDate: firstEvt.start_date,
+              id: res.events[0].id,
+              title: res.events[0].title,
+              city: res.events[0].city,
+              startDate: res.events[0].start_date,
             });
-            return;
           }
         }
       } catch (err) {
         console.warn("Failed to load scanner events:", err);
       }
 
-      if (selectedEventId) {
-        try {
-          const meta = await verifyGateAccessAction({ eventId: selectedEventId, pin: "" });
-          if (isMounted && meta.eventTitle) {
-            setGateEventMeta({
-              id: meta.eventId || selectedEventId,
-              title: meta.eventTitle,
-              city: meta.eventCity || "Venue",
-              startDate: meta.startDate,
-            });
-          }
-        } catch (err) {
-          console.warn("Failed to load gate event metadata:", err);
+      if (!targetId) {
+        if (isMounted) setAuthStatus("locked");
+        return;
+      }
+
+      // 2. Check Cache Storage API & localStorage for stored Gate Key
+      let cachedPin = "";
+      try {
+        cachedPin = await getGateKeyFromStorage(targetId);
+      } catch {}
+
+      try {
+        const meta = await verifyGateAccessAction({
+          eventId: targetId,
+          pin: cachedPin || undefined,
+        });
+
+        if (!isMounted) return;
+
+        if (meta.eventTitle) {
+          setGateEventMeta({
+            id: meta.eventId || targetId,
+            title: meta.eventTitle,
+            city: meta.eventCity || "Venue",
+            startDate: meta.startDate,
+          });
         }
+
+        if (cachedPin && meta.authorized) {
+          // Successfully restored session from cache across page refresh!
+          setAuthStatus("authorized");
+          setAuthorizedRole(meta.role || "staff");
+          setOperatorIdentity(
+            meta.userName
+              ? `${meta.userName} (${meta.role === "organizer" || meta.role === "admin" ? "Organizer" : "Gate Staff"})`
+              : "Gate Staff (Key Verified)"
+          );
+          setActiveGatePin(cachedPin);
+          setPinError(false);
+        } else {
+          // If cached pin failed or was not found, set locked state and purge stale key
+          if (cachedPin && !meta.authorized) {
+            await removeGateKeyFromStorage(targetId);
+          }
+          setAuthStatus("locked");
+        }
+      } catch (err) {
+        console.warn("Failed to verify gate event:", err);
+        if (isMounted) setAuthStatus("locked");
       }
     }
 
@@ -262,7 +349,7 @@ function CheckInScannerContent() {
     };
   }, [selectedEventId]);
 
-  // Handle switching target event (stops camera and locks gate)
+  // Handle switching target event (stops camera and checks for cached key)
   const handleEventChange = useCallback(async (newEventId: string) => {
     if (scannerRef.current && scannerRef.current.isScanning) {
       try {
@@ -275,15 +362,54 @@ function CheckInScannerContent() {
     setPinInput("");
     setPinError(false);
     setPinErrorMessage(null);
+
+    // Check if new event already has a valid cached key in browser cache storage
+    let cachedPin = "";
+    try {
+      cachedPin = await getGateKeyFromStorage(newEventId);
+    } catch {}
+
+    if (cachedPin && cachedPin.length === 6) {
+      setAuthStatus("checking");
+      try {
+        const res = await verifyGateAccessAction({ eventId: newEventId, pin: cachedPin });
+        if (res.authorized) {
+          setAuthStatus("authorized");
+          setAuthorizedRole(res.role || "staff");
+          setOperatorIdentity(
+            res.userName
+              ? `${res.userName} (${res.role === "organizer" || res.role === "admin" ? "Organizer" : "Gate Staff"})`
+              : "Gate Staff (Key Verified)"
+          );
+          setActiveGatePin(cachedPin);
+          if (res.eventTitle) {
+            setGateEventMeta({
+              id: res.eventId || newEventId,
+              title: res.eventTitle,
+              city: res.eventCity || "Venue",
+              startDate: res.startDate,
+            });
+          }
+          return;
+        } else {
+          await removeGateKeyFromStorage(newEventId);
+        }
+      } catch {}
+    }
+
     setAuthStatus("locked");
   }, []);
 
-  // Lock gate scanner manually
+  // Lock gate scanner manually (purges browser cache storage)
   const handleLockGate = useCallback(async () => {
     if (scannerRef.current && scannerRef.current.isScanning) {
       try {
         await scannerRef.current.stop();
       } catch {}
+    }
+    const targetEventId = selectedEventId || gateEventMeta?.id;
+    if (targetEventId) {
+      await removeGateKeyFromStorage(targetEventId);
     }
     setCameraActive(false);
     setActiveGatePin("");
@@ -291,7 +417,7 @@ function CheckInScannerContent() {
     setPinError(false);
     setPinErrorMessage(null);
     setAuthStatus("locked");
-  }, []);
+  }, [selectedEventId, gateEventMeta?.id]);
 
   // Submit and verify Gate Key
   const submitGatePin = useCallback(async (pinToTest: string) => {
@@ -329,6 +455,9 @@ function CheckInScannerContent() {
         setActiveGatePin(cleanPin);
         setPinError(false);
         playSound("SUCCESS");
+
+        // Cache in Cache Storage API & localStorage so page refreshes stay logged in
+        await saveGateKeyToStorage(targetEventId, cleanPin);
       } else {
         setPinError(true);
         setPinShake(true);
@@ -336,6 +465,8 @@ function CheckInScannerContent() {
         setPinInput("");
         playSound("INVALID");
         setTimeout(() => setPinShake(false), 600);
+
+        await removeGateKeyFromStorage(targetEventId);
       }
     } catch {
       setPinError(true);
