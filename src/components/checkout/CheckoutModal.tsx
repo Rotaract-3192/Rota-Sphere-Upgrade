@@ -39,6 +39,8 @@ import {
   Award,
   RefreshCw,
   Sparkles,
+  Download,
+  Share2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
@@ -263,6 +265,7 @@ export function CheckoutModal({
   const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [qrSaved, setQrSaved] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<{
@@ -541,10 +544,71 @@ export function CheckoutModal({
   const targetUpiId = (event as any).upi_id || "rotaractdistrict3192@okaxis";
   const targetPayeeName = (event as any).upi_payee_name || "District 3192 Rotaract";
 
-  // Dynamic UPI URI Format: upi://pay?pa={upi_id}&pn={name}&am={amount}&tn={note}&cu=INR
-  const upiPaymentUri = `upi://pay?pa=${encodeURIComponent(targetUpiId)}&pn=${encodeURIComponent(
-    targetPayeeName
-  )}&am=${fees.totalPayable.toFixed(2)}&tn=${encodeURIComponent(`Passes for ${event.title.slice(0, 30)}`)}&cu=INR`;
+  // Unique Order Reference for NPCI Merchant tr parameter
+  const orderRef = holdSessionId
+    ? `ROTA${holdSessionId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 14)}`
+    : `ROTA${Date.now()}`;
+
+  // Clean title without trailing space or special characters for clean UPI transaction note
+  const cleanTitle = (event.title || "Passes")
+    .trim()
+    .replace(/[^a-zA-Z0-9 ]/g, "")
+    .slice(0, 24)
+    .trim();
+  const cleanNote = `Passes for ${cleanTitle}`;
+
+  // Standard NPCI compliant UPI query parameters
+  const baseUpiQuery = [
+    `pa=${encodeURIComponent(targetUpiId.trim())}`,
+    `pn=${encodeURIComponent(targetPayeeName.trim())}`,
+    `am=${fees.totalPayable.toFixed(2)}`,
+    `cu=INR`,
+    `tn=${encodeURIComponent(cleanNote)}`,
+    `tr=${encodeURIComponent(orderRef)}`,
+  ].join("&");
+
+  const upiPaymentUri = `upi://pay?${baseUpiQuery}`;
+  const gpayPaymentUri = `tez://upi/pay?${baseUpiQuery}`;
+  const phonepePaymentUri = `phonepe://pay?${baseUpiQuery}`;
+  const paytmPaymentUri = `paytmmp://pay?${baseUpiQuery}`;
+
+  const handleSaveQrCode = async () => {
+    if (!upiQrDataUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.share) {
+        const res = await fetch(upiQrDataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], `UPI-QR-${event.slug || "ticket"}-Rs${fees.totalPayable.toFixed(0)}.png`, {
+          type: "image/png",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `UPI QR - ${event.title}`,
+            text: `Scan in PhonePe / GPay / Paytm to pay ₹${fees.totalPayable.toFixed(2)}`,
+          });
+          setQrSaved(true);
+          setTimeout(() => setQrSaved(false), 3000);
+          return;
+        }
+      }
+    } catch {
+      // User cancelled or unsupported, fallback to download
+    }
+
+    try {
+      const link = document.createElement("a");
+      link.href = upiQrDataUrl;
+      link.download = `UPI-QR-${event.slug || "ticket"}-Rs${fees.totalPayable.toFixed(0)}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setQrSaved(true);
+      setTimeout(() => setQrSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to download QR code", e);
+    }
+  };
 
   // Generate dynamic QR code whenever payment amount is calculated
   useEffect(() => {
@@ -555,7 +619,7 @@ export function CheckoutModal({
 
     if (isOpen && upiPaymentUri) {
       QRCode.toDataURL(upiPaymentUri, {
-        width: 320,
+        width: 360,
         margin: 2,
         errorCorrectionLevel: "H",
         color: {
@@ -1294,7 +1358,7 @@ export function CheckoutModal({
             </div>
 
             {/* Mobile 1-Click UPI Payment Button */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <a
                 href={upiPaymentUri}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
@@ -1317,7 +1381,7 @@ export function CheckoutModal({
             </div>
 
             {/* Dynamic UPI QR Code Box */}
-            <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
+            <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-3.5">
               <div className="bg-white p-3 rounded-2xl border-2 border-gray-900 dark:border-gray-600 shadow-md">
                 {upiQrDataUrl ? (
                   <img
@@ -1330,6 +1394,29 @@ export function CheckoutModal({
                     <Loader2 size={24} className="animate-spin text-gray-400" />
                   </div>
                 )}
+              </div>
+
+              {/* Quick Actions: Save QR for Gallery Scan & Copy UPI ID */}
+              <div className="flex items-center gap-2 w-full max-w-[280px]">
+                <button
+                  type="button"
+                  onClick={handleSaveQrCode}
+                  disabled={!upiQrDataUrl}
+                  className="flex-1 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Save QR code to scan from gallery in your UPI app"
+                >
+                  {qrSaved ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Download size={13} />}
+                  <span>{qrSaved ? "Saved" : "Save QR"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(targetUpiId, "upi")}
+                  className="flex-1 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="Copy Organizer UPI ID"
+                >
+                  {copiedUpi ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
+                  <span>{copiedUpi ? "Copied" : "Copy UPI ID"}</span>
+                </button>
               </div>
 
               {/* Payee Info */}
