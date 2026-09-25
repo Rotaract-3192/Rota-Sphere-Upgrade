@@ -162,8 +162,7 @@ export default async function DashboardPage(props: {
     GROUP BY o.id, e.title, e.slug
     ORDER BY
       CASE WHEN o.status = 'PENDING_VERIFICATION' THEN 0 ELSE 1 END,
-      o.created_at DESC
-    LIMIT 200;
+      o.created_at DESC;
   `);
   const orders = ordersData || [];
 
@@ -178,8 +177,7 @@ export default async function DashboardPage(props: {
     LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
     LEFT JOIN saas_orders o ON t.order_id = o.id
     WHERE e.organization_id = '${orgId}'
-    ORDER BY t.created_at DESC
-    LIMIT 200;
+    ORDER BY t.created_at DESC;
   `);
   const tickets = ticketsData || [];
 

@@ -104,8 +104,7 @@ export default async function DedicatedEventDashboardPage(props: {
     WHERE o.event_id = ${escapeSql(eventId)}
     ORDER BY
       CASE WHEN o.status = 'PENDING_VERIFICATION' THEN 0 ELSE 1 END,
-      o.created_at DESC
-    LIMIT 300;
+      o.created_at DESC;
   `);
   const orders = ordersData || [];
 
@@ -122,8 +121,7 @@ export default async function DedicatedEventDashboardPage(props: {
     LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
     LEFT JOIN saas_orders o ON t.order_id = o.id
     WHERE t.event_id = ${escapeSql(eventId)}
-    ORDER BY t.created_at DESC
-    LIMIT 500;
+    ORDER BY t.created_at DESC;
   `);
   const tickets = ticketsData || [];
 
@@ -132,8 +130,7 @@ export default async function DedicatedEventDashboardPage(props: {
     SELECT *
     FROM check_in_logs
     WHERE event_id = ${escapeSql(eventId)}
-    ORDER BY created_at DESC
-    LIMIT 100;
+    ORDER BY created_at DESC;
   `);
   const checkInLogs = checkInsData || [];
 

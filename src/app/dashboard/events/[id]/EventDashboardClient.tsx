@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -75,6 +75,12 @@ export function EventDashboardClient({
   const [orders, setOrders] = useState(initialOrders);
   const [tickets, setTickets] = useState(initialTickets);
   const [checkIns, setCheckIns] = useState(initialCheckIns);
+
+  useEffect(() => { setEvent(initialEvent); }, [initialEvent]);
+  useEffect(() => { setTiers(initialTiers); }, [initialTiers]);
+  useEffect(() => { setOrders(initialOrders); }, [initialOrders]);
+  useEffect(() => { setTickets(initialTickets); }, [initialTickets]);
+  useEffect(() => { setCheckIns(initialCheckIns); }, [initialCheckIns]);
   const [activeTab, setActiveTab] = useState<
     "overview" | "orders" | "attendees" | "tickets" | "broadcast"
   >(

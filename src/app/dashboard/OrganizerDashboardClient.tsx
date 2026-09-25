@@ -9,7 +9,7 @@
  * 4. Inventory, Attendees, Orders, and Gate Scanner Ops
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -111,6 +111,11 @@ export function OrganizerDashboardClient({
   const [orders, setOrders] = useState(initialOrders);
   const [tickets, setTickets] = useState(initialTickets);
   const [coupons, setCoupons] = useState(initialCoupons);
+
+  useEffect(() => { setEvents(initialEvents); }, [initialEvents]);
+  useEffect(() => { setOrders(initialOrders); }, [initialOrders]);
+  useEffect(() => { setTickets(initialTickets); }, [initialTickets]);
+  useEffect(() => { setCoupons(initialCoupons); }, [initialCoupons]);
 
   // Search & Filter queries
   const [attendeeSearch, setAttendeeSearch] = useState("");

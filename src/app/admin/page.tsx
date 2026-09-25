@@ -45,7 +45,7 @@ export default async function AdminPage() {
     SELECT o.*, e.title as event_title
     FROM saas_orders o
     LEFT JOIN saas_events e ON o.event_id = e.id
-    ORDER BY o.created_at DESC LIMIT 200;
+    ORDER BY o.created_at DESC;
   `);
   const orders = ordersData || [];
 
@@ -54,7 +54,7 @@ export default async function AdminPage() {
     FROM saas_tickets t
     LEFT JOIN saas_events e ON t.event_id = e.id
     LEFT JOIN saas_ticket_tiers tt ON t.ticket_tier_id = tt.id
-    ORDER BY t.created_at DESC LIMIT 200;
+    ORDER BY t.created_at DESC;
   `);
   const tickets = ticketsData || [];
 
@@ -62,7 +62,7 @@ export default async function AdminPage() {
     SELECT c.*, e.title as event_title
     FROM check_in_logs c
     LEFT JOIN saas_events e ON c.event_id = e.id
-    ORDER BY c.created_at DESC LIMIT 50;
+    ORDER BY c.created_at DESC;
   `);
   const checkInLogs = checkInsData || [];
 

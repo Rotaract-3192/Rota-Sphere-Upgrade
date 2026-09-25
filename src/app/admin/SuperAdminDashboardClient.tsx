@@ -188,9 +188,17 @@ export function SuperAdminDashboardClient({
   const [orders, setOrders] = useState(initialOrders);
   const [tickets, setTickets] = useState(initialTickets);
   const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
-  const [checkIns] = useState(initialCheckInLogs);
-  const [auditLogs] = useState(initialAuditLogs);
+  const [checkIns, setCheckIns] = useState(initialCheckInLogs);
+  const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
   const [organizerRequests, setOrganizerRequests] = useState(initialOrganizerRequests);
+
+  useEffect(() => { setOrganizations(initialOrganizations); }, [initialOrganizations]);
+  useEffect(() => { setEvents(initialEvents); }, [initialEvents]);
+  useEffect(() => { setOrders(initialOrders); }, [initialOrders]);
+  useEffect(() => { setTickets(initialTickets); }, [initialTickets]);
+  useEffect(() => { setCheckIns(initialCheckInLogs); }, [initialCheckInLogs]);
+  useEffect(() => { setAuditLogs(initialAuditLogs); }, [initialAuditLogs]);
+  useEffect(() => { setOrganizerRequests(initialOrganizerRequests); }, [initialOrganizerRequests]);
   const [reqProcessingId, setReqProcessingId] = useState<string | null>(null);
 
   // Manual Attendee Entry State

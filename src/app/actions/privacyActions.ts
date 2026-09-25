@@ -255,8 +255,8 @@ export async function requestDataExportAction(): Promise<{
     // Collect export data
     const [profileRes, ticketsRes, ordersRes, consentsRes] = await Promise.all([
       executeSql(`SELECT id, attendee_name, attendee_email, phone, created_at FROM saas_tickets WHERE owner_user_id = '${esc(user.clerkId)}' LIMIT 1`),
-      executeSql(`SELECT id, ticket_code, status, attendee_name, created_at FROM saas_tickets WHERE owner_user_id = '${esc(user.clerkId)}' ORDER BY created_at DESC LIMIT 200`),
-      executeSql(`SELECT id, amount, currency, status, created_at FROM saas_orders WHERE user_id = '${esc(user.clerkId)}' ORDER BY created_at DESC LIMIT 200`),
+      executeSql(`SELECT id, ticket_code, status, attendee_name, created_at FROM saas_tickets WHERE owner_user_id = '${esc(user.clerkId)}' ORDER BY created_at DESC`),
+      executeSql(`SELECT id, amount, currency, status, created_at FROM saas_orders WHERE user_id = '${esc(user.clerkId)}' ORDER BY created_at DESC`),
       executeSql(`SELECT purpose, status, granted_at, withdrawn_at FROM consents WHERE user_id = '${esc(user.clerkId)}'`),
     ]);
 
