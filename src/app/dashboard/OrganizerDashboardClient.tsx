@@ -1084,6 +1084,19 @@ export function OrganizerDashboardClient({
                           <span>Edit</span>
                         </button>
 
+                        {/* Issue Manual Ticket Button */}
+                        <button
+                          onClick={() => {
+                            setManualAttendeeEventId(evt.id);
+                            setManualAttendeeModalOpen(true);
+                          }}
+                          title="Issue manual pass or spot registration for this event (works even when paused)"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs hover:border-blue-300"
+                        >
+                          <UserPlus size={14} className="text-[#0758fc]" />
+                          <span>+ Manual Ticket</span>
+                        </button>
+
                         {/* Pause / Resume Quick Button */}
                         {evt.status === "PUBLISHED" ? (
                           <button
@@ -1254,6 +1267,19 @@ export function OrganizerDashboardClient({
                         >
                           <Edit3 size={13} className="text-[#0758fc]" />
                           <span>Edit</span>
+                        </button>
+
+                        {/* Issue Manual Ticket Button */}
+                        <button
+                          onClick={() => {
+                            setManualAttendeeEventId(evt.id);
+                            setManualAttendeeModalOpen(true);
+                          }}
+                          title="Issue manual pass or spot registration for this event (works even when paused)"
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <UserPlus size={13} className="text-[#0758fc]" />
+                          <span>+ Manual Ticket</span>
                         </button>
 
                         {/* Pause / Resume / End Ticketing Controls */}

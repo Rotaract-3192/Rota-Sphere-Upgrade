@@ -43,12 +43,14 @@ import {
   PlayCircle,
   Ban,
   RotateCcw,
+  UserPlus,
 } from "lucide-react";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
 import { updateEventAction, updateEventStatusAction } from "@/app/actions/eventActions";
 import { checkInTicketAction } from "@/app/actions/checkInActions";
 import { exportEventAttendeesToExcel } from "@/lib/utils/excelExporter";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
+import { ManualAttendeeModal } from "@/components/dashboard/ManualAttendeeModal";
 
 interface EventDashboardClientProps {
   user: any;
@@ -98,6 +100,7 @@ export function EventDashboardClient({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+  const [manualAttendeeModalOpen, setManualAttendeeModalOpen] = useState(false);
 
   // Ticketing Status Management
   const [eventStatus, setEventStatus] = useState(event.status);
@@ -483,6 +486,16 @@ export function EventDashboardClient({
                   <span>Reopen Ticketing</span>
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => setManualAttendeeModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                title="Issue manual / offline ticket for this event (works even when paused)"
+              >
+                <UserPlus size={13} />
+                <span>+ Manual Ticket</span>
+              </button>
 
               <button
                 type="button"
@@ -1111,6 +1124,16 @@ export function EventDashboardClient({
                   <option value="CHECKED_IN">Checked In At Gate</option>
                   <option value="PENDING">Pending Approval</option>
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => setManualAttendeeModalOpen(true)}
+                  className="bg-[#0758fc] hover:bg-[#054fe0] text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  title="Issue manual / offline ticket for this event (works even when paused)"
+                >
+                  <UserPlus size={13} />
+                  <span>+ Add Manual Attendee</span>
+                </button>
 
                 <button
                   type="button"
@@ -1858,6 +1881,18 @@ export function EventDashboardClient({
         events={[{ id: event.id, title: event.title }]}
         defaultEventId={event.id}
         isSuperAdmin={user?.profile?.role === "super_admin" || user?.email === "tech.rotaract3192@gmail.com"}
+      />
+
+      {/* ── MANUAL ATTENDEE & SPOT REGISTRATION MODAL ────────────────── */}
+      <ManualAttendeeModal
+        isOpen={manualAttendeeModalOpen}
+        onClose={() => setManualAttendeeModalOpen(false)}
+        events={[event]}
+        initialEventId={event.id}
+        onAttendeeAdded={(newTicket) => {
+          setTickets((prev) => [newTicket, ...prev]);
+          showToast(`✓ Manual ticket issued for ${newTicket.attendee_name}`);
+        }}
       />
     </div>
   );

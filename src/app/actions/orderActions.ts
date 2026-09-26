@@ -1525,7 +1525,7 @@ export async function createManualAttendeeAction(
 
     // 1. Fetch Event and Verify Organizer/Admin Rights
     const { data: eventRows } = await executeSql(`
-      SELECT e.id, e.title, e.city, e.venue_name, e.start_date, e.organization_id
+      SELECT e.id, e.title, e.city, e.venue_name, e.start_date, e.organization_id, e.status, e.deleted_at
       FROM saas_events e
       WHERE e.id = ${escapeSql(input.eventId)}
       LIMIT 1;
@@ -1534,6 +1534,10 @@ export async function createManualAttendeeAction(
     const event = eventRows?.[0];
     if (!event) {
       return { success: false, error: "Event not found." };
+    }
+
+    if (event.deleted_at || event.status === "TRASHED") {
+      return { success: false, error: "Cannot issue manual tickets for an event in the Trash Bin." };
     }
 
     const isSuperAdmin = user.profile.role === "super_admin" || user.profile.role === "admin";

@@ -180,10 +180,10 @@ export function EventCard({
             <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-200 border border-white/15 shadow-xs">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isEnded ? "bg-zinc-400" : isPaused ? "bg-amber-400 animate-pulse" : isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
+                  isEnded ? "bg-zinc-400" : isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
                 }`}
               />
-              {isEnded ? "Ended" : isPaused ? "Paused" : isVirtual ? "Virtual" : "In-Person"}
+              {isEnded ? "Ended" : isVirtual ? "Virtual" : "In-Person"}
             </span>
           </div>
 

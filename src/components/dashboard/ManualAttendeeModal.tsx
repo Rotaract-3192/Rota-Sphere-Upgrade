@@ -377,10 +377,22 @@ export function ManualAttendeeModal({
                   >
                     {events.map((ev) => (
                       <option key={ev.id} value={ev.id}>
-                        {ev.title} {ev.city ? `(${ev.city})` : ""}
+                        {ev.title} {ev.city ? `(${ev.city})` : ""}{ev.status === "PAUSED" ? " — [Ticketing Paused]" : ev.status === "COMPLETED" ? " — [Ticketing Closed]" : ""}
                       </option>
                     ))}
                   </select>
+                  {selectedEvent?.status === "PAUSED" && (
+                    <div className="p-2 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mt-1">
+                      <Sparkles size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>Online public checkout is paused, but you can still issue official manual/spot passes here.</span>
+                    </div>
+                  )}
+                  {selectedEvent?.status === "COMPLETED" && (
+                    <div className="p-2 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 rounded-xl text-[11px] text-blue-800 dark:text-blue-300 flex items-center gap-1.5 mt-1">
+                      <Sparkles size={13} className="shrink-0 text-blue-600 dark:text-blue-400" />
+                      <span>Public registration is closed, but you can still issue official manual/spot passes here.</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Tier Selector */}
