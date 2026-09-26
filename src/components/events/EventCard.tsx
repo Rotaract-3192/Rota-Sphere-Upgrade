@@ -18,6 +18,7 @@ import {
   Sparkles,
   Users,
   Globe,
+  PauseCircle,
 } from "lucide-react";
 import { isEventConcluded } from "@/lib/utils/dateTimeUtils";
 
@@ -66,6 +67,7 @@ export function EventCard({
     endDate,
     status,
   });
+  const isPaused = status === "PAUSED";
 
   // Formatted date (e.g., "27 Sep 2026")
   const dateObj = new Date(startDate);
@@ -158,6 +160,11 @@ export function EventCard({
                 <Clock size={11} className="text-zinc-400" />
                 Concluded
               </span>
+            ) : isPaused ? (
+              <span className="flex items-center gap-1 bg-amber-950/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-amber-300 border border-amber-500/60 shadow-xs">
+                <PauseCircle size={11} className="text-amber-400" />
+                Ticketing Paused
+              </span>
             ) : categoryName ? (
               <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-white border border-white/20 shadow-xs">
                 <Sparkles size={11} className="text-blue-400" />
@@ -173,10 +180,10 @@ export function EventCard({
             <span className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-200 border border-white/15 shadow-xs">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isEnded ? "bg-zinc-400" : isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
+                  isEnded ? "bg-zinc-400" : isPaused ? "bg-amber-400 animate-pulse" : isVirtual ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
                 }`}
               />
-              {isEnded ? "Ended" : isVirtual ? "Virtual" : "In-Person"}
+              {isEnded ? "Ended" : isPaused ? "Paused" : isVirtual ? "Virtual" : "In-Person"}
             </span>
           </div>
 
@@ -205,6 +212,11 @@ export function EventCard({
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                   Event Over
                 </span>
+              ) : isPaused ? (
+                <span className="text-xs font-bold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm bg-amber-950/90 text-amber-300 border-amber-500/40 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  Paused
+                </span>
               ) : (
                 <span
                   className={`text-xs font-mono font-extrabold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm ${
@@ -217,7 +229,7 @@ export function EventCard({
                 </span>
               )}
 
-              {!isEnded && hasGroupPasses && (
+              {!isEnded && !isPaused && hasGroupPasses && (
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold bg-purple-500/90 backdrop-blur-md text-white px-2 py-1 rounded-lg border border-purple-400/40 shadow-xs">
                   <Users size={11} /> Group Deals
                 </span>
@@ -296,22 +308,22 @@ export function EventCard({
         <div data-tour="event-card-action" className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
-              {isEnded ? "Event Status" : isFree ? "Admission" : "Pass Starts At"}
+              {isEnded ? "Event Status" : isPaused ? "Ticketing" : isFree ? "Admission" : "Pass Starts At"}
             </span>
-            <span className={`text-sm sm:text-base font-black leading-none ${isEnded ? "text-gray-500 dark:text-gray-400 font-sans text-xs sm:text-sm" : "text-gray-900 dark:text-white font-mono"}`}>
-              {isEnded ? "Concluded" : priceDisplay}
+            <span className={`text-sm sm:text-base font-black leading-none ${isEnded || isPaused ? "text-gray-500 dark:text-gray-400 font-sans text-xs sm:text-sm" : "text-gray-900 dark:text-white font-mono"}`}>
+              {isEnded ? "Concluded" : isPaused ? "Paused" : priceDisplay}
             </span>
           </div>
 
           <Link
             href={`/events/${slug}`}
             className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer group/btn ${
-              isEnded
+              isEnded || isPaused
                 ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 shadow-xs"
                 : "bg-[#0758fc] hover:bg-[#054fe0] active:scale-95 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
             }`}
           >
-            <span>{isEnded ? "Event Over" : "Book Pass"}</span>
+            <span>{isEnded ? "Event Over" : isPaused ? "View Details" : "Book Pass"}</span>
             <ArrowRight size={13} className="group-hover/btn:translate-x-0.5 transition-transform opacity-70" />
           </Link>
         </div>

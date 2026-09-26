@@ -254,6 +254,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     end_date: event.end_date,
     status: event.status,
   });
+  const isPaused = event.status === "PAUSED";
 
   return (
     <>
@@ -292,6 +293,11 @@ export default async function EventDetailPage({ params }: PageProps) {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 backdrop-blur-md text-zinc-300 border border-zinc-600/60">
                 <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
                 <span className="font-bold uppercase tracking-wider text-[11px]">Event Concluded</span>
+              </span>
+            ) : isPaused ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/80 backdrop-blur-md text-amber-300 border border-amber-500/50">
+                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+                <span className="font-bold uppercase tracking-wider text-[11px]">Ticketing Paused</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/15">

@@ -787,6 +787,73 @@ export async function cancelEventAction(eventId: string, reason: string): Promis
   }
 }
 
+export async function updateEventStatusAction(
+  eventId: string,
+  newStatus: "PUBLISHED" | "PAUSED" | "COMPLETED" | "DRAFT",
+  reason?: string
+): Promise<{ success: boolean; error?: string; status?: string }> {
+  try {
+    const user = await requireAuth();
+    const access = await verifyEventAccess(eventId, user);
+    if (!access.authorized) {
+      return { success: false, error: access.error };
+    }
+
+    const validStatuses = ["PUBLISHED", "PAUSED", "COMPLETED", "DRAFT"];
+    if (!validStatuses.includes(newStatus)) {
+      return { success: false, error: `Invalid status: ${newStatus}` };
+    }
+
+    // Get event slug for instant path revalidation
+    const { data: eventRows } = await executeSql(`
+      SELECT slug FROM saas_events WHERE id = ${escapeSql(eventId)} LIMIT 1;
+    `);
+    const slug = eventRows?.[0]?.slug;
+
+    const { error: dbErr } = await executeSql(`
+      UPDATE saas_events
+      SET status = ${escapeSql(newStatus)}, updated_at = NOW()
+      WHERE id = ${escapeSql(eventId)};
+    `);
+
+    if (dbErr) {
+      logger.error("updateEventStatusAction failed", { error: dbErr, eventId, newStatus });
+      return { success: false, error: dbErr.message || "Failed to update event status" };
+    }
+
+    // Also update legacy table if present
+    try {
+      await executeSql(`
+        UPDATE rotasphere_events
+        SET status = ${escapeSql(newStatus)}, updated_at = NOW()
+        WHERE id = ${escapeSql(eventId)};
+      `);
+    } catch (_) {}
+
+    await logAuditAction({
+      actorId: user.clerkId,
+      actorRole: user.profile.role,
+      actorEmail: user.email,
+      action: `EVENT_STATUS_${newStatus}`,
+      entityType: "EVENT",
+      entityId: eventId,
+      newState: { status: newStatus, reason: reason || null },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/dashboard/events/${eventId}`);
+    revalidatePath("/events");
+    revalidatePath("/");
+    if (slug) {
+      revalidatePath(`/events/${slug}`);
+    }
+
+    return { success: true, status: newStatus };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
 export async function updateEventAction(
   eventId: string,
   input: Partial<CreateEventInput>

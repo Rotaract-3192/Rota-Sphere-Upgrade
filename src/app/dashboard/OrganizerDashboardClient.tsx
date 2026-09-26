@@ -51,10 +51,14 @@ import {
   Menu,
   KeyRound,
   RefreshCw,
+  PauseCircle,
+  PlayCircle,
+  Ban,
 } from "lucide-react";
 import {
   duplicateEventAction,
   cancelEventAction,
+  updateEventStatusAction,
   trashEventAction,
   restoreEventAction,
   permanentDeleteEventAction,
@@ -338,6 +342,43 @@ export function OrganizerDashboardClient({
     if (res.success) {
       showToast("Event marked as CANCELLED");
       window.location.reload();
+    }
+  }
+
+  async function handleUpdateEventStatus(
+    eventId: string,
+    newStatus: "PUBLISHED" | "PAUSED" | "COMPLETED",
+    eventTitle: string
+  ) {
+    let promptMsg = "";
+    if (newStatus === "PAUSED") {
+      promptMsg = `Pause ticketing for "${eventTitle}"?\n\nPass sales will be temporarily halted. Visitors on the event page will see "Ticketing Paused", and checkout will be disabled. You can resume sales anytime.`;
+    } else if (newStatus === "COMPLETED") {
+      promptMsg = `End ticketing and close all registrations for "${eventTitle}"?\n\nPass sales will be concluded. The event listing and all attendee data remain safe and intact. You do NOT need to delete the event.`;
+    } else if (newStatus === "PUBLISHED") {
+      promptMsg = `Resume ticketing for "${eventTitle}"?\n\nPass sales will be reopened immediately.`;
+    }
+
+    if (!confirm(promptMsg)) return;
+
+    setActionLoadingId(eventId);
+    const res = await updateEventStatusAction(eventId, newStatus);
+    setActionLoadingId(null);
+
+    if (res.success) {
+      const msg =
+        newStatus === "PAUSED"
+          ? `Ticketing paused for "${eventTitle}".`
+          : newStatus === "COMPLETED"
+          ? `Ticketing ended and registrations closed for "${eventTitle}".`
+          : `Ticketing resumed for "${eventTitle}"!`;
+      showToast(msg);
+      setEvents((prev) =>
+        prev.map((e) => (e.id === eventId ? { ...e, status: newStatus } : e))
+      );
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to update event ticketing status");
     }
   }
 
@@ -1008,7 +1049,19 @@ export function OrganizerDashboardClient({
                           {evt.title}
                         </Link>
                         <p className="text-xs text-gray-500">
-                          Status: <span className="font-bold text-emerald-600">{evt.status}</span> · City: {evt.city} · Date: {new Date(evt.start_date).toLocaleDateString("en-IN")} · Capacity: {evt.capacity}
+                          Status:{" "}
+                          <span
+                            className={`font-bold ${
+                              evt.status === "PAUSED"
+                                ? "text-amber-600"
+                                : evt.status === "COMPLETED"
+                                ? "text-slate-600"
+                                : "text-emerald-600"
+                            }`}
+                          >
+                            {evt.status === "PAUSED" ? "PAUSED (TICKETING FROZEN)" : evt.status === "COMPLETED" ? "CLOSED (REGISTRATIONS ENDED)" : evt.status}
+                          </span>{" "}
+                          · City: {evt.city} · Date: {new Date(evt.start_date).toLocaleDateString("en-IN")} · Capacity: {evt.capacity}
                         </p>
                       </div>
 
@@ -1030,6 +1083,39 @@ export function OrganizerDashboardClient({
                           <Edit3 size={14} className="text-[#0758fc]" />
                           <span>Edit</span>
                         </button>
+
+                        {/* Pause / Resume Quick Button */}
+                        {evt.status === "PUBLISHED" ? (
+                          <button
+                            onClick={() => handleUpdateEventStatus(evt.id, "PAUSED", evt.title)}
+                            disabled={actionLoadingId === evt.id}
+                            title="Pause ticketing"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            <PauseCircle size={14} className="text-amber-700" />
+                            <span>Pause</span>
+                          </button>
+                        ) : evt.status === "PAUSED" ? (
+                          <button
+                            onClick={() => handleUpdateEventStatus(evt.id, "PUBLISHED", evt.title)}
+                            disabled={actionLoadingId === evt.id}
+                            title="Resume ticketing"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            <PlayCircle size={14} className="text-emerald-700" />
+                            <span>Resume</span>
+                          </button>
+                        ) : evt.status === "COMPLETED" ? (
+                          <button
+                            onClick={() => handleUpdateEventStatus(evt.id, "PUBLISHED", evt.title)}
+                            disabled={actionLoadingId === evt.id}
+                            title="Reopen ticketing"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0758fc] bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            <RotateCcw size={14} className="text-[#0758fc]" />
+                            <span>Reopen</span>
+                          </button>
+                        ) : null}
 
                         {/* Broadcast Email Button */}
                         <button
@@ -1129,9 +1215,22 @@ export function OrganizerDashboardClient({
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-base font-bold text-gray-900">{evt.title}</span>
-                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            {evt.status}
-                          </span>
+                          {evt.status === "PAUSED" ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1">
+                              <PauseCircle size={11} className="text-amber-600 shrink-0" />
+                              <span>Ticketing Paused</span>
+                            </span>
+                          ) : evt.status === "COMPLETED" ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1">
+                              <Ban size={11} className="text-slate-500 shrink-0" />
+                              <span>Ticketing Closed</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span>{evt.status}</span>
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500">
                           {evt.city} · Start: {new Date(evt.start_date).toLocaleDateString("en-IN")} · Capacity: {evt.capacity}
@@ -1156,6 +1255,65 @@ export function OrganizerDashboardClient({
                           <Edit3 size={13} className="text-[#0758fc]" />
                           <span>Edit</span>
                         </button>
+
+                        {/* Pause / Resume / End Ticketing Controls */}
+                        {evt.status === "PUBLISHED" && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateEventStatus(evt.id, "PAUSED", evt.title)}
+                              disabled={actionLoadingId === evt.id}
+                              title="Temporarily freeze ticket bookings without deleting the event"
+                              className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            >
+                              <PauseCircle size={13} className="text-amber-700" />
+                              <span>Pause Ticketing</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdateEventStatus(evt.id, "COMPLETED", evt.title)}
+                              disabled={actionLoadingId === evt.id}
+                              title="Conclude pass sales and close registrations safely without trashing"
+                              className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 border border-gray-300 hover:bg-gray-200 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            >
+                              <Ban size={13} className="text-gray-600" />
+                              <span>End Ticketing</span>
+                            </button>
+                          </>
+                        )}
+
+                        {evt.status === "PAUSED" && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateEventStatus(evt.id, "PUBLISHED", evt.title)}
+                              disabled={actionLoadingId === evt.id}
+                              title="Resume pass bookings and make tickets live again"
+                              className="px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            >
+                              <PlayCircle size={13} className="text-emerald-700" />
+                              <span>Resume Ticketing</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdateEventStatus(evt.id, "COMPLETED", evt.title)}
+                              disabled={actionLoadingId === evt.id}
+                              title="Conclude pass sales and close registrations safely without trashing"
+                              className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 border border-gray-300 hover:bg-gray-200 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            >
+                              <Ban size={13} className="text-gray-600" />
+                              <span>End Ticketing</span>
+                            </button>
+                          </>
+                        )}
+
+                        {evt.status === "COMPLETED" && (
+                          <button
+                            onClick={() => handleUpdateEventStatus(evt.id, "PUBLISHED", evt.title)}
+                            disabled={actionLoadingId === evt.id}
+                            title="Reopen registrations and ticket bookings"
+                            className="px-3.5 py-2 rounded-xl text-xs font-bold text-[#0758fc] bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                          >
+                            <RotateCcw size={13} className="text-[#0758fc]" />
+                            <span>Reopen Ticketing</span>
+                          </button>
+                        )}
 
                         {/* Export Excel Button */}
                         <button

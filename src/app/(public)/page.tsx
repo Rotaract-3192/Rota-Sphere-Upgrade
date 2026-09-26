@@ -111,7 +111,7 @@ async function getMapEvents() {
         ) as saas_ticket_tiers
       FROM saas_events e
       LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-      WHERE e.status = 'PUBLISHED' AND (e.deleted_at IS NULL)
+      WHERE e.status IN ('PUBLISHED', 'PAUSED') AND (e.deleted_at IS NULL)
       GROUP BY e.id
       ORDER BY e.created_at DESC NULLS LAST, e.start_date DESC
       LIMIT 12;
@@ -138,7 +138,7 @@ async function getFeaturedHeroEvent() {
       FROM saas_events e
       LEFT JOIN organizations o ON e.organization_id = o.id
       LEFT JOIN event_categories cat ON e.category_id = cat.id
-      WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+      WHERE e.status IN ('PUBLISHED', 'PAUSED') AND e.deleted_at IS NULL
       ORDER BY (CASE WHEN e.slug = 'vibe' THEN 0 WHEN e.slug = 'project-jatayu-30' THEN 1 ELSE 2 END), e.start_date DESC
       LIMIT 1;
     `);

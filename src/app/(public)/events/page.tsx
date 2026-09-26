@@ -105,7 +105,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
     LEFT JOIN organizations o ON e.organization_id = o.id
     LEFT JOIN event_categories cat ON e.category_id = cat.id
     LEFT JOIN saas_ticket_tiers t ON e.id = t.event_id
-    WHERE e.status = 'PUBLISHED' AND e.deleted_at IS NULL
+    WHERE e.status IN ('PUBLISHED', 'PAUSED', 'COMPLETED') AND e.deleted_at IS NULL
   `;
 
   if (category) sql += ` AND (e.category_id::text = '${escapeSql(category)}' OR cat.slug = '${escapeSql(category)}' OR cat.name ILIKE '%${escapeSql(category)}%')`;

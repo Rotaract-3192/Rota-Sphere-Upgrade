@@ -676,7 +676,13 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
     }
 
     if (event.status !== "PUBLISHED") {
-      return { success: false, error: `Event is currently in ${event.status} status` };
+      const msg =
+        event.status === "PAUSED"
+          ? "Ticket sales for this event are temporarily paused by the organizer. Please check back later."
+          : event.status === "COMPLETED"
+          ? "Registration and ticketing for this event have closed."
+          : `Event ticketing is currently unavailable (${event.status}).`;
+      return { success: false, error: msg };
     }
 
     // 2. Fetch all requested ticket tiers

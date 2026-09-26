@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Ticket, ShieldCheck, Share2, Heart, Lock, Users, Clock, CalendarCheck } from "lucide-react";
+import { Ticket, ShieldCheck, Share2, Heart, Lock, Users, Clock, CalendarCheck, PauseCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
@@ -33,6 +33,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
   // Tamper-proof, server-synchronized monotonic time
   const currentTime = useServerSyncedTime(initialServerTime);
   const isEnded = isEventConcluded(event, currentTime);
+  const isPaused = event.status === "PAUSED";
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTierIdForCheckout, setSelectedTierIdForCheckout] = useState<string | undefined>(undefined);
   const [isSaved, setIsSaved] = useState(false);
@@ -68,9 +69,9 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
 
   // Sort tiers by availability: bookable tiers first (price ASC), then sold out/closed
   const sortedLiveTiers = sortTiersByAvailability(liveTiers, currentTime);
-  const availableTiers = isEnded ? [] : sortedLiveTiers.filter((t) => getTierScheduleStatus(t, currentTime).canBook);
-  const unavailableTiers = isEnded ? sortedLiveTiers : sortedLiveTiers.filter((t) => !getTierScheduleStatus(t, currentTime).canBook);
-  const hasAnyBookableTier = !isEnded && availableTiers.length > 0;
+  const availableTiers = (isEnded || isPaused) ? [] : sortedLiveTiers.filter((t) => getTierScheduleStatus(t, currentTime).canBook);
+  const unavailableTiers = (isEnded || isPaused) ? sortedLiveTiers : sortedLiveTiers.filter((t) => !getTierScheduleStatus(t, currentTime).canBook);
+  const hasAnyBookableTier = !isEnded && !isPaused && availableTiers.length > 0;
 
   // Earliest upcoming tier if everything is locked
   const earliestUpcoming = sortedLiveTiers
@@ -105,7 +106,7 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
   }
 
   async function handleOpenCheckout(tierId?: string) {
-    if (isEnded) return;
+    if (isEnded || isPaused) return;
     if (tierId) {
       setSelectedTierIdForCheckout(tierId);
     } else {
@@ -134,17 +135,19 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
         <div className="flex items-baseline justify-between border-b border-gray-100 dark:border-gray-800 pb-5">
           <div>
             <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">
-              {isEnded ? "Event Status" : "Registration"}
+              {isEnded ? "Event Status" : isPaused ? "Ticketing Status" : "Registration"}
             </span>
             <div className="text-3xl font-black text-gray-900 dark:text-white mt-0.5 tracking-tight">
-              {isEnded ? "Event Over" : isFree ? "Free Entry" : `₹${minPrice}`}
-              {!isEnded && !isFree && minPrice > 0 && <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-1">onwards</span>}
+              {isEnded ? "Event Over" : isPaused ? "Paused" : isFree ? "Free Entry" : `₹${minPrice}`}
+              {!isEnded && !isPaused && !isFree && minPrice > 0 && <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-1">onwards</span>}
             </div>
           </div>
           <span
             className={`text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border shadow-xs ${
               isEnded
                 ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 flex items-center gap-1.5"
+                : isPaused
+                ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 flex items-center gap-1.5"
                 : hasAnyBookableTier
                 ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                 : earliestUpcoming
@@ -156,6 +159,11 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
               <>
                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                 <span>Event Concluded</span>
+              </>
+            ) : isPaused ? (
+              <>
+                <PauseCircle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Ticketing Paused</span>
               </>
             ) : hasAnyBookableTier ? (
               "● Booking's Live"
@@ -175,6 +183,19 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
           <div className="p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-300 flex items-center gap-2.5 shadow-xs">
             <Clock size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
             <span>This event has already ended. Pass sales and registrations are now closed.</span>
+          </div>
+        )}
+
+        {/* Paused Notice Banner */}
+        {!isEnded && isPaused && (
+          <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1 shadow-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-100">
+              <PauseCircle size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Ticketing Temporarily Paused</span>
+            </div>
+            <p className="leading-relaxed text-amber-800 dark:text-amber-300">
+              Pass sales and bookings have been temporarily paused by the organizer. Previously issued passes and QR entry codes remain 100% active and valid.
+            </p>
           </div>
         )}
 
@@ -375,6 +396,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
             <CalendarCheck size={18} className="text-gray-400" />
             <span>Event is Over (Registration Closed)</span>
           </button>
+        ) : isPaused ? (
+          <button
+            type="button"
+            disabled={true}
+            className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-extrabold text-sm py-4 rounded-2xl flex items-center justify-center gap-2 cursor-not-allowed opacity-95 shadow-xs"
+          >
+            <PauseCircle size={18} className="text-amber-600 dark:text-amber-400" />
+            <span>Ticketing Temporarily Paused</span>
+          </button>
         ) : hasAnyBookableTier ? (
           <button
             type="button"
@@ -438,10 +468,10 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
       >
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            {isEnded ? "Status" : "Passes From"}
+            {isEnded ? "Status" : isPaused ? "Ticketing" : "Passes From"}
           </p>
           <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">
-            {isEnded ? "Event Over" : isFree ? "Free Entry" : `₹${minPrice}`}
+            {isEnded ? "Event Over" : isPaused ? "Paused" : isFree ? "Free Entry" : `₹${minPrice}`}
           </p>
         </div>
 
@@ -466,6 +496,15 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
           >
             <Clock size={15} />
             <span>Event Over</span>
+          </button>
+        ) : isPaused ? (
+          <button
+            type="button"
+            disabled={true}
+            className="bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold text-xs px-5 py-3.5 rounded-2xl flex items-center gap-1.5 cursor-not-allowed shadow-xs"
+          >
+            <PauseCircle size={15} className="text-amber-600" />
+            <span>Ticketing Paused</span>
           </button>
         ) : hasAnyBookableTier ? (
           <button

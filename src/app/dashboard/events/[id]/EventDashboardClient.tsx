@@ -39,9 +39,13 @@ import {
   Loader2,
   DollarSign,
   Share2,
+  PauseCircle,
+  PlayCircle,
+  Ban,
+  RotateCcw,
 } from "lucide-react";
 import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
-import { updateEventAction } from "@/app/actions/eventActions";
+import { updateEventAction, updateEventStatusAction } from "@/app/actions/eventActions";
 import { checkInTicketAction } from "@/app/actions/checkInActions";
 import { exportEventAttendeesToExcel } from "@/lib/utils/excelExporter";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
@@ -94,6 +98,11 @@ export function EventDashboardClient({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+
+  // Ticketing Status Management
+  const [eventStatus, setEventStatus] = useState(event.status);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  useEffect(() => { setEventStatus(event.status); }, [event.status]);
 
   // Modals & Action loading
   const [proofModalOrder, setProofModalOrder] = useState<any | null>(null);
@@ -273,6 +282,38 @@ export function EventDashboardClient({
     }
   }
 
+  // ── Ticketing Status Handler ──────────────────────────────────────────────
+  async function handleUpdateEventStatus(newStatus: "PUBLISHED" | "PAUSED" | "COMPLETED") {
+    let promptMsg = "";
+    if (newStatus === "PAUSED") {
+      promptMsg = `Pause ticketing for "${event.title}"?\n\nPass sales will be temporarily halted. Visitors on the event page will see "Ticketing Paused", and checkout will be disabled. You can resume sales anytime.`;
+    } else if (newStatus === "COMPLETED") {
+      promptMsg = `End ticketing and close all registrations for "${event.title}"?\n\nPass sales will be concluded. The event listing and all attendee data remain safe and intact.`;
+    } else if (newStatus === "PUBLISHED") {
+      promptMsg = `Resume ticketing for "${event.title}"?\n\nPass sales will be reopened immediately.`;
+    }
+
+    if (!confirm(promptMsg)) return;
+
+    setStatusUpdating(true);
+    const res = await updateEventStatusAction(event.id, newStatus);
+    setStatusUpdating(false);
+
+    if (res.success) {
+      setEventStatus(newStatus);
+      showToast(
+        newStatus === "PAUSED"
+          ? "Ticketing paused."
+          : newStatus === "COMPLETED"
+          ? "Ticketing ended and registrations closed."
+          : "Ticketing resumed and live!"
+      );
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to update event status");
+    }
+  }
+
   // ── Save / Add Ticket Tier Handler ─────────────────────────────────────────
   async function handleSaveTier() {
     if (!tierForm.name.trim()) {
@@ -378,7 +419,71 @@ export function EventDashboardClient({
             </div>
 
             {/* Quick Actions Right */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {/* Ticketing Status Actions */}
+              {eventStatus === "PUBLISHED" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateEventStatus("PAUSED")}
+                    disabled={statusUpdating}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="Pause Ticketing (freeze sales without deleting event)"
+                  >
+                    <PauseCircle size={13} className="text-amber-600" />
+                    <span>Pause Ticketing</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateEventStatus("COMPLETED")}
+                    disabled={statusUpdating}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="End Ticketing and close registrations"
+                  >
+                    <Ban size={13} className="text-gray-500" />
+                    <span>End Ticketing</span>
+                  </button>
+                </>
+              )}
+
+              {eventStatus === "PAUSED" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateEventStatus("PUBLISHED")}
+                    disabled={statusUpdating}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="Resume Ticketing and reopen ticket sales"
+                  >
+                    <PlayCircle size={13} className="text-emerald-600" />
+                    <span>Resume Ticketing</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateEventStatus("COMPLETED")}
+                    disabled={statusUpdating}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="End Ticketing and close registrations"
+                  >
+                    <Ban size={13} className="text-gray-500" />
+                    <span>End Ticketing</span>
+                  </button>
+                </>
+              )}
+
+              {eventStatus === "COMPLETED" && (
+                <button
+                  type="button"
+                  onClick={() => handleUpdateEventStatus("PUBLISHED")}
+                  disabled={statusUpdating}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0758fc] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="Reopen Ticketing and restart pass sales"
+                >
+                  <RotateCcw size={13} className="text-[#0758fc]" />
+                  <span>Reopen Ticketing</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setIsBulkEmailOpen(true)}
@@ -418,10 +523,22 @@ export function EventDashboardClient({
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight truncate">
                   {event.title}
                 </h1>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 leading-none whitespace-nowrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  {event.status}
-                </span>
+                {eventStatus === "PAUSED" ? (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 leading-none whitespace-nowrap">
+                    <PauseCircle size={11} className="text-amber-600 dark:text-amber-400" />
+                    <span>TICKETING PAUSED</span>
+                  </span>
+                ) : eventStatus === "COMPLETED" ? (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 leading-none whitespace-nowrap">
+                    <Ban size={11} className="text-slate-500" />
+                    <span>TICKETING CLOSED</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 leading-none whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {eventStatus}
+                  </span>
+                )}
                 <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800 leading-none whitespace-nowrap">
                   {event.category_name || "Rotaract Event"}
                 </span>

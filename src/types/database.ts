@@ -15,6 +15,8 @@ export type EventStatus =
   | "DRAFT"
   | "PENDING_APPROVAL"
   | "PUBLISHED"
+  | "PAUSED"
+  | "SOLD_OUT"
   | "REGISTRATION_OPEN"
   | "REGISTRATION_CLOSED"
   | "COMPLETED"
