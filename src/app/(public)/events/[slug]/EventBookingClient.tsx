@@ -135,11 +135,11 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
         <div className="flex items-baseline justify-between border-b border-gray-100 dark:border-gray-800 pb-5">
           <div>
             <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">
-              {isEnded ? "Event Status" : isPaused ? "Ticketing Status" : "Registration"}
+              {isEnded ? "Event Status" : "Registration"}
             </span>
             <div className="text-3xl font-black text-gray-900 dark:text-white mt-0.5 tracking-tight">
-              {isEnded ? "Event Over" : isPaused ? "Paused" : isFree ? "Free Entry" : `₹${minPrice}`}
-              {!isEnded && !isPaused && !isFree && minPrice > 0 && <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-1">onwards</span>}
+              {isEnded ? "Event Over" : isFree ? "Free Entry" : `₹${minPrice}`}
+              {!isEnded && !isFree && minPrice > 0 && <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-1">onwards</span>}
             </div>
           </div>
           <span
@@ -468,10 +468,10 @@ export function EventBookingClient({ event, tiers, userEmail, userName, initialS
       >
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            {isEnded ? "Status" : isPaused ? "Ticketing" : "Passes From"}
+            {isEnded ? "Status" : "Passes From"}
           </p>
           <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">
-            {isEnded ? "Event Over" : isPaused ? "Paused" : isFree ? "Free Entry" : `₹${minPrice}`}
+            {isEnded ? "Event Over" : isFree ? "Free Entry" : `₹${minPrice}`}
           </p>
         </div>
 

@@ -212,11 +212,6 @@ export function EventCard({
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                   Event Over
                 </span>
-              ) : isPaused ? (
-                <span className="text-xs font-bold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm bg-amber-950/90 text-amber-300 border-amber-500/40 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  Paused
-                </span>
               ) : (
                 <span
                   className={`text-xs font-mono font-extrabold backdrop-blur-md px-2.5 py-1 rounded-lg border shadow-sm ${
@@ -308,10 +303,10 @@ export function EventCard({
         <div data-tour="event-card-action" className="mt-auto pt-3.5 border-t border-gray-100 dark:border-gray-800/90 flex items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
-              {isEnded ? "Event Status" : isPaused ? "Ticketing" : isFree ? "Admission" : "Pass Starts At"}
+              {isEnded ? "Event Status" : isFree ? "Admission" : "Pass Starts At"}
             </span>
-            <span className={`text-sm sm:text-base font-black leading-none ${isEnded || isPaused ? "text-gray-500 dark:text-gray-400 font-sans text-xs sm:text-sm" : "text-gray-900 dark:text-white font-mono"}`}>
-              {isEnded ? "Concluded" : isPaused ? "Paused" : priceDisplay}
+            <span className={`text-sm sm:text-base font-black leading-none ${isEnded ? "text-gray-500 dark:text-gray-400 font-sans text-xs sm:text-sm" : "text-gray-900 dark:text-white font-mono"}`}>
+              {isEnded ? "Concluded" : priceDisplay}
             </span>
           </div>
 
