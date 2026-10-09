@@ -216,7 +216,7 @@ export function resolveClubAndZone(ticketOrAttendee: {
   }
 
   // 5. Check if zone is explicitly provided in custom answers
-  let explicitZone = ticketOrAttendee.zone || custom.zone || custom.district_zone || "";
+  const explicitZone = ticketOrAttendee.zone || custom.zone || custom.district_zone || "";
 
   if (candidateClub && typeof candidateClub === "string" && candidateClub.trim().length > 0) {
     const cleanClub = candidateClub.trim();

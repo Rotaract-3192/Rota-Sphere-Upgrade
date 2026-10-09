@@ -1270,18 +1270,29 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
 
     // 9. Send Ticket Email with QR attachment for confirmed free passes, or Booking Received email for paid UPI orders
     if (isFree && customerEmail) {
+      const eventDateStr = event.start_date
+        ? new Date(event.start_date).toLocaleDateString("en-IN", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+
       sendTicketEmailWithQR({
         to: customerEmail,
         fullName: input.attendees[0]?.name || user?.profile?.full_name || "Delegate",
         eventTitle: event.title,
-        eventDate: new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
+        eventDate: eventDateStr,
         eventCity: event.city || "District 3192",
+        venueName: event.venue_name || undefined,
         orderNumber,
         orderTotal: "₹0.00 (Free Pass)",
         tickets: generatedTickets.map((t, idx) => ({
           code: t.ticket_code,
           qrToken: t.qr_token,
           tierName: tierMap.get(input.attendees[idx]?.ticketTierId)?.name || "Delegate Pass",
+          attendeeName: input.attendees[idx]?.name || undefined,
         })),
       }).catch((err) => logger.error("Async ticket email failed", { error: String(err) }));
     } else if (!isFree && customerEmail) {
@@ -1388,7 +1399,8 @@ export async function verifyOrderPaymentAction(params: {
     const { data: orderRows, error: orderFetchErr } = await executeSql(`
       SELECT o.id, o.order_number, o.total_amount, o.status as current_status, o.event_id,
              o.customer_name, o.customer_email,
-             e.organizer_id, e.created_by_user_id, e.organization_id, e.title as event_title, e.city as event_city
+             e.organizer_id, e.created_by_user_id, e.organization_id, e.title as event_title, e.city as event_city,
+             e.venue_name as event_venue, e.start_date as event_start_date
       FROM saas_orders o
       LEFT JOIN saas_events e ON o.event_id = e.id
       WHERE o.id = ${escapeSql(params.orderId)}
@@ -1450,7 +1462,15 @@ export async function verifyOrderPaymentAction(params: {
         if (tktDetails && tktDetails.length > 0) {
           const eventTitle = ord.event_title || "Rotaract Event";
           const eventCity = ord.event_city || "District 3192";
-          const eventDateStr = new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+          const venueName = ord.event_venue || undefined;
+          const eventDateStr = ord.event_start_date
+            ? new Date(ord.event_start_date).toLocaleDateString("en-IN", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
           const orderTotalStr = `₹${Number(ord.total_amount || 0).toFixed(2)}`;
 
           // 3a. Send each individual attendee their personal QR pass
@@ -1462,12 +1482,14 @@ export async function verifyOrderPaymentAction(params: {
                 eventTitle,
                 eventDate: eventDateStr,
                 eventCity,
+                venueName,
                 orderNumber: ord.order_number,
                 orderTotal: orderTotalStr,
                 tickets: [{
                   code: tkt.ticket_code,
                   qrToken: tkt.qr_token,
                   tierName: tkt.tier_name || "Pass",
+                  attendeeName: tkt.attendee_name || "Delegate",
                 }],
               }).catch((err) => logger.error("Approval ticket email dispatch to attendee failed", { error: String(err) }));
             }
@@ -1484,12 +1506,14 @@ export async function verifyOrderPaymentAction(params: {
                 eventTitle,
                 eventDate: eventDateStr,
                 eventCity,
+                venueName,
                 orderNumber: ord.order_number,
                 orderTotal: orderTotalStr,
                 tickets: tktDetails.map((t: any) => ({
                   code: t.ticket_code,
                   qrToken: t.qr_token,
                   tierName: t.tier_name || "Pass",
+                  attendeeName: t.attendee_name,
                 })),
               }).catch((err) => logger.error("Approval bundle email dispatch to buyer failed", { error: String(err) }));
             }
@@ -1988,7 +2012,8 @@ export async function createBulkTicketOrderAction(
              t.sales_start, t.sales_end,
              (t.sales_start IS NOT NULL AND NOW() < t.sales_start) AS is_too_early,
              (t.sales_end IS NOT NULL AND NOW() > t.sales_end) AS is_too_late,
-             e.title as event_title, e.city as event_city
+             e.title as event_title, e.city as event_city,
+             e.venue_name as event_venue, e.start_date as event_start_date
       FROM saas_ticket_tiers t
       LEFT JOIN saas_events e ON e.id = t.event_id
       WHERE t.id = ${escapeSql(input.tierId)}
@@ -2188,7 +2213,15 @@ export async function createBulkTicketOrderAction(
     // ── 10. Send notification emails (non-blocking, matching existing signature) ─
     const eventTitle = tier.event_title || "Rotaract Event";
     const eventCity = tier.event_city || "District 3192";
-    const eventDateStr = new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+    const venueName = tier.event_venue || undefined;
+    const eventDateStr = tier.event_start_date
+      ? new Date(tier.event_start_date).toLocaleDateString("en-IN", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
 
     if (isFree) {
       // 10a. Send each individual attendee their own personal QR pass
@@ -2200,12 +2233,14 @@ export async function createBulkTicketOrderAction(
             eventTitle,
             eventDate: eventDateStr,
             eventCity,
+            venueName,
             orderNumber,
             orderTotal: "₹0.00 (Free Group Pass)",
             tickets: [{
               code: t.ticketCode,
               qrToken: t.qrToken,
               tierName: tier.name,
+              attendeeName: t.attendeeName,
             }],
           }).catch((err: any) => logger.warn("Bulk free ticket attendee email failed", { error: String(err) }));
         }
@@ -2218,12 +2253,14 @@ export async function createBulkTicketOrderAction(
         eventTitle,
         eventDate: eventDateStr,
         eventCity,
+        venueName,
         orderNumber,
         orderTotal: "₹0.00 (Free Group Pass)",
         tickets: createdTickets.map((t) => ({
           code: t.ticketCode,
           qrToken: t.qrToken,
           tierName: tier.name,
+          attendeeName: t.attendeeName,
         })),
       }).catch((err: any) => logger.warn("Bulk free ticket buyer bundle email failed", { error: String(err) }));
     } else {

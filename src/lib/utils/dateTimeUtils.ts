@@ -176,7 +176,7 @@ export function combineDateAndTimeWithTz(dateStr: string, timeStr: string, tzStr
   // Parse time
   const timeParts = time.split(":");
   let hours = Number(timeParts[0]) || 0;
-  let minutes = Number(timeParts[1]) || 0;
+  const minutes = Number(timeParts[1]) || 0;
 
   // Handle potential AM/PM if present
   if (/pm/i.test(time) && hours < 12) hours += 12;

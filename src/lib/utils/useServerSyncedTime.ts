@@ -10,36 +10,31 @@ import { useState, useEffect, useRef } from "react";
  */
 export function useServerSyncedTime(initialServerTime?: string | Date): Date {
   const [syncedDate, setSyncedDate] = useState<Date>(() => {
-    return initialServerTime ? new Date(initialServerTime) : new Date();
+    return initialServerTime ? new Date(initialServerTime) : new Date(0);
   });
 
   const baseServerMsRef = useRef<number>(
-    initialServerTime ? new Date(initialServerTime).getTime() : Date.now()
+    initialServerTime ? new Date(initialServerTime).getTime() : 0
   );
-  const basePerfMsRef = useRef<number>(
-    typeof performance !== undefined ? performance.now() : 0
-  );
+  const basePerfMsRef = useRef<number>(0);
 
   useEffect(() => {
-    if (initialServerTime) {
-      baseServerMsRef.current = new Date(initialServerTime).getTime();
-      basePerfMsRef.current = typeof performance !== undefined ? performance.now() : 0;
-    }
-  }, [initialServerTime]);
+    const isPerfAvailable = typeof window !== "undefined" && typeof window.performance !== "undefined";
+    const nowPerf = isPerfAvailable ? window.performance.now() : 0;
+    const nowServer = initialServerTime ? new Date(initialServerTime).getTime() : Date.now();
 
-  useEffect(() => {
+    baseServerMsRef.current = nowServer;
+    basePerfMsRef.current = nowPerf;
+    setSyncedDate(new Date(nowServer));
+
     const updateTick = () => {
-      const elapsed =
-        typeof performance !== undefined
-          ? performance.now() - basePerfMsRef.current
-          : 0;
+      const elapsed = isPerfAvailable ? window.performance.now() - basePerfMsRef.current : 0;
       setSyncedDate(new Date(baseServerMsRef.current + elapsed));
     };
 
-    updateTick();
     const interval = setInterval(updateTick, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [initialServerTime]);
 
   return syncedDate;
 }

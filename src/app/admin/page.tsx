@@ -8,6 +8,9 @@ export const metadata = {
   description: "Platform-wide KYC moderation, event approvals, financial ledger, gate analytics, and fee rules.",
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminPage() {
   const user = await getCurrentUser();
 

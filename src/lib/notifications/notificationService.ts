@@ -23,9 +23,10 @@ function createTransport() {
 
 export interface EmailAttachment {
   filename: string;
-  content: Buffer;
+  content: Buffer | string;
   cid?: string;
   contentType?: string;
+  contentDisposition?: "inline" | "attachment";
 }
 
 export interface SendEmailParams {
@@ -34,12 +35,39 @@ export interface SendEmailParams {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
+  replyTo?: string;
+  headers?: Record<string, string>;
+  entityRefId?: string;
+}
+
+export function generatePlainTextFromHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*[\/]?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/td>/gi, "  ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#8377;/gi, "₹")
+    .replace(/\n\s*\n\s*\n/g, "\n\n")
+    .trim();
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {
   try {
     const transport = createTransport();
     const fromAddress = process.env.SMTP_FROM_EMAIL || "no-reply@rotasphere.in";
+    const fromDomain = fromAddress.includes("@") ? fromAddress.split("@")[1] : "rotasphere.in";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
     // If SMTP is not set up in local dev, log gracefully instead of crashing
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -47,13 +75,28 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
       return true;
     }
 
+    const uniqueMessageId = `<order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}@${fromDomain}>`;
+
+    const standardHeaders: Record<string, string> = {
+      "X-Entity-Ref-ID": params.entityRefId || `order-${Date.now()}`,
+      "X-Mailer": "RotaSphere-Notification-Engine/2.0",
+      "Auto-Submitted": "auto-generated",
+      "X-Auto-Response-Suppress": "OOF, AutoReply",
+      "List-Unsubscribe": `<${appUrl}/settings/notifications>, <mailto:support@${fromDomain}?subject=Unsubscribe>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      ...(params.headers || {}),
+    };
+
     await transport.sendMail({
-      from: `RotaSphere <${fromAddress}>`,
+      from: `"RotaSphere Tickets" <${fromAddress}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
-      text: params.text ?? params.html.replace(/<[^>]*>/g, ""),
+      text: params.text ?? generatePlainTextFromHtml(params.html),
       attachments: params.attachments,
+      replyTo: params.replyTo || process.env.SMTP_REPLY_TO || `support@${fromDomain}`,
+      messageId: uniqueMessageId,
+      headers: standardHeaders,
     });
     return true;
   } catch (err) {
@@ -93,8 +136,16 @@ export async function sendNotification({
   }
 }
 
+export interface TicketEmailItem {
+  code: string;
+  qrToken: string;
+  tierName: string;
+  attendeeName?: string;
+}
+
 /**
- * Send Ticket Confirmation Email with QR Attachment and Inline Scannable QR Code
+ * Send Ticket Confirmation Email with high-resolution QR Attachment and Inline Scannable QR Pass.
+ * Bulletproof cross-client table layout, Apple Wallet ticket card aesthetics, and anti-spam optimized.
  */
 export async function sendTicketEmailWithQR({
   to,
@@ -102,6 +153,7 @@ export async function sendTicketEmailWithQR({
   eventTitle,
   eventDate,
   eventCity,
+  venueName,
   orderNumber,
   orderTotal,
   tickets,
@@ -111,131 +163,351 @@ export async function sendTicketEmailWithQR({
   eventTitle: string;
   eventDate: string;
   eventCity: string;
+  venueName?: string;
   orderNumber: string;
   orderTotal: string;
-  tickets: Array<{ code: string; qrToken: string; tierName: string }>;
+  tickets: TicketEmailItem[];
 }): Promise<boolean> {
   const attachments: EmailAttachment[] = [];
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
+  const passUrl = `${appUrl}/tickets`;
+  const locationLabel = venueName ? `${venueName}, ${eventCity}` : eventCity;
 
-  // Generate QR Code PNG Buffers for each ticket
+  // Generate QR Code PNG Buffers for each ticket with high error-correction
   for (const t of tickets) {
     try {
       const qrBuffer = await QRCode.toBuffer(t.qrToken, {
-        width: 300,
+        width: 360,
         margin: 2,
         color: {
           dark: "#0f172a",
           light: "#ffffff",
         },
+        errorCorrectionLevel: "H",
       });
 
       attachments.push({
         filename: `Ticket-${t.code}.png`,
         content: qrBuffer,
-        cid: `qr-${t.code}`, // Content ID for inline HTML email rendering
+        cid: `qr-${t.code}`, // RFC Content ID for local inline MIME rendering without external servers
         contentType: "image/png",
+        contentDisposition: "inline",
       });
     } catch (err) {
       logger.error("QR Code generation for email failed", { ticketCode: t.code, error: String(err) });
     }
   }
 
+  // Build bulletproof HTML cards for each ticket pass
   const ticketCardsHtml = tickets
     .map((t) => {
-      const qrFallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(t.qrToken)}&margin=10&format=png`;
-      const passUrl = `${appUrl}/tickets`;
+      const attendeeLabel = t.attendeeName || fullName;
       return `
-      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:12px;margin-bottom:12px;">
-          <div>
-            <span style="font-size:11px;font-weight:700;color:#0758fc;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:2px;">OFFICIAL DELEGATE PASS</span>
-            <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0;">${t.tierName}</h3>
-          </div>
-          <span style="font-family:monospace;font-size:12px;font-weight:700;background:#f1f5f9;color:#334155;padding:4px 8px;border-radius:6px;">${t.code}</span>
-        </div>
-        <div style="text-align:center;padding:12px 0;">
-          <a href="${passUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-            <img src="${qrFallbackUrl}" alt="Ticket QR Code (${t.code})" width="180" height="180" style="width:180px;height:180px;border-radius:12px;border:1px solid #e2e8f0;display:inline-block;" />
-          </a>
-          <div style="margin-top:12px;">
-            <a href="${passUrl}" target="_blank" style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:8px 18px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(7,88,252,0.25);">
-              📱 Tap to Open Digital QR Pass
-            </a>
-          </div>
-          <p style="font-size:11px;color:#64748b;margin:8px 0 0;">Scan at entry gate or tap button above to open pass in browser</p>
-        </div>
-      </div>`;
+      <!-- Ticket Pass Card Component: ${t.code} -->
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border:1px solid #cbd5e1;border-radius:16px;overflow:hidden;margin-bottom:24px;box-shadow:0 4px 16px rgba(15,23,42,0.06);table-layout:fixed;">
+        <!-- Ticket Stub Header -->
+        <tr>
+          <td style="background-color:#f8fafc;padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td align="left" valign="middle">
+                  <span style="display:inline-block;font-size:10px;font-weight:800;color:#2563eb;background-color:#eff6ff;border:1px solid #dbeafe;padding:3px 8px;border-radius:6px;letter-spacing:1px;text-transform:uppercase;">
+                    Official Delegate Pass
+                  </span>
+                  <div style="font-size:18px;font-weight:800;color:#0f172a;margin-top:4px;">
+                    ${t.tierName}
+                  </div>
+                </td>
+                <td align="right" valign="middle">
+                  <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;font-size:13px;font-weight:700;background-color:#ffffff;color:#1e293b;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;display:inline-block;letter-spacing:1px;">
+                    ${t.code}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Perforated Ticket Divider -->
+        <tr>
+          <td style="padding:0;background-color:#ffffff;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td style="border-bottom:2px dashed #e2e8f0;font-size:1px;line-height:1px;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- QR Code Centerpiece -->
+        <tr>
+          <td align="center" style="background-color:#ffffff;padding:24px 20px 20px 20px;">
+            <!-- Framed QR code card -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 12px rgba(15,23,42,0.04);margin:0 auto;">
+              <tr>
+                <td align="center" style="padding:14px;">
+                  <img src="cid:qr-${t.code}" alt="Pass QR Code ${t.code}" width="190" height="190" border="0" style="display:block;width:190px;height:190px;border-radius:8px;" />
+                </td>
+              </tr>
+            </table>
+
+            <!-- Ticket Code beneath QR -->
+            <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;font-size:15px;font-weight:800;letter-spacing:2px;color:#0f172a;margin-top:14px;">
+              ${t.code}
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;font-weight:500;">
+              Fast-track gate check-in &middot; Scan at entrance
+            </div>
+
+            <!-- Action Button -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+              <tr>
+                <td align="center" style="background-color:#2563eb;border-radius:8px;">
+                  <a href="${passUrl}" target="_blank" style="display:inline-block;padding:9px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
+                    Open Digital Pass in Browser &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Ticket Stub Details Grid -->
+        <tr>
+          <td style="background-color:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td width="50%" align="left" valign="top">
+                  <span style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Attendee</span>
+                  <span style="display:block;font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${attendeeLabel}</span>
+                </td>
+                <td width="50%" align="right" valign="top">
+                  <span style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Pass Category</span>
+                  <span style="display:block;font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${t.tierName}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>`;
     })
     .join("");
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>Your RotaSphere Ticket Confirmation</title>
-    </head>
-    <body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;margin:0;padding:32px 16px;color:#0f172a;">
-      <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
-        
-        <!-- Header Banner -->
-        <div style="background:#0758fc;padding:28px 32px;text-align:left;">
-          <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0;letter-spacing:-0.5px;">RotaSphere</h1>
-          <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:700;margin:6px 0 0;text-transform:uppercase;letter-spacing:1px;">Registration Confirmed ✓</p>
-        </div>
+  const html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <title>Ticket Confirmation: ${eventTitle}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style type="text/css">
+    body, table, td, p, a { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <!-- Hidden Preheader Preview Text -->
+  <div style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+    Your official pass for ${eventTitle} is confirmed. Order #${orderNumber} &bull; Scannable QR code enclosed.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
 
-        <!-- Body Content -->
-        <div style="padding:32px;">
-          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 6px;">${eventTitle}</h2>
-          <p style="font-size:14px;color:#64748b;margin:0 0 24px;font-weight:500;">📅 ${eventDate} &nbsp;·&nbsp; 📍 ${eventCity}</p>
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f1f5f9;table-layout:fixed;">
+    <tr>
+      <td align="center" style="padding:28px 12px 40px 12px;">
+        <!-- Email Container Card (600px) -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">
           
-          <p style="font-size:15px;color:#334155;margin:0 0 20px;line-height:1.6;">
-            Hi <strong>${fullName}</strong>,<br/>
-            Your digital ticket pass has been issued! Below is your entry QR code, which is also attached to this email as a PNG for offline saving.
-          </p>
+          <!-- Sleek Top Header Bar -->
+          <tr>
+            <td style="background-color:#0f172a;padding:24px 32px;border-bottom:3px solid #2563eb;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="left" valign="middle">
+                    <span style="color:#ffffff;font-size:22px;font-weight:900;letter-spacing:-0.5px;display:block;">RotaSphere</span>
+                    <span style="color:#94a3b8;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">District 3192 Ticketing</span>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block;background-color:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:5px 12px;border-radius:100px;text-transform:uppercase;">
+                      Confirmed Pass
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          ${ticketCardsHtml}
+          <!-- Main Body -->
+          <tr>
+            <td style="padding:32px 32px 24px 32px;">
+              <!-- Event Headline -->
+              <h1 style="margin:0 0 10px 0;font-size:24px;line-height:1.3;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">
+                ${eventTitle}
+              </h1>
 
-          <!-- Order Summary Box -->
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-top:24px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:12px;color:#64748b;font-weight:600;">Order Reference:</span>
-              <span style="font-size:12px;font-family:monospace;font-weight:700;color:#0f172a;">${orderNumber}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="font-size:12px;color:#64748b;font-weight:600;">Total Amount:</span>
-              <span style="font-size:15px;font-weight:800;color:#10b981;">${orderTotal}</span>
-            </div>
-          </div>
+              <!-- Event Details Block -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
+                <tr>
+                  <td style="padding:4px 0;font-size:14px;color:#475569;font-weight:500;">
+                    <strong style="color:#0f172a;">Date:</strong> ${eventDate} &nbsp;&bull;&nbsp; <strong style="color:#0f172a;">Venue:</strong> ${locationLabel}
+                  </td>
+                </tr>
+              </table>
 
-          <!-- Buttons -->
-          <div style="margin-top:28px;text-align:center;">
-            <a href="${appUrl}/tickets" 
-               style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(30,157,241,0.3);">
-              View My Passes Dashboard →
-            </a>
-          </div>
-        </div>
+              <!-- Salutation -->
+              <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 24px 0;">
+                Hi <strong>${fullName}</strong>,<br/>
+                Your registration has been confirmed! Your official entry pass and scannable QR code are ready below. Please keep this pass ready on your mobile device when checking in at the venue.
+              </p>
 
-        <!-- Footer -->
-        <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="font-size:12px;color:#94a3b8;margin:0;">
-            © ${new Date().getFullYear()} RotaSphere Platform · District 3192 Rotaract<br/>
-            <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">Visit RotaSphere</a>
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+              <!-- Ticket Cards -->
+              ${ticketCardsHtml}
+
+              <!-- Order Summary Receipt Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
+                <tr>
+                  <td colspan="2" style="padding-bottom:10px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:1px;">
+                      Order Receipt Details
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0 6px 0;font-size:13px;color:#64748b;">Order Reference</td>
+                  <td align="right" style="padding:10px 0 6px 0;font-size:13px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;font-weight:700;color:#0f172a;">
+                    ${orderNumber}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#64748b;">Payment Status</td>
+                  <td align="right" style="padding:6px 0;font-size:13px;font-weight:700;color:#059669;">
+                    Confirmed & Issued
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#64748b;">Total Amount Paid</td>
+                  <td align="right" style="padding:6px 0;font-size:16px;font-weight:800;color:#0f172a;">
+                    ${orderTotal}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Important Entry Instructions -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+                <tr>
+                  <td>
+                    <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:6px;">Important Entry Instructions</div>
+                    <div style="font-size:12px;line-height:1.6;color:#0c4a6e;">
+                      &bull; <strong>Offline Access:</strong> Your QR code is attached to this email as a PNG file. Save it to your phone photos for instant offline access at the gate.<br/>
+                      &bull; <strong>Gate Check-in:</strong> Please turn up your screen brightness when presenting your QR code to volunteers.<br/>
+                      &bull; <strong>Identification:</strong> Carry a valid official photo ID or Rotaract membership proof if required by event organizers.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Primary Action CTA -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 12px auto;">
+                <tr>
+                  <td align="center" style="background-color:#0f172a;border-radius:12px;box-shadow:0 4px 14px rgba(15,23,42,0.2);">
+                    <a href="${appUrl}/tickets" target="_blank" style="display:inline-block;padding:14px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
+                      Go to My Passes Dashboard &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer / Compliance Notice -->
+          <tr>
+            <td style="padding:24px 32px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0 0 10px 0;">
+                <strong>RotaSphere Platform</strong> &middot; Rotaract District 3192<br/>
+                District Secretariat &middot; Bengaluru, Karnataka, India<br/>
+                Support: <a href="mailto:support@rotasphere.in" style="color:#2563eb;text-decoration:none;">support@rotasphere.in</a>
+              </p>
+              <p style="font-size:11px;line-height:1.5;color:#94a3b8;margin:0;">
+                You received this transactional receipt because your email was provided during event registration for order #${orderNumber}.<br/>
+                <a href="${appUrl}/tickets" style="color:#64748b;text-decoration:underline;">View Passes</a> &nbsp;&middot;&nbsp; 
+                <a href="${appUrl}/privacy" style="color:#64748b;text-decoration:underline;">Privacy Policy</a> &nbsp;&middot;&nbsp; 
+                <a href="${appUrl}/terms" style="color:#64748b;text-decoration:underline;">Terms</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  // Dedicated human-readable plain text counterpart to satisfy SpamAssassin MIME standards
+  const textContent = `ROTASPHERE — TICKET CONFIRMATION
+============================================================
+Order Reference: ${orderNumber}
+Event: ${eventTitle}
+Date: ${eventDate}
+Location: ${locationLabel}
+
+Hi ${fullName},
+
+Your registration has been confirmed! Your official event pass has been issued.
+Your scannable entry QR code is attached to this email as a PNG image for offline saving.
+
+------------------------------------------------------------
+TICKET PASS DETAILS
+------------------------------------------------------------
+${tickets
+  .map(
+    (t, idx) =>
+      `[Pass #${idx + 1}]
+• Ticket Code: ${t.code}
+• Pass Category: ${t.tierName}
+• Attendee: ${t.attendeeName || fullName}`
+  )
+  .join("\n\n")}
+
+------------------------------------------------------------
+ORDER RECEIPT
+------------------------------------------------------------
+• Order Reference: ${orderNumber}
+• Total Amount Paid: ${orderTotal}
+• Status: Confirmed & Issued
+
+ACCESS YOUR PASSES ONLINE:
+${passUrl}
+
+ENTRY INSTRUCTIONS:
+1. Have your scannable QR code ready on your mobile device upon arrival.
+2. You can also save the attached Ticket-*.png file to your photo library for offline access.
+3. Turn up your screen brightness at the gate for fast-track scanning.
+4. Keep a valid photo ID ready if required by event organizers.
+
+============================================================
+RotaSphere Platform · Rotaract District 3192
+District Secretariat · Bengaluru, Karnataka, India
+Support & Inquiries: support@rotasphere.in
+`;
+
+  const passSubjectCount = tickets.length > 1 ? ` (${tickets.length} Passes)` : "";
+  const subject = `Ticket Confirmation: ${eventTitle}${passSubjectCount} — Order #${orderNumber}`;
 
   return sendEmail({
     to,
-    subject: `🎟️ Your Entry Passes: ${eventTitle} (${orderNumber})`,
+    subject,
     html,
+    text: textContent,
     attachments,
+    entityRefId: orderNumber,
   });
 }
 
@@ -268,98 +540,181 @@ export async function sendBookingReceivedEmail({
 }): Promise<boolean> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
 
-  const tierSummaryHtml =
-    tierNames && tierNames.length > 0
-      ? `<div style="margin-top:8px;font-size:12px;color:#64748b;text-align:right;">${tierNames.join(", ")}</div>`
-      : "";
+  const tierSummaryText = tierNames && tierNames.length > 0 ? tierNames.join(", ") : "Delegate Pass";
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>Booking Received — Payment Verification Pending</title>
-    </head>
-    <body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;margin:0;padding:32px 16px;color:#0f172a;">
-      <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
-        
-        <!-- Header Banner -->
-        <div style="background:#0758fc;padding:28px 32px;text-align:left;">
-          <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0;letter-spacing:-0.5px;">RotaSphere</h1>
-          <p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:700;margin:6px 0 0;text-transform:uppercase;letter-spacing:1px;">Booking Received · Under Review ⏳</p>
-        </div>
+  const html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Booking Received: ${eventTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <!-- Preheader -->
+  <div style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+    Your booking for ${eventTitle} has been received and is pending payment verification. Order #${orderNumber}.
+  </div>
 
-        <!-- Body Content -->
-        <div style="padding:32px;">
-          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 6px;">${eventTitle}</h2>
-          <p style="font-size:14px;color:#64748b;margin:0 0 24px;font-weight:500;">📅 ${eventDate} &nbsp;·&nbsp; 📍 ${eventCity}</p>
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f1f5f9;table-layout:fixed;">
+    <tr>
+      <td align="center" style="padding:28px 12px 40px 12px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">
           
-          <p style="font-size:15px;color:#334155;margin:0 0 20px;line-height:1.6;">
-            Hi <strong>${fullName}</strong>,<br/>
-            We have received your booking and payment details for <strong>${eventTitle}</strong>.
-          </p>
+          <!-- Header Bar -->
+          <tr>
+            <td style="background-color:#0f172a;padding:24px 32px;border-bottom:3px solid #f59e0b;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="left" valign="middle">
+                    <span style="color:#ffffff;font-size:22px;font-weight:900;letter-spacing:-0.5px;display:block;">RotaSphere</span>
+                    <span style="color:#94a3b8;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">District 3192 Ticketing</span>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block;background-color:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:5px 12px;border-radius:100px;text-transform:uppercase;">
+                      Verification Pending
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          <!-- Review Notice Callout -->
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:18px 20px;margin-bottom:24px;">
-            <div style="margin-bottom:6px;">
-              <span style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;">Organizer Review</span>
-            </div>
-            <p style="font-size:13px;color:#1e40af;line-height:1.6;margin:0;">
-              The event organizing committee is reviewing your payment screenshot and UTR transaction reference. Once verified and approved by the host, your official entry QR pass will be generated and emailed to you.
-            </p>
-          </div>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 32px 24px 32px;">
+              <h1 style="margin:0 0 10px 0;font-size:24px;line-height:1.3;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">
+                ${eventTitle}
+              </h1>
 
-          <!-- Order Summary Box -->
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-top:20px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-              <span style="font-size:12px;color:#64748b;font-weight:600;">Order Reference:</span>
-              <span style="font-size:12px;font-family:monospace;font-weight:700;color:#0f172a;">${orderNumber}</span>
-            </div>
-            ${
-              upiTransactionId
-                ? `<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-                     <span style="font-size:12px;color:#64748b;font-weight:600;">Submitted UTR / Ref:</span>
-                     <span style="font-size:12px;font-family:monospace;font-weight:700;color:#0758fc;">${upiTransactionId}</span>
-                   </div>`
-                : ""
-            }
-            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-              <span style="font-size:12px;color:#64748b;font-weight:600;">Reserved Passes:</span>
-              <span style="font-size:12px;font-weight:700;color:#0f172a;">${ticketCount} Ticket${ticketCount > 1 ? "s" : ""}</span>
-            </div>
-            ${tierSummaryHtml}
-            <div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;">
-              <span style="font-size:12px;color:#64748b;font-weight:600;">Total Amount:</span>
-              <span style="font-size:15px;font-weight:800;color:#0758fc;">${orderTotal}</span>
-            </div>
-          </div>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
+                <tr>
+                  <td style="padding:4px 0;font-size:14px;color:#475569;font-weight:500;">
+                    <strong style="color:#0f172a;">Date:</strong> ${eventDate} &nbsp;&bull;&nbsp; <strong style="color:#0f172a;">Location:</strong> ${eventCity}
+                  </td>
+                </tr>
+              </table>
 
-          <!-- Buttons -->
-          <div style="margin-top:28px;text-align:center;">
-            <a href="${appUrl}/tickets" 
-               style="display:inline-block;background:#0758fc;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(7,88,252,0.3);">
-              View My Passes Dashboard →
-            </a>
-          </div>
-        </div>
+              <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px 0;">
+                Hi <strong>${fullName}</strong>,<br/>
+                We have received your registration and payment submission for <strong>${eventTitle}</strong>.
+              </p>
 
-        <!-- Footer -->
-        <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="font-size:12px;color:#94a3b8;margin:0;">
-            © ${new Date().getFullYear()} RotaSphere Platform · District 3192 Rotaract<br/>
-            <a href="${appUrl}" style="color:#0758fc;text-decoration:none;">Visit RotaSphere</a>
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+              <!-- Notice Callout -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+                <tr>
+                  <td>
+                    <span style="display:inline-block;background-color:#3b82f6;color:#ffffff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
+                      Organizer Verification
+                    </span>
+                    <p style="font-size:13px;color:#1e40af;line-height:1.6;margin:6px 0 0 0;">
+                      The event organizing committee is currently reviewing your payment reference and transaction receipt. Once verified by the host, your official entry QR pass will be issued and emailed to you immediately.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Order Summary Receipt Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
+                <tr>
+                  <td colspan="2" style="padding-bottom:10px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:1px;">
+                      Registration Summary
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0 6px 0;font-size:13px;color:#64748b;">Order Reference</td>
+                  <td align="right" style="padding:10px 0 6px 0;font-size:13px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;font-weight:700;color:#0f172a;">
+                    ${orderNumber}
+                  </td>
+                </tr>
+                ${
+                  upiTransactionId
+                    ? `<tr>
+                        <td style="padding:6px 0;font-size:13px;color:#64748b;">Submitted UTR / Ref</td>
+                        <td align="right" style="padding:6px 0;font-size:13px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;font-weight:700;color:#2563eb;">
+                          ${upiTransactionId}
+                        </td>
+                      </tr>`
+                    : ""
+                }
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#64748b;">Reserved Passes</td>
+                  <td align="right" style="padding:6px 0;font-size:13px;font-weight:700;color:#0f172a;">
+                    ${ticketCount} Pass${ticketCount > 1 ? "es" : ""} (${tierSummaryText})
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#64748b;">Total Amount</td>
+                  <td align="right" style="padding:6px 0;font-size:16px;font-weight:800;color:#0f172a;">
+                    ${orderTotal}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Primary Action CTA -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 12px auto;">
+                <tr>
+                  <td align="center" style="background-color:#0f172a;border-radius:12px;box-shadow:0 4px 14px rgba(15,23,42,0.2);">
+                    <a href="${appUrl}/tickets" target="_blank" style="display:inline-block;padding:14px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
+                      View Passes Status &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0 0 10px 0;">
+                <strong>RotaSphere Platform</strong> &middot; Rotaract District 3192<br/>
+                District Secretariat &middot; Bengaluru, Karnataka, India<br/>
+                Support: <a href="mailto:support@rotasphere.in" style="color:#2563eb;text-decoration:none;">support@rotasphere.in</a>
+              </p>
+              <p style="font-size:11px;line-height:1.5;color:#94a3b8;margin:0;">
+                You received this notice because an order was submitted for ${eventTitle}.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `ROTASPHERE — BOOKING RECEIVED
+============================================================
+Event: ${eventTitle}
+Order Reference: ${orderNumber}
+Date: ${eventDate}
+Location: ${eventCity}
+
+Hi ${fullName},
+
+We have received your registration for ${eventTitle}.
+The organizing committee is reviewing your payment submission. Once approved, your official entry QR pass will be emailed to you.
+
+SUMMARY:
+• Order Reference: ${orderNumber}
+• Reserved Passes: ${ticketCount} (${tierSummaryText})
+• Total Amount: ${orderTotal}
+${upiTransactionId ? `• Submitted UTR Reference: ${upiTransactionId}\n` : ""}
+Track your passes: ${appUrl}/tickets
+
+============================================================
+RotaSphere Platform · Rotaract District 3192
+Support: support@rotasphere.in
+`;
 
   return sendEmail({
     to,
-    subject: `⏳ Booking Received: ${eventTitle} (${orderNumber}) - Verification Pending`,
+    subject: `Booking Received: ${eventTitle} — Order #${orderNumber}`,
     html,
+    text,
+    entityRefId: orderNumber,
   });
 }
 
@@ -505,21 +860,18 @@ export function buildStudioBroadcastEmailHtml({
       : "";
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://events.rotaract3192.org";
-  const broadcastQrUrl = ticketCode
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(ticketCode)}&margin=10&format=png`
-    : "";
 
   const qrSectionHtml =
     includeQrCode && ticketCode
       ? `
     <div style="text-align:center;padding:16px 0;background:#09090b;border:1px solid #27272a;border-radius:14px;margin:20px 0;">
       <a href="${appUrl}/tickets" target="_blank" style="text-decoration:none;display:inline-block;">
-        <img src="${broadcastQrUrl}" alt="Ticket QR Code (${ticketCode})" width="160" height="160" style="width:160px;height:160px;border-radius:10px;border:1px solid #3f3f46;display:inline-block;" />
+        <img src="cid:qr-${ticketCode}" alt="Ticket QR Code (${ticketCode})" width="160" height="160" style="width:160px;height:160px;border-radius:10px;border:1px solid #3f3f46;display:inline-block;" />
       </a>
       <p style="font-size:11px;color:#a1a1aa;margin:8px 0 0;">Scan at entry gate for fast-track clearance</p>
       <div style="margin-top:12px;">
         <a href="${appUrl}/tickets" target="_blank" style="display:inline-block;background:#ff003c;color:#ffffff;text-decoration:none;padding:7px 16px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:0.5px;">
-          📱 Tap to Open Digital QR Pass
+          Open Digital QR Pass &rarr;
         </a>
       </div>
     </div>`
@@ -625,7 +977,7 @@ export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnounceme
       let emails: Array<{ email: string; name?: string }> = [];
 
       if (!userErr && userRows && userRows.length > 0) {
-        emails = userRows.map((r: any) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
+        emails = userRows.map((r: { email: string; full_name?: string | null }) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
       } else {
         // Fallback to clerk / profiles query
         const { data: fallbackProfiles } = await supabaseAdmin
@@ -633,7 +985,7 @@ export async function broadcastNewEventToAllUsersAsync(event: NewEventAnnounceme
           .select("email, full_name")
           .not("email", "is", null);
         if (fallbackProfiles && fallbackProfiles.length > 0) {
-          emails = fallbackProfiles.map((r: any) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
+          emails = fallbackProfiles.map((r: { email: string; full_name?: string | null }) => ({ email: r.email.trim(), name: r.full_name || "Delegate" }));
         }
       }
 

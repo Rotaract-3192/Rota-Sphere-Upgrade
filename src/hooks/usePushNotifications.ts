@@ -53,10 +53,17 @@ export function usePushNotifications() {
         return false;
       }
 
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) {
+        console.warn("Push subscription skipped: NEXT_PUBLIC_VAPID_PUBLIC_KEY is not configured.");
+        setLoading(false);
+        return false;
+      }
+
+      const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: vapidKey,
+        applicationServerKey: convertedVapidKey as unknown as BufferSource,
       });
 
       const subJson = sub.toJSON();
