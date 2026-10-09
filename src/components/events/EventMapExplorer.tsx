@@ -43,19 +43,55 @@ interface EventMapExplorerProps {
   subtitle?: string;
 }
 
-// Default City Coordinates in Karnataka / India
+// Extended City & Location Coordinates for District 3192 & Karnataka
 const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  // Bengaluru Urban & Suburbs
   bengaluru: { lat: 12.9716, lng: 77.5946 },
   bangalore: { lat: 12.9716, lng: 77.5946 },
+  whitefield: { lat: 12.9698, lng: 77.7499 },
+  "electronic city": { lat: 12.8399, lng: 77.6770 },
+  koramangala: { lat: 12.9352, lng: 77.6245 },
+  indiranagar: { lat: 12.9784, lng: 77.6408 },
+  yelahanka: { lat: 13.1007, lng: 77.5963 },
+  jayanagar: { lat: 12.9250, lng: 77.5938 },
+  rajajinagar: { lat: 12.9982, lng: 77.5530 },
+  kengeri: { lat: 12.9081, lng: 77.4815 },
+
+  // Ramanagara District & Taluks
+  ramanagara: { lat: 12.7209, lng: 77.2797 },
+  "ramanagara taluk": { lat: 12.7150, lng: 77.2850 },
+  channapatna: { lat: 12.6518, lng: 77.2089 },
+  kanakapura: { lat: 12.5467, lng: 77.4194 },
+  magadi: { lat: 12.9567, lng: 77.2272 },
+  harohalli: { lat: 12.6845, lng: 77.4475 },
+
+  // Tumakuru
+  tumakuru: { lat: 13.3409, lng: 77.1006 },
+  tumkur: { lat: 13.3409, lng: 77.1006 },
+
+  // Mysuru & Mandya
   mysuru: { lat: 12.2958, lng: 76.6394 },
   mysore: { lat: 12.2958, lng: 76.6394 },
+  mandya: { lat: 12.5218, lng: 76.8951 },
+  srirangapatna: { lat: 12.4222, lng: 76.6938 },
+
+  // Kolar & Chikkaballapur
+  kolar: { lat: 13.1367, lng: 78.1292 },
+  chikkaballapur: { lat: 13.4355, lng: 77.7315 },
+  "nandi hills": { lat: 13.3702, lng: 77.6835 },
+
+  // Coastal & Malnad
   mangaluru: { lat: 12.9141, lng: 74.8560 },
   mangalore: { lat: 12.9141, lng: 74.8560 },
+  udupi: { lat: 13.3409, lng: 74.7421 },
+  shivamogga: { lat: 13.9299, lng: 75.5681 },
+  shimoga: { lat: 13.9299, lng: 75.5681 },
+
+  // Central & North Karnataka
   hubballi: { lat: 15.3647, lng: 75.1240 },
   hubli: { lat: 15.3647, lng: 75.1240 },
   belagavi: { lat: 15.8497, lng: 74.4977 },
-  tumakuru: { lat: 13.3409, lng: 77.1006 },
-  shivamogga: { lat: 13.9299, lng: 75.5681 },
+  belgaum: { lat: 15.8497, lng: 74.4977 },
   davangere: { lat: 14.4644, lng: 75.9218 },
   ballari: { lat: 15.1394, lng: 76.9214 },
 };
@@ -65,6 +101,55 @@ function getMinPrice(tiers?: TicketTier[]): string {
   const prices = tiers.map((t) => parseFloat(String(t.price)) || 0);
   const min = Math.min(...prices);
   return min === 0 ? "Free" : `₹${min.toFixed(2)}`;
+}
+
+// Disambiguate overlapping pins using a spiral displacement vector (~300m step)
+function getDisambiguatedMapCoordinates(eventsList: EventItem[]): Map<string, { lat: number; lng: number }> {
+  const coordMap = new Map<string, { lat: number; lng: number }>();
+  const occupiedCounts: Record<string, number> = {};
+
+  eventsList.forEach((evt) => {
+    let lat = evt.latitude;
+    let lng = evt.longitude;
+
+    if (!lat || !lng) {
+      const cityText = (evt.city || "").toLowerCase().trim();
+      const venueText = (evt.venue_name || "").toLowerCase().trim();
+
+      let matched: { lat: number; lng: number } | undefined;
+      for (const [k, coords] of Object.entries(CITY_COORDINATES)) {
+        if (cityText.includes(k) || venueText.includes(k)) {
+          matched = coords;
+          break;
+        }
+      }
+
+      if (!matched) {
+        matched = CITY_COORDINATES["bengaluru"];
+      }
+
+      lat = matched.lat;
+      lng = matched.lng;
+    }
+
+    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    const count = occupiedCounts[key] || 0;
+    occupiedCounts[key] = count + 1;
+
+    if (count === 0) {
+      coordMap.set(evt.id, { lat, lng });
+    } else {
+      // Golden spiral offset (~400m displacement ring for co-located events)
+      const angle = count * 2.399963; // Radians
+      const radius = 0.005 * Math.sqrt(count); // ~500m lat/lng offset
+      coordMap.set(evt.id, {
+        lat: lat + radius * Math.cos(angle),
+        lng: lng + radius * Math.sin(angle),
+      });
+    }
+  });
+
+  return coordMap;
 }
 
 export function EventMapExplorer({
@@ -94,7 +179,6 @@ export function EventMapExplorer({
 
     checkTheme();
 
-    // Listen to custom theme change event
     const handleThemeChange = (e: any) => {
       if (e.detail) {
         setIsDark(e.detail === "dark");
@@ -105,7 +189,6 @@ export function EventMapExplorer({
 
     window.addEventListener("rotasphere-theme-change", handleThemeChange);
 
-    // Also observe DOM attribute changes for class="dark"
     const observer = new MutationObserver(() => {
       checkTheme();
     });
@@ -117,19 +200,16 @@ export function EventMapExplorer({
     };
   }, []);
 
-  // Fix X button logic: ONLY return event if selectedEventId is truthy
   const selectedEvent = useMemo(() => {
     if (!selectedEventId) return null;
     return events.find((e) => e.id === selectedEventId) || null;
   }, [events, selectedEventId]);
 
-  // Filter events by active city tab
   const filteredEvents = useMemo(() => {
     if (activeCityFilter === "ALL") return events;
     return events.filter((e) => e.city?.toLowerCase().includes(activeCityFilter.toLowerCase()));
   }, [events, activeCityFilter]);
 
-  // Unique cities list
   const cities = useMemo(() => {
     const set = new Set<string>();
     events.forEach((e) => {
@@ -138,11 +218,15 @@ export function EventMapExplorer({
     return Array.from(set);
   }, [events]);
 
+  // Map coordinates with spatial spiral disambiguation for co-located events
+  const disambiguatedCoordsMap = useMemo(() => {
+    return getDisambiguatedMapCoordinates(filteredEvents);
+  }, [filteredEvents]);
+
   // ── LOAD LEAFLET MAP & TILE LAYER ─────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-    // Inject Leaflet CSS dynamically if not present
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
       link.id = "leaflet-css";
@@ -156,11 +240,13 @@ export function EventMapExplorer({
     import("leaflet").then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
 
+      // Free, high-performance, keyless tile layers (no CARTO watermark)
       const tileUrl = isDark
-        ? "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-      // Initialize map instance if not existing
+      const subdomains = isDark ? "a" : "abc";
+
       if (!mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current, {
           center: [12.9716, 77.5946],
@@ -171,19 +257,18 @@ export function EventMapExplorer({
 
         const tileLayer = L.tileLayer(tileUrl, {
           maxZoom: 19,
-          subdomains: "abcd",
+          subdomains: subdomains,
         }).addTo(map);
 
         tileLayerRef.current = tileLayer;
         mapInstanceRef.current = map;
       } else {
-        // Swap tile layer if theme changed
         if (tileLayerRef.current) {
           mapInstanceRef.current.removeLayer(tileLayerRef.current);
         }
         const newLayer = L.tileLayer(tileUrl, {
           maxZoom: 19,
-          subdomains: "abcd",
+          subdomains: subdomains,
         }).addTo(mapInstanceRef.current);
         tileLayerRef.current = newLayer;
       }
@@ -194,16 +279,10 @@ export function EventMapExplorer({
       Object.values(markersRef.current).forEach((m) => m.remove());
       markersRef.current = {};
 
-      // Add pins for filtered events
       const bounds: [number, number][] = [];
 
       filteredEvents.forEach((evt) => {
-        const cityKey = (evt.city || "bengaluru").toLowerCase().trim();
-        const coords =
-          evt.latitude && evt.longitude
-            ? { lat: evt.latitude, lng: evt.longitude }
-            : CITY_COORDINATES[cityKey] || CITY_COORDINATES["bengaluru"];
-
+        const coords = disambiguatedCoordsMap.get(evt.id) || { lat: 12.9716, lng: 77.5946 };
         bounds.push([coords.lat, coords.lng]);
 
         const isSelected = selectedEventId === evt.id;
@@ -224,34 +303,39 @@ export function EventMapExplorer({
           ? "#334155"
           : "#e2e8f0";
 
+        const titleText = evt.title || evt.city || "Event";
+
         const customIcon = L.divIcon({
           className: "custom-map-pin-container",
           html: `
             <div class="relative cursor-pointer group" style="transition: transform 0.2s ease;">
               ${isSelected ? '<span class="absolute -inset-2 rounded-full bg-[#0758fc]/40 animate-ping"></span>' : ''}
-              <div style="background-color: ${pinBg}; color: ${pinText}; padding: 6px 12px; border-radius: 9999px; border: 1.5px solid ${pinBorder}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,${isDark ? '0.6' : '0.15'});">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: ${isSelected ? '#ffffff' : '#0758fc'};"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>${evt.city || 'Venue'}</span>
+              <div style="background-color: ${pinBg}; color: ${pinText}; padding: 6px 14px; border-radius: 9999px; border: 1.5px solid ${pinBorder}; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,${isDark ? '0.6' : '0.15'}); max-width: 180px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: ${isSelected ? '#ffffff' : '#0758fc'}; shrink: 0;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${titleText}</span>
               </div>
             </div>
           `,
-          iconSize: [110, 36],
-          iconAnchor: [55, 18],
+          iconSize: [160, 36],
+          iconAnchor: [80, 18],
         });
 
         const marker = L.marker([coords.lat, coords.lng], { icon: customIcon }).addTo(map);
 
         marker.on("click", () => {
           setSelectedEventId(evt.id);
-          map.setView([coords.lat, coords.lng], 12, { animate: true });
+          map.setView([coords.lat, coords.lng], 13, { animate: true });
         });
 
         markersRef.current[evt.id] = marker;
       });
 
-      // Auto-fit map bounds if markers exist
-      if (bounds.length > 0 && activeCityFilter !== "ALL") {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+      if (bounds.length > 0) {
+        if (activeCityFilter !== "ALL") {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        } else if (bounds.length > 1) {
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+        }
       }
     });
 
@@ -264,7 +348,7 @@ export function EventMapExplorer({
         mapInstanceRef.current = null;
       }
     };
-  }, [filteredEvents, selectedEventId, activeCityFilter, isDark]);
+  }, [filteredEvents, selectedEventId, activeCityFilter, isDark, disambiguatedCoordsMap]);
 
   function handleZoomIn() {
     if (mapInstanceRef.current) mapInstanceRef.current.zoomIn();
@@ -490,12 +574,8 @@ export function EventMapExplorer({
                       onClick={() => {
                         setSelectedEventId(evt.id);
                         if (mapInstanceRef.current) {
-                          const cityKey = (evt.city || "bengaluru").toLowerCase().trim();
-                          const coords =
-                            evt.latitude && evt.longitude
-                              ? { lat: evt.latitude, lng: evt.longitude }
-                              : CITY_COORDINATES[cityKey] || CITY_COORDINATES["bengaluru"];
-                          mapInstanceRef.current.setView([coords.lat, coords.lng], 12, { animate: true });
+                          const coords = disambiguatedCoordsMap.get(evt.id) || { lat: 12.9716, lng: 77.5946 };
+                          mapInstanceRef.current.setView([coords.lat, coords.lng], 13, { animate: true });
                         }
                       }}
                       className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${

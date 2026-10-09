@@ -41,6 +41,10 @@ import {
   Sparkles,
   Download,
   Share2,
+  Phone,
+  FileText,
+  Image as ImageIcon,
+  Calendar,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
@@ -62,6 +66,7 @@ import {
   type TierStatusInfo,
 } from "@/lib/utils/tierAvailability";
 import { SearchableClubSelect } from "@/components/ui/SearchableClubSelect";
+import { HoldToConfirm } from "@/components/ui/motion-hold-to-confirm";
 import { SlideToPayButton } from "./SlideToPayButton";
 import { PaymentConfirmationAnimation } from "./PaymentConfirmationAnimation";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
@@ -107,7 +112,9 @@ export function CheckoutModal({
 }: CheckoutModalProps) {
   // Tamper-proof, server-synchronized monotonic time
   const currentTime = useServerSyncedTime(initialServerTime);
-  const [checkoutStep, setCheckoutStep] = useState<"SELECT_PASSES" | "UPI_PAYMENT" | "SUCCESS">("SELECT_PASSES");
+  const [checkoutStep, setCheckoutStep] = useState<
+    "SELECT_PASSES" | "REGISTRATION_DETAILS" | "UPI_PAYMENT" | "SUCCESS"
+  >("SELECT_PASSES");
 
   // Dynamic current tiers state synced with PostgreSQL reserved_count
   const [currentTiers, setCurrentTiers] = useState<SaasTicketTier[]>(tiers);
@@ -133,9 +140,17 @@ export function CheckoutModal({
     return initial;
   });
 
-  // Support pre-selecting a tier when opening modal and properly initialize attendee slots
+  const isInitializedRef = useRef(false);
+
+  // Support pre-selecting a tier when opening modal and properly initialize attendee slots once
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      isInitializedRef.current = false;
+      return;
+    }
+
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
       let targetTier: SaasTicketTier | undefined;
       if (initialSelectedTierId) {
         targetTier = currentTiers.find((t) => t.id === initialSelectedTierId);
@@ -165,7 +180,7 @@ export function CheckoutModal({
         setAttendees(initialSlots);
       }
     }
-  }, [isOpen, initialSelectedTierId]);
+  }, [isOpen, initialSelectedTierId, currentTiers, currentTime, userName, userEmail]);
 
   // Clamp any pre-selected quantities to tier max_per_order limits
   useEffect(() => {
@@ -257,6 +272,48 @@ export function CheckoutModal({
       ];
     }
     return [];
+  });
+
+  // Resilient functional attendee updater to eliminate stale closure bugs during fast typing or async uploads
+  const updateAttendeeField = useCallback((index: number, field: string, value: any) => {
+    setAttendees((prev) => {
+      const next = [...prev];
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }, []);
+
+  const updateAttendeeCustomAnswer = useCallback((index: number, questionId: string, value: any) => {
+    setAttendees((prev) => {
+      const next = [...prev];
+      if (!next[index]) return prev;
+      next[index] = {
+        ...next[index],
+        customAnswers: {
+          ...(next[index].customAnswers || {}),
+          [questionId]: value,
+        },
+      };
+      return next;
+    });
+  }, []);
+
+  const getApplicableQuestionsForAttendee = useCallback(
+    (tierId: string) => {
+      return customQuestions.filter((q) => {
+        const targetTiers = q.target_tiers || q.targetTiers;
+        if (Array.isArray(targetTiers) && targetTiers.length > 0) {
+          return targetTiers.includes(tierId);
+        }
+        return true;
+      });
+    },
+    [customQuestions]
+  );
+
+  const hasApplicableCustomQuestions = attendees.some((att) => {
+    return getApplicableQuestionsForAttendee(att.tierId).length > 0;
   });
 
   // UPI Payment State
@@ -648,44 +705,44 @@ export function CheckoutModal({
       }, 350);
     }
 
-    // Rebuild attendee slots while preserving what user typed
-    const newAttendees: Array<{
-      tierId: string;
-      name: string;
-      email: string;
-      phone: string;
-      memberType: "Rotaract" | "Rotary" | "Non-Rotaract";
-      clubName: string;
-      customClubName: string;
-      designation: string;
-      zone: string;
-      customAnswers?: Record<string, any>;
-    }> = [];
-    let prevIndex = 0;
-    currentTiers.forEach((t) => {
-      const count = newCounts[t.id] || 0;
-      const tSlabSize = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
-      const totalAttendeesForTier = count * tSlabSize;
-      for (let i = 0; i < totalAttendeesForTier; i++) {
-        const existing = attendees[prevIndex];
-        const isBuyerSlot = prevIndex === 0;
-        newAttendees.push({
-          tierId: t.id,
-          name: existing?.name || (isBuyerSlot ? userName || "" : ""),
-          email: existing?.email || (isBuyerSlot ? userEmail || "" : ""),
-          phone: existing?.phone || "",
-          memberType: existing?.memberType || "Rotaract",
-          clubName: existing?.clubName || "",
-          customClubName: existing?.customClubName || "",
-          designation: existing?.designation || "",
-          zone: existing?.zone || "",
-          customAnswers: existing?.customAnswers || {},
-        });
-        prevIndex++;
-      }
-    });
-    setAttendees(
-      newAttendees.length > 0
+    // Rebuild attendee slots while preserving what user typed using functional state update
+    setAttendees((prevAttendees) => {
+      const newAttendees: Array<{
+        tierId: string;
+        name: string;
+        email: string;
+        phone: string;
+        memberType: "Rotaract" | "Rotary" | "Non-Rotaract";
+        clubName: string;
+        customClubName: string;
+        designation: string;
+        zone: string;
+        customAnswers?: Record<string, any>;
+      }> = [];
+      let prevIndex = 0;
+      currentTiers.forEach((t) => {
+        const count = newCounts[t.id] || 0;
+        const tSlabSize = t.is_bulk_slab && t.bulk_slab_size ? Number(t.bulk_slab_size) : 1;
+        const totalAttendeesForTier = count * tSlabSize;
+        for (let i = 0; i < totalAttendeesForTier; i++) {
+          const existing = prevAttendees[prevIndex];
+          const isBuyerSlot = prevIndex === 0;
+          newAttendees.push({
+            tierId: t.id,
+            name: existing?.name || (isBuyerSlot ? userName || "" : ""),
+            email: existing?.email || (isBuyerSlot ? userEmail || "" : ""),
+            phone: existing?.phone || "",
+            memberType: existing?.memberType || "Rotaract",
+            clubName: existing?.clubName || "",
+            customClubName: existing?.customClubName || "",
+            designation: existing?.designation || "",
+            zone: existing?.zone || "",
+            customAnswers: existing?.customAnswers || {},
+          });
+          prevIndex++;
+        }
+      });
+      return newAttendees.length > 0
         ? newAttendees
         : [
             {
@@ -700,8 +757,8 @@ export function CheckoutModal({
               zone: "",
               customAnswers: {},
             },
-          ]
-    );
+          ];
+    });
   }
 
   function handleCountChange(tierId: string, delta: number) {
@@ -792,15 +849,15 @@ export function CheckoutModal({
     }
   }
 
-  async function handleProceedToPayment() {
+  function validatePrimaryDetails(): boolean {
     if (!userEmail) {
       setErrorMessage("Please sign in to your account before purchasing tickets.");
-      return;
+      return false;
     }
 
     if (totalTicketCount === 0) {
       setErrorMessage("Please select at least 1 active ticket pass.");
-      return;
+      return false;
     }
 
     // Verify each selected tier is currently open & bookable
@@ -811,7 +868,7 @@ export function CheckoutModal({
         const status = getTierScheduleStatus(tier, currentTime);
         if (!status.canBook) {
           setErrorMessage(`"${tier.name}" is locked (${status.detailText}). Please adjust your selection.`);
-          return;
+          return false;
         }
         const maxAllowed = tier.max_per_order ? Number(tier.max_per_order) : 50;
         if (count > maxAllowed) {
@@ -820,7 +877,7 @@ export function CheckoutModal({
               ? `"${tier.name}" is strictly limited to 1 ticket only.`
               : `You can only select up to ${maxAllowed} tickets for "${tier.name}".`
           );
-          return;
+          return false;
         }
       }
     }
@@ -831,7 +888,7 @@ export function CheckoutModal({
       const email = attendees[i].email.trim().toLowerCase();
       if (email && emailSet.has(email)) {
         setErrorMessage(`Duplicate email detected: "${email}". Each attendee must have a unique email address.`);
-        return;
+        return false;
       }
       if (email) emailSet.add(email);
     }
@@ -840,45 +897,111 @@ export function CheckoutModal({
       const att = attendees[i];
       if (!att.name.trim() || !att.email.trim()) {
         setErrorMessage(`Please fill out Name and Email for Attendee #${i + 1}`);
-        return;
+        return false;
       }
 
       const matchedTier = currentTiers.find((t) => t.id === att.tierId);
       // For bulk slab group members (attendees 2..N), club affiliation is automatically inherited!
       if (matchedTier?.is_bulk_slab && i > 0) {
-        if (!att.clubName?.trim()) {
-          att.clubName = attendees[0]?.clubName || "Rotaract District 3192";
-        }
+        // Inherited from Attendee #1, proceed to next attendee
+        continue;
       } else {
         const memberType = att.memberType || "Rotaract";
         if (memberType === "Rotaract") {
-          const hasClub = att.clubName === "custom"
-            ? Boolean(att.customClubName?.trim())
-            : Boolean(att.clubName?.trim());
+          const hasClub =
+            att.clubName === "custom"
+              ? Boolean(att.customClubName?.trim())
+              : Boolean(att.clubName?.trim());
           if (!hasClub) {
             setErrorMessage(
               `Please select or enter the Rotaract Club for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
             );
-            return;
+            return false;
           }
         } else if (memberType === "Rotary") {
           if (!att.clubName?.trim()) {
             setErrorMessage(
               `Please enter the Rotary Club Name for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`
             );
-            return;
+            return false;
           }
-        }
-      }
-
-      for (const q of customQuestions) {
-        if (q.is_required && !att.customAnswers?.[q.id]?.toString().trim()) {
-          setErrorMessage(`Please answer "${q.question_text}" for Attendee #${i + 1}`);
-          return;
         }
       }
     }
 
+    return true;
+  }
+
+  function validateRegistrationDetails(): boolean {
+    for (let i = 0; i < attendees.length; i++) {
+      const att = attendees[i];
+      const applicable = getApplicableQuestionsForAttendee(att.tierId);
+
+      for (const q of applicable) {
+        const rawVal = att.customAnswers?.[q.id];
+        const valStr = rawVal ? String(rawVal).trim() : "";
+        const qLabel = q.question_text || q.questionText || "Question";
+        const qType = q.question_type || q.questionType;
+
+        if (q.is_required && !valStr) {
+          setErrorMessage(`Please answer "${qLabel}" for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`);
+          return false;
+        }
+
+        if (valStr) {
+          const isAadhaarField =
+            qType === "aadhaar" ||
+            (qType === "text" && /\baadhaa?r(\s*(card|number|no))?\b/i.test(qLabel));
+          const isPanField =
+            qType === "pan" ||
+            (qType === "text" && /\bpan(\s*(card|number|no))?\b/i.test(qLabel));
+          const isPhoneField =
+            qType === "phone" ||
+            (qType === "text" && /\b(phone|mobile|whatsapp|emergency\s*(contact|number|phone))\b/i.test(qLabel));
+
+          if (isAadhaarField) {
+            const digits = valStr.replace(/\D/g, "");
+            if (digits.length !== 12) {
+              setErrorMessage(`Please enter a valid 12-digit Aadhaar number for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`);
+              return false;
+            }
+          } else if (isPanField) {
+            const cleanPan = valStr.toUpperCase().replace(/\s/g, "");
+            if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+              setErrorMessage(`Please enter a valid 10-character PAN (e.g. ABCDE1234F) for Attendee #${i + 1}${att.name ? ` (${att.name})` : ""}`);
+              return false;
+            }
+          } else if (isPhoneField && valStr.replace(/\D/g, "").length < 10) {
+            setErrorMessage(`Please enter a valid 10-digit phone number for "${qLabel}" (Attendee #${i + 1})`);
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  async function handleProceedFromStep1() {
+    if (!validatePrimaryDetails()) return;
+    setErrorMessage(null);
+
+    if (hasApplicableCustomQuestions) {
+      setCheckoutStep("REGISTRATION_DETAILS");
+      return;
+    }
+
+    await handleProceedToPayment();
+  }
+
+  async function handleProceedFromStep2() {
+    if (!validateRegistrationDetails()) return;
+    setErrorMessage(null);
+
+    await handleProceedToPayment();
+  }
+
+  async function handleProceedToPayment() {
     setErrorMessage(null);
     setLoading(true);
 
@@ -971,10 +1094,15 @@ export function CheckoutModal({
     setLoading(true);
     setErrorMessage(null);
 
-    const formattedAttendees = attendees.map((a) => {
+    const formattedAttendees = attendees.map((a, i) => {
+      const matchedTier = currentTiers.find((t) => t.id === a.tierId);
+      const isSlabMember = Boolean(matchedTier?.is_bulk_slab && i > 0);
+      const slabFallbackClub = attendees[0]?.clubName || "Rotaract District 3192";
       const finalClub =
         a.memberType === "Non-Rotaract"
           ? (a.clubName?.trim() || "Guest / Non-Rotaractor")
+          : isSlabMember && !a.clubName?.trim()
+          ? slabFallbackClub
           : a.memberType === "Rotary"
           ? a.clubName?.trim() || ""
           : a.clubName === "custom"
@@ -1052,6 +1180,326 @@ export function CheckoutModal({
       setTimeout(() => setCopiedAmount(false), 2000);
     }
   }
+
+  const renderCustomQuestionInput = (
+    q: any,
+    att: (typeof attendees)[0],
+    idx: number
+  ) => {
+    const qId = q.id;
+    const qType = q.question_type || q.questionType || "text";
+    const qText = q.question_text || q.questionText;
+    const isReq = !!q.is_required;
+    const placeholder = q.placeholder || "";
+    const helpText = q.help_text || q.helpText || "";
+    const options = Array.isArray(q.options) ? q.options : [];
+    const currentVal = att.customAnswers?.[qId] ?? "";
+
+    return (
+      <div key={qId} className="space-y-1.5 text-left">
+        <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
+          {qText} {isReq && <span className="text-rose-500 font-black">*</span>}
+        </label>
+
+        {/* Aadhaar Input */}
+        {qType === "aadhaar" && (
+          <div className="space-y-1">
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={14}
+                placeholder="XXXX XXXX XXXX"
+                value={currentVal}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+                  const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+                  updateAttendeeCustomAnswer(idx, qId, formatted);
+                }}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold tracking-wider text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-gray-400 font-medium pointer-events-none">
+                <ShieldCheck size={12} className="text-blue-500" />
+                <span>12 Digits</span>
+              </div>
+            </div>
+            <span className="text-[10px] text-gray-400 block">
+              {helpText || "Encrypted & masked according to UIDAI / DPDP Act guidelines."}
+            </span>
+          </div>
+        )}
+
+        {/* PAN Input */}
+        {qType === "pan" && (
+          <div className="space-y-1">
+            <input
+              type="text"
+              maxLength={10}
+              placeholder="ABCDE1234F"
+              value={currentVal}
+              onChange={(e) => {
+                const clean = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                updateAttendeeCustomAnswer(idx, qId, clean);
+              }}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold tracking-wider uppercase text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+            />
+            <span className="text-[10px] text-gray-400 block">
+              {helpText || "10-character alphanumeric Income Tax PAN"}
+            </span>
+          </div>
+        )}
+
+        {/* Phone / Emergency Phone */}
+        {qType === "phone" && (
+          <div className="space-y-1">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                +91
+              </span>
+              <input
+                type="tel"
+                inputMode="tel"
+                maxLength={10}
+                placeholder={placeholder || "10-digit mobile number"}
+                value={currentVal}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  updateAttendeeCustomAnswer(idx, qId, digits);
+                }}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-11 pr-3.5 py-2.5 text-xs font-bold font-mono text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+              />
+            </div>
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* File Upload / ID Proof Document */}
+        {qType === "file_upload" && (
+          <div className="space-y-1.5">
+            {currentVal ? (
+              <div className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={currentVal}
+                  alt="Uploaded Document"
+                  className="w-14 h-14 rounded-lg object-cover border border-gray-200 dark:border-gray-700 bg-white shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white block truncate">
+                    Document Attached
+                  </span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                    ✓ Ready for registration
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateAttendeeCustomAnswer(idx, qId, "")}
+                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer transition-colors"
+                  title="Remove file"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-blue-500 rounded-xl cursor-pointer bg-white dark:bg-gray-900/50 transition-colors">
+                <Upload size={20} className="text-gray-400 mb-1" />
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  {placeholder || "Click or tap to upload photo / ID proof"}
+                </span>
+                <span className="text-[10px] text-gray-400 mt-0.5">
+                  JPG, PNG, WebP (auto-compressed)
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const compressed = await compressImageFile(file);
+                      updateAttendeeCustomAnswer(idx, qId, compressed);
+                    } catch {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          updateAttendeeCustomAnswer(idx, qId, reader.result);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            )}
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Dropdown Input */}
+        {qType === "dropdown" && (
+          <div className="space-y-1">
+            <select
+              value={currentVal}
+              onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
+            >
+              <option value="">{placeholder || "Select an option..."}</option>
+              {options.map((opt: string, optIdx: number) => (
+                <option key={optIdx} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Radio Group */}
+        {qType === "radio" && (
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap gap-2">
+              {options.map((opt: string, optIdx: number) => {
+                const isSelected = currentVal === opt;
+                return (
+                  <button
+                    key={optIdx}
+                    type="button"
+                    onClick={() => updateAttendeeCustomAnswer(idx, qId, opt)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#0758fc] text-white border-[#0758fc] shadow-xs"
+                        : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Checkbox Group */}
+        {qType === "checkbox" && (
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap gap-2">
+              {options.map((opt: string, optIdx: number) => {
+                const selectedArray = Array.isArray(currentVal)
+                  ? currentVal
+                  : typeof currentVal === "string" && currentVal
+                  ? currentVal.split(", ")
+                  : [];
+                const isChecked = selectedArray.includes(opt);
+
+                return (
+                  <button
+                    key={optIdx}
+                    type="button"
+                    onClick={() => {
+                      let next: string[];
+                      if (isChecked) {
+                        next = selectedArray.filter((x: string) => x !== opt);
+                      } else {
+                        next = [...selectedArray, opt];
+                      }
+                      updateAttendeeCustomAnswer(idx, qId, next.join(", "));
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isChecked
+                        ? "bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-300 border-[#0758fc] shadow-2xs"
+                        : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] ${
+                        isChecked
+                          ? "bg-[#0758fc] text-white border-[#0758fc]"
+                          : "border-gray-300 dark:border-gray-600"
+                      }`}
+                    >
+                      {isChecked && "✓"}
+                    </span>
+                    <span>{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Textarea / Long Text */}
+        {qType === "textarea" && (
+          <div className="space-y-1">
+            <textarea
+              rows={3}
+              placeholder={placeholder || "Type your detailed answer here..."}
+              value={currentVal}
+              onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 resize-none"
+            />
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Number Input */}
+        {qType === "number" && (
+          <div className="space-y-1">
+            <input
+              type="number"
+              placeholder={placeholder || "Enter a number"}
+              value={currentVal}
+              onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+            />
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Date Input */}
+        {qType === "date" && (
+          <div className="space-y-1">
+            <input
+              type="date"
+              value={currentVal}
+              onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+            />
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+
+        {/* Standard Text Input (fallback) */}
+        {(qType === "text" ||
+          ![
+            "aadhaar",
+            "pan",
+            "phone",
+            "file_upload",
+            "dropdown",
+            "radio",
+            "checkbox",
+            "textarea",
+            "number",
+            "date",
+          ].includes(qType)) && (
+          <div className="space-y-1">
+            <input
+              type="text"
+              placeholder={placeholder || qText}
+              value={currentVal}
+              onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
+            />
+            {helpText && <span className="text-[10px] text-gray-400 block">{helpText}</span>}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderTierItem = (tier: SaasTicketTier) => {
     const count = selectedCounts[tier.id] || 0;
@@ -1258,6 +1706,83 @@ export function CheckoutModal({
               >
                 <X size={18} />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Stepper Navigation Indicator */}
+        {userEmail && checkoutStep !== "SUCCESS" && hasApplicableCustomQuestions && (
+          <div className="bg-gray-50/90 dark:bg-gray-800/60 px-5 sm:px-6 py-2.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs select-none">
+            <button
+              type="button"
+              onClick={() => {
+                if (checkoutStep === "REGISTRATION_DETAILS") {
+                  setErrorMessage(null);
+                  setCheckoutStep("SELECT_PASSES");
+                }
+              }}
+              className={`flex items-center gap-1.5 transition-colors ${
+                checkoutStep === "SELECT_PASSES"
+                  ? "text-[#0758fc] dark:text-blue-400 font-extrabold cursor-default"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-bold cursor-pointer"
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black ${
+                  checkoutStep === "SELECT_PASSES"
+                    ? "bg-[#0758fc] text-white"
+                    : "bg-emerald-500 text-white"
+                }`}
+              >
+                {checkoutStep === "SELECT_PASSES" ? "1" : "✓"}
+              </span>
+              <span>1. Passes &amp; Info</span>
+            </button>
+
+            <div className="flex-1 mx-3 h-0.5 bg-gray-200 dark:bg-gray-700" />
+
+            <div
+              className={`flex items-center gap-1.5 ${
+                checkoutStep === "REGISTRATION_DETAILS"
+                  ? "text-[#0758fc] dark:text-blue-400 font-extrabold"
+                  : checkoutStep === "UPI_PAYMENT"
+                  ? "text-gray-600 dark:text-gray-300 font-bold"
+                  : "text-gray-400 dark:text-gray-500 font-medium"
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black ${
+                  checkoutStep === "REGISTRATION_DETAILS"
+                    ? "bg-[#0758fc] text-white"
+                    : checkoutStep === "UPI_PAYMENT"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                }`}
+              >
+                {checkoutStep === "UPI_PAYMENT" ? "✓" : "2"}
+              </span>
+              <span>2. Extra Details</span>
+            </div>
+
+            <div className="flex-1 mx-3 h-0.5 bg-gray-200 dark:bg-gray-700" />
+
+            <div
+              className={`flex items-center gap-1.5 ${
+                checkoutStep === "UPI_PAYMENT"
+                  ? "text-[#0758fc] dark:text-blue-400 font-extrabold"
+                  : "text-gray-400 dark:text-gray-500 font-medium"
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black ${
+                  checkoutStep === "UPI_PAYMENT"
+                    ? "bg-[#0758fc] text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                }`}
+              >
+                3
+              </span>
+              <span>3. Payment</span>
             </div>
           </div>
         )}
@@ -1573,32 +2098,182 @@ export function CheckoutModal({
             <div className="space-y-3 pt-2">
               <button
                 type="button"
-                onClick={() => setCheckoutStep("SELECT_PASSES")}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 font-bold transition-colors cursor-pointer"
+                onClick={() => {
+                  setErrorMessage(null);
+                  if (hasApplicableCustomQuestions) {
+                    setCheckoutStep("REGISTRATION_DETAILS");
+                  } else {
+                    setCheckoutStep("SELECT_PASSES");
+                  }
+                }}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 font-bold transition-colors cursor-pointer"
               >
-                <ArrowLeft size={14} /> Back to Pass Selection
+                <ArrowLeft size={14} /> {hasApplicableCustomQuestions ? "Back to Extra Details" : "Back to Pass Selection"}
               </button>
 
               {(() => {
                 const canSubmit =
                   (isFreeOrder || Boolean(paymentProofUrl || upiTransactionId.trim())) && !isHoldExpired;
                 return (
-                  <SlideToPayButton
-                    onSuccess={() => handleSubmitOrder(upiTransactionId)}
+                  <HoldToConfirm
+                    onConfirm={() => handleSubmitOrder(upiTransactionId)}
                     label={
                       loading
                         ? "Submitting..."
                         : isHoldExpired
-                        ? "Hold Expired — Please Re-lock Seats Above"
+                        ? "Hold Expired — Re-lock Seats Above"
                         : !canSubmit
-                        ? "Upload Screenshot or Enter UTR to Confirm"
-                        : "Slide to Submit Ticket for Approval"
+                        ? "Attach Screenshot or Enter UTR First"
+                        : "Hold to Submit Ticket for Approval"
                     }
                     disabled={loading || !canSubmit || isHoldExpired}
                     loading={loading}
                   />
                 );
               })()}
+            </div>
+          </div>
+        ) : checkoutStep === "REGISTRATION_DETAILS" ? (
+          /* ── 3.5 STEP 2: DEDICATED REGISTRATION & CUSTOM QUESTIONS PAGE ── */
+          <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+            {errorMessage && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Hold Expired Alert */}
+            {!isFreeOrder && totalTicketCount > 0 && isHoldExpired && (
+              <div className="p-4 rounded-2xl border bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-300">Reservation Expired</p>
+                    <p className="text-[11px] opacity-85">Click re-lock to hold your tickets again.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isRenewingHold}
+                  onClick={handleRenewHold}
+                  className="text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+                >
+                  {isRenewingHold ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  <span>Re-lock Passes</span>
+                </button>
+              </div>
+            )}
+
+            {/* Section Header */}
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <FileText size={18} className="text-[#0758fc] dark:text-blue-400" />
+                  Additional Registration Details
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Please provide the required information for each attendee pass.
+                </p>
+              </div>
+              <span className="text-[11px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0">
+                {attendees.length} Attendee{attendees.length > 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Attendee Registration Cards */}
+            <div className="space-y-4">
+              {attendees.map((att, idx) => {
+                const matchedTier = currentTiers.find((t) => t.id === att.tierId);
+                const applicableQuestions = getApplicableQuestionsForAttendee(att.tierId);
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 sm:p-5 bg-gray-50/90 dark:bg-gray-800/80 rounded-3xl border border-gray-200 dark:border-gray-700/80 space-y-4 shadow-xs"
+                  >
+                    {/* Card Header with Attendee Name & Tier */}
+                    <div className="flex items-center justify-between border-b border-gray-200/70 dark:border-gray-700/70 pb-2.5">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-black uppercase text-[#0758fc] dark:text-blue-400 tracking-wider flex items-center gap-1.5">
+                          <User size={14} /> Attendee #{idx + 1}: {att.name || `Delegate ${idx + 1}`}
+                        </span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block">
+                          {att.email || "No email"} {att.clubName ? `• ${att.clubName}` : ""}
+                        </span>
+                      </div>
+                      {matchedTier && (
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[#0758fc] dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                          {matchedTier.name}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Questions for this Attendee */}
+                    {applicableQuestions.length > 0 ? (
+                      <div className="space-y-3.5">
+                        {applicableQuestions.map((q) => renderCustomQuestionInput(q, att, idx))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic py-2">
+                        No additional registration details required for this pass.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Price Summary Pill */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-extrabold block">Total Payable Amount</span>
+                <span className="text-xl font-black text-gray-900 dark:text-white">
+                  {fees.totalPayable === 0 ? "Free Pass" : `₹${fees.totalPayable.toFixed(2)}`}
+                </span>
+              </div>
+              <span className="text-xs text-gray-500 font-medium">
+                {totalTicketCount} pass{totalTicketCount > 1 ? "es" : ""} selected
+              </span>
+            </div>
+
+            {/* Navigation Buttons: Back & Proceed to Payment */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMessage(null);
+                  setCheckoutStep("SELECT_PASSES");
+                }}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 font-bold transition-colors cursor-pointer"
+              >
+                <ArrowLeft size={14} /> Back to Passes &amp; Delegate Info
+              </button>
+
+              <button
+                type="button"
+                disabled={loading || isRenewingHold}
+                onClick={handleProceedFromStep2}
+                className={`w-full text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                  isHoldExpired
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/25"
+                    : "bg-[#0758fc] hover:bg-[#054fe0] shadow-[#0758fc]/25"
+                }`}
+              >
+                {loading || isRenewingHold ? (
+                  <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                ) : isFreeOrder ? (
+                  <>Confirm Free Registration <ArrowRight size={16} /></>
+                ) : isHoldExpired ? (
+                  <><RefreshCw size={16} /> {holdDurationMinutes}m Hold Expired — Re-lock Passes &amp; Continue</>
+                ) : (
+                  <>
+                    Proceed to Payment {!isFreeOrder && holdSecondsRemaining !== null && `(${formatSecondsToTimer(holdSecondsRemaining, holdDurationSeconds)})`} • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
             </div>
           </div>
         ) : (
@@ -1736,7 +2411,7 @@ export function CheckoutModal({
                   </div>
                 )}
 
-                <div className="space-y-4 max-h-[52vh] sm:max-h-[58vh] overflow-y-auto pr-1 sm:pr-2">
+                <div className="space-y-4">
                   {attendees.map((att, idx) => {
                     const matchedTier = tiers.find((t) => t.id === att.tierId);
                     return (
@@ -1762,11 +2437,7 @@ export function CheckoutModal({
                               required
                               placeholder="Full Name *"
                               value={att.name}
-                              onChange={(e) => {
-                                const updated = [...attendees];
-                                updated[idx].name = e.target.value;
-                                setAttendees(updated);
-                              }}
+                              onChange={(e) => updateAttendeeField(idx, "name", e.target.value)}
                               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                             />
                           </div>
@@ -1777,11 +2448,7 @@ export function CheckoutModal({
                               required
                               placeholder="Email Address *"
                               value={att.email}
-                              onChange={(e) => {
-                                const updated = [...attendees];
-                                updated[idx].email = e.target.value;
-                                setAttendees(updated);
-                              }}
+                              onChange={(e) => updateAttendeeField(idx, "email", e.target.value)}
                               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                             />
                           </div>
@@ -1794,11 +2461,7 @@ export function CheckoutModal({
                             type="tel"
                             placeholder="e.g. +91 98765 43210"
                             value={att.phone}
-                            onChange={(e) => {
-                              const updated = [...attendees];
-                              updated[idx].phone = e.target.value;
-                              setAttendees(updated);
-                            }}
+                            onChange={(e) => updateAttendeeField(idx, "phone", e.target.value)}
                             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-1 focus:ring-[#0758fc]/20"
                           />
                         </div>
@@ -1818,12 +2481,18 @@ export function CheckoutModal({
                             <button
                               type="button"
                               onClick={() => {
-                                const updated = [...attendees];
-                                updated[idx].customAnswers = {
-                                  ...(updated[idx].customAnswers || {}),
-                                  _showCustomAffiliation: true,
-                                };
-                                setAttendees(updated);
+                                setAttendees((prev) => {
+                                  const next = [...prev];
+                                  if (!next[idx]) return prev;
+                                  next[idx] = {
+                                    ...next[idx],
+                                    customAnswers: {
+                                      ...(next[idx].customAnswers || {}),
+                                      _showCustomAffiliation: true,
+                                    },
+                                  };
+                                  return next;
+                                });
                               }}
                               className="text-[11px] font-bold text-[#0758fc] dark:text-blue-400 hover:underline px-2 py-1 rounded-lg hover:bg-blue-100/60 dark:hover:bg-blue-900/60 cursor-pointer"
                             >
@@ -1863,19 +2532,25 @@ export function CheckoutModal({
                                           disabled={isDisabled}
                                           onClick={() => {
                                             if (isDisabled) return;
-                                            const updated = [...attendees];
-                                            updated[idx].memberType = type;
-                                            if (type === "Non-Rotaract") {
-                                              updated[idx].clubName = "Non-Rotaract Guest";
-                                              updated[idx].zone = "General / Guest";
-                                            } else if (type === "Rotary") {
-                                              updated[idx].clubName = "";
-                                              updated[idx].zone = "Rotary International";
-                                            } else {
-                                              updated[idx].clubName = "";
-                                              updated[idx].zone = "";
-                                            }
-                                            setAttendees(updated);
+                                            setAttendees((prev) => {
+                                              const next = [...prev];
+                                              if (!next[idx]) return prev;
+                                              next[idx] = {
+                                                ...next[idx],
+                                                memberType: type,
+                                                clubName:
+                                                  type === "Non-Rotaract"
+                                                    ? "Non-Rotaract Guest"
+                                                    : "",
+                                                zone:
+                                                  type === "Non-Rotaract"
+                                                    ? "General / Guest"
+                                                    : type === "Rotary"
+                                                    ? "Rotary International"
+                                                    : "",
+                                              };
+                                              return next;
+                                            });
                                           }}
                                           title={isDisabled ? "This event / ticket is restricted to Rotaract & Rotary members" : undefined}
                                           className={`py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all border text-center active:scale-95 ${
@@ -1916,11 +2591,7 @@ export function CheckoutModal({
                                     required
                                     placeholder="e.g. Rotary Club of Bangalore Central, RC Yelahanka..."
                                     value={att.clubName}
-                                    onChange={(e) => {
-                                      const updated = [...attendees];
-                                      updated[idx].clubName = e.target.value;
-                                      setAttendees(updated);
-                                    }}
+                                    onChange={(e) => updateAttendeeField(idx, "clubName", e.target.value)}
                                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                                   />
                                 </div>
@@ -1933,11 +2604,7 @@ export function CheckoutModal({
                                     type="text"
                                     placeholder="e.g. University Name, Corporate, Guest of Rtr. X..."
                                     value={att.clubName === "Non-Rotaract Guest" ? "" : att.clubName}
-                                    onChange={(e) => {
-                                      const updated = [...attendees];
-                                      updated[idx].clubName = e.target.value || "Non-Rotaract Guest";
-                                      setAttendees(updated);
-                                    }}
+                                    onChange={(e) => updateAttendeeField(idx, "clubName", e.target.value || "Non-Rotaract Guest")}
                                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:bg-white dark:focus:bg-gray-900"
                                   />
                                 </div>
@@ -1965,18 +2632,20 @@ export function CheckoutModal({
                                     zone={att.zone}
                                     required={true}
                                     onChange={(clubName, clubZone, isCustom) => {
-                                      const updated = [...attendees];
-                                      updated[idx].clubName = clubName;
-                                      updated[idx].zone = clubZone;
-                                      if (!isCustom && clubName !== "custom") {
-                                        updated[idx].customClubName = "";
-                                      }
-                                      setAttendees(updated);
+                                      setAttendees((prev) => {
+                                        const next = [...prev];
+                                        if (!next[idx]) return prev;
+                                        next[idx] = {
+                                          ...next[idx],
+                                          clubName,
+                                          zone: clubZone,
+                                          customClubName: !isCustom && clubName !== "custom" ? "" : next[idx].customClubName,
+                                        };
+                                        return next;
+                                      });
                                     }}
                                     onCustomChange={(customVal) => {
-                                      const updated = [...attendees];
-                                      updated[idx].customClubName = customVal;
-                                      setAttendees(updated);
+                                      updateAttendeeField(idx, "customClubName", customVal);
                                     }}
                                     placeholder="Type to search District 3192 clubs (e.g. Koramangala, Bangalore)..."
                                   />
@@ -1998,58 +2667,10 @@ export function CheckoutModal({
                             type="text"
                             placeholder="e.g. President, Sergeant-at-Arms, DRR, Secretary, Member..."
                             value={att.designation}
-                            onChange={(e) => {
-                              const updated = [...attendees];
-                              updated[idx].designation = e.target.value;
-                              setAttendees(updated);
-                            }}
+                            onChange={(e) => updateAttendeeField(idx, "designation", e.target.value)}
                             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10"
                           />
                         </div>
-
-                        {/* 6. Event Custom Registration Questions */}
-                        {customQuestions.length > 0 && (
-                          <div className="pt-3 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2.5">
-                            <span className="text-[10px] font-extrabold uppercase text-gray-500 dark:text-gray-400 tracking-wider block">
-                              Additional Event Questions
-                            </span>
-                            {customQuestions.map((q) => (
-                              <div key={q.id} className="space-y-1 text-left">
-                                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300">
-                                  {q.question_text} {q.is_required && <span className="text-rose-500">*</span>}
-                                </label>
-                                {q.question_type === "dropdown" ? (
-                                  <select
-                                    value={att.customAnswers?.[q.id] || ""}
-                                    onChange={(e) => {
-                                      const updated = [...attendees];
-                                      updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
-                                      setAttendees(updated);
-                                    }}
-                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:border-[#0758fc]"
-                                  >
-                                    <option value="">Select an option...</option>
-                                    {(Array.isArray(q.options) ? q.options : []).map((opt: string, optIdx: number) => (
-                                      <option key={optIdx} value={opt}>{opt}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    placeholder={q.question_text}
-                                    value={att.customAnswers?.[q.id] || ""}
-                                    onChange={(e) => {
-                                      const updated = [...attendees];
-                                      updated[idx].customAnswers = { ...(updated[idx].customAnswers || {}), [q.id]: e.target.value };
-                                      setAttendees(updated);
-                                    }}
-                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-[#0758fc]"
-                                  />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -2096,7 +2717,7 @@ export function CheckoutModal({
                   if (isHoldExpired) {
                     handleRenewHold();
                   } else {
-                    handleProceedToPayment();
+                    handleProceedFromStep1();
                   }
                 }}
                 className={`w-full disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer ${
@@ -2109,10 +2730,14 @@ export function CheckoutModal({
                   <><Loader2 size={18} className="animate-spin" /> Processing...</>
                 ) : !hasAnyBookableTier ? (
                   <>Passes Locked Until Release Time</>
-                ) : isFreeOrder ? (
-                  <>Confirm Free Registration <ArrowRight size={16} /></>
                 ) : isHoldExpired ? (
                   <><RefreshCw size={16} /> {holdDurationMinutes}m Hold Expired — Re-lock Passes &amp; Continue</>
+                ) : hasApplicableCustomQuestions ? (
+                  <>
+                    Next: Fill Extra Details <ArrowRight size={16} />
+                  </>
+                ) : isFreeOrder ? (
+                  <>Confirm Free Registration <ArrowRight size={16} /></>
                 ) : (
                   <>
                     Proceed to Payment {!isFreeOrder && holdSecondsRemaining !== null && `(${formatSecondsToTimer(holdSecondsRemaining, holdDurationSeconds)})`} • ₹{fees.totalPayable.toFixed(2)} <ArrowRight size={16} />

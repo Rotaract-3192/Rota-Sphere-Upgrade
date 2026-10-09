@@ -49,6 +49,9 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Phone,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
@@ -240,6 +243,7 @@ function CheckInScannerContent() {
 
   // Scan state
   const [scanResult, setScanResult] = useState<CheckInResponse | null>(null);
+  const [revealedScanAadhaar, setRevealedScanAadhaar] = useState(false);
   const [admittingBulkGroup, setAdmittingBulkGroup] = useState(false);
 
   const [recentScans, setRecentScans] = useState<
@@ -811,6 +815,7 @@ function CheckInScannerContent() {
   // Resume camera & ready scanner for next ticket when staff presses "Scan Next"
   const handleScanNext = useCallback(async () => {
     setScanResult(null);
+    setRevealedScanAadhaar(false);
     lastScannedTokenRef.current = null;
     isProcessingRef.current = false;
 
@@ -1378,6 +1383,149 @@ function CheckInScannerContent() {
                       </span>
                     )}
                   </div>
+
+                  {/* CUSTOM REGISTRATION DETAILS / VERIFIED PROOF */}
+                  {(() => {
+                    const customAnswers = scanResult.customAnswers;
+                    if (!customAnswers || typeof customAnswers !== "object") return null;
+
+                    const INTERNAL_KEYS = new Set([
+                      "member_type",
+                      "club_name",
+                      "designation",
+                      "zone",
+                      "_showCustomAffiliation",
+                    ]);
+
+                    const customEntries = Object.entries(customAnswers).filter(
+                      ([k, v]) => !INTERNAL_KEYS.has(k) && v !== undefined && v !== null && String(v).trim() !== ""
+                    );
+
+                    if (customEntries.length === 0) return null;
+
+                    return (
+                      <div className="pt-2.5 border-t border-gray-800/80 space-y-2 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider">
+                            Verified Registration Details
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                            <ShieldCheck size={11} /> Checked
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {customEntries.map(([key, val]) => {
+                            const strVal = String(val).trim();
+                            const lowerKey = key.toLowerCase();
+                            const label = key
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/[_-]/g, " ")
+                              .trim()
+                              .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                            // Aadhaar formatting & mask toggle
+                            if (lowerKey.includes("aadhaar")) {
+                              const digits = strVal.replace(/\D/g, "");
+                              const masked =
+                                digits.length === 12
+                                  ? `•••• •••• ${digits.slice(-4)}`
+                                  : strVal;
+                              const displayed = revealedScanAadhaar
+                                ? digits.replace(/(\d{4})/g, "$1 ").trim() || strVal
+                                : masked;
+
+                              return (
+                                <div
+                                  key={key}
+                                  className="p-2.5 bg-gray-950/80 rounded-xl border border-gray-800 flex items-center justify-between gap-2"
+                                >
+                                  <div>
+                                    <span className="text-[10px] text-gray-400 block font-bold">{label}</span>
+                                    <span className="font-mono text-xs font-black text-white tracking-wider">
+                                      {displayed}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRevealedScanAadhaar(!revealedScanAadhaar)}
+                                    className="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-[10px] font-bold rounded-lg text-gray-300 flex items-center gap-1 cursor-pointer shrink-0"
+                                  >
+                                    {revealedScanAadhaar ? <EyeOff size={11} /> : <Eye size={11} />}
+                                    <span>{revealedScanAadhaar ? "Mask" : "Reveal"}</span>
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            // Emergency Phone / Phone
+                            if (lowerKey.includes("phone") || lowerKey.includes("emergency") || lowerKey.includes("contact")) {
+                              return (
+                                <div
+                                  key={key}
+                                  className="p-2.5 bg-gray-950/80 rounded-xl border border-gray-800 flex items-center justify-between gap-2"
+                                >
+                                  <div>
+                                    <span className="text-[10px] text-gray-400 block font-bold">{label}</span>
+                                    <span className="font-mono text-xs font-bold text-white">{strVal}</span>
+                                  </div>
+                                  {strVal && (
+                                    <a
+                                      href={`tel:${strVal}`}
+                                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] rounded-lg flex items-center gap-1 cursor-pointer shrink-0"
+                                    >
+                                      <Phone size={11} /> Call
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            // File / Photo Document
+                            if (strVal.startsWith("data:image") || strVal.startsWith("http")) {
+                              return (
+                                <div
+                                  key={key}
+                                  className="p-2.5 bg-gray-950/80 rounded-xl border border-gray-800 space-y-1.5"
+                                >
+                                  <span className="text-[10px] text-gray-400 block font-bold">{label}</span>
+                                  <div className="flex items-center gap-2.5">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={strVal}
+                                      alt="ID Document"
+                                      className="w-12 h-12 rounded-lg object-cover border border-gray-700 bg-black shrink-0"
+                                    />
+                                    <a
+                                      href={strVal}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] font-bold text-blue-400 hover:underline flex items-center gap-1"
+                                    >
+                                      <ExternalLink size={11} /> Open Photo / Proof
+                                    </a>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Default text response
+                            return (
+                              <div
+                                key={key}
+                                className="p-2 bg-gray-950/60 rounded-xl border border-gray-800/80 flex items-center justify-between gap-2"
+                              >
+                                <span className="text-[11px] text-gray-400 font-bold">{label}</span>
+                                <span className="text-[11px] font-extrabold text-white text-right truncate max-w-[180px]">
+                                  {strVal}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* DUPLICATE EXTRA DETAILS */}
                   {scanResult.result === "DUPLICATE_SCAN" && (

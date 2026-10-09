@@ -11,13 +11,19 @@
  * - Server-side submission via createBulkTicketOrderAction
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   X, Users, Check, AlertCircle, Loader2, Copy, ChevronDown, ChevronUp,
   User, Mail, Phone, ShieldCheck, QrCode, CreditCard, CheckCircle2, Package,
+  Upload, Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBulkTicketOrderAction, type BulkAttendeeInput } from "@/app/actions/orderActions";
+import {
+  createBulkTicketOrderAction,
+  getEventCustomQuestionsAction,
+  type BulkAttendeeInput,
+} from "@/app/actions/orderActions";
+import { compressImageFile } from "@/lib/utils/imageCompressor";
 import type { SaasEvent, SaasTicketTier } from "@/types/saas";
 
 interface BulkAttendeeFormProps {
@@ -34,12 +40,14 @@ interface AttendeeRow {
   name: string;
   email: string;
   phone: string;
+  customAnswers?: Record<string, any>;
+  customErrors?: Record<string, string>;
   nameError?: string;
   emailError?: string;
 }
 
 function makeEmptyRow(): AttendeeRow {
-  return { name: "", email: "", phone: "" };
+  return { name: "", email: "", phone: "", customAnswers: {} };
 }
 
 export function BulkAttendeeForm({
@@ -72,7 +80,26 @@ export function BulkAttendeeForm({
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{ orderNumber: string; ticketCount: number } | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set([0]));
+  const [customQuestions, setCustomQuestions] = useState<any[]>([]);
   const idempotencyKey = useRef(`bulk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+
+  useEffect(() => {
+    if (isOpen && event?.id) {
+      getEventCustomQuestionsAction(event.id).then((res) => {
+        if (res.success && res.questions) {
+          setCustomQuestions(res.questions);
+        }
+      });
+    }
+  }, [isOpen, event?.id]);
+
+  const applicableQuestions = customQuestions.filter((q) => {
+    const targetTiers = q.target_tiers || q.targetTiers;
+    if (Array.isArray(targetTiers) && targetTiers.length > 0) {
+      return targetTiers.includes(tier.id);
+    }
+    return true;
+  });
 
   // Reset when re-opening
   const handleOpen = useCallback(() => {
@@ -89,6 +116,22 @@ export function BulkAttendeeForm({
     setAttendees((prev) => {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], [field]: value, [`${field}Error`]: undefined };
+      return updated;
+    });
+    setGlobalError(null);
+  }
+
+  function updateAttendeeCustomAnswer(idx: number, qId: string, value: any) {
+    setAttendees((prev) => {
+      const updated = [...prev];
+      const prevAnswers = updated[idx].customAnswers || {};
+      const prevErrors = { ...(updated[idx].customErrors || {}) };
+      delete prevErrors[qId];
+      updated[idx] = {
+        ...updated[idx],
+        customAnswers: { ...prevAnswers, [qId]: value },
+        customErrors: prevErrors,
+      };
       return updated;
     });
     setGlobalError(null);
@@ -119,8 +162,44 @@ export function BulkAttendeeForm({
         } else {
           emailSeen.set(row.email.toLowerCase(), idx);
         }
-        if (nameError || emailError) valid = false;
-        return { ...row, nameError, emailError };
+
+        const customErrors: Record<string, string> = {};
+        for (const q of applicableQuestions) {
+          const qId = q.id;
+          const qLabel = q.question_text || q.questionText || "Question";
+          const qType = q.question_type || q.questionType;
+          const rawVal = row.customAnswers?.[qId];
+          const valStr = rawVal ? String(rawVal).trim() : "";
+
+          if (q.is_required && !valStr) {
+            customErrors[qId] = `${qLabel} is required`;
+            valid = false;
+          } else if (valStr) {
+            const isAadhaarField = qType === "aadhaar" || (qType === "text" && /\baadhaar(\s*(card|number|no))?\b/i.test(qLabel));
+            const isPanField = qType === "pan" || (qType === "text" && /\bpan(\s*(card|number|no))?\b/i.test(qLabel));
+            const isPhoneField = qType === "phone" || (qType === "text" && /\b(phone|mobile|emergency\s*(phone|contact))\b/i.test(qLabel));
+
+            if (isAadhaarField) {
+              const digits = valStr.replace(/\D/g, "");
+              if (digits.length !== 12) {
+                customErrors[qId] = "Aadhaar must be 12 digits";
+                valid = false;
+              }
+            } else if (isPanField) {
+              const cleanPan = valStr.toUpperCase().replace(/\s/g, "");
+              if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+                customErrors[qId] = "Invalid PAN format (e.g. ABCDE1234F)";
+                valid = false;
+              }
+            } else if (isPhoneField && valStr.replace(/\D/g, "").length < 10) {
+              customErrors[qId] = "Must be at least 10 digits";
+              valid = false;
+            }
+          }
+        }
+
+        if (nameError || emailError || Object.keys(customErrors).length > 0) valid = false;
+        return { ...row, nameError, emailError, customErrors };
       });
       return updated;
     });
@@ -152,6 +231,7 @@ export function BulkAttendeeForm({
       name: a.name.trim(),
       email: a.email.trim().toLowerCase(),
       phone: a.phone.trim() || undefined,
+      customAnswers: a.customAnswers || {},
     }));
 
     const res = await createBulkTicketOrderAction({
@@ -275,7 +355,8 @@ export function BulkAttendeeForm({
 
                 {attendees.map((row, idx) => {
                   const isExpanded = expandedRows.has(idx);
-                  const hasError = !!(row.nameError || row.emailError);
+                  const hasCustomErrors = !!(row.customErrors && Object.keys(row.customErrors).length > 0);
+                  const hasError = !!(row.nameError || row.emailError || hasCustomErrors);
                   const isComplete = !!(row.name.trim() && row.email.trim() && !hasError);
 
                   return (
@@ -380,6 +461,214 @@ export function BulkAttendeeForm({
                               />
                             </div>
                           </div>
+
+                          {/* Custom Registration Questions for this Attendee */}
+                          {applicableQuestions.length > 0 && (
+                            <div className="pt-2 border-t border-gray-100 space-y-3">
+                              <p className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">
+                                Additional Event Questions
+                              </p>
+                              {applicableQuestions.map((q) => {
+                                const qId = q.id;
+                                const qType = q.question_type || q.questionType || "text";
+                                const qText = q.question_text || q.questionText;
+                                const isReq = !!q.is_required;
+                                const placeholder = q.placeholder || "";
+                                const helpText = q.help_text || q.helpText;
+                                const options = Array.isArray(q.options) ? q.options : [];
+                                const currentVal = row.customAnswers?.[qId] ?? "";
+                                const fieldError = row.customErrors?.[qId];
+
+                                return (
+                                  <div key={qId} className="space-y-1">
+                                    <label className="block text-[11px] font-bold text-gray-700">
+                                      {qText} {isReq && <span className="text-rose-500 font-black">*</span>}
+                                    </label>
+
+                                    {/* Aadhaar */}
+                                    {qType === "aadhaar" && (
+                                      <div>
+                                        <input
+                                          type="text"
+                                          inputMode="numeric"
+                                          maxLength={14}
+                                          placeholder="XXXX XXXX XXXX"
+                                          value={currentVal}
+                                          onChange={(e) => {
+                                            const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+                                            const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+                                            updateAttendeeCustomAnswer(idx, qId, formatted);
+                                          }}
+                                          className={`w-full text-sm font-mono border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 ${
+                                            fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                          }`}
+                                        />
+                                        <span className="text-[10px] text-gray-400 block mt-0.5">12-digit Aadhaar UID</span>
+                                      </div>
+                                    )}
+
+                                    {/* PAN */}
+                                    {qType === "pan" && (
+                                      <div>
+                                        <input
+                                          type="text"
+                                          maxLength={10}
+                                          placeholder="ABCDE1234F"
+                                          value={currentVal}
+                                          onChange={(e) => {
+                                            const clean = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                                            updateAttendeeCustomAnswer(idx, qId, clean);
+                                          }}
+                                          className={`w-full text-sm font-mono uppercase border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 ${
+                                            fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                          }`}
+                                        />
+                                        <span className="text-[10px] text-gray-400 block mt-0.5">10-character PAN</span>
+                                      </div>
+                                    )}
+
+                                    {/* Phone / Emergency */}
+                                    {qType === "phone" && (
+                                      <input
+                                        type="tel"
+                                        maxLength={10}
+                                        placeholder={placeholder || "10-digit mobile number"}
+                                        value={currentVal}
+                                        onChange={(e) => {
+                                          const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                          updateAttendeeCustomAnswer(idx, qId, digits);
+                                        }}
+                                        className={`w-full text-sm font-mono border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 ${
+                                          fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                        }`}
+                                      />
+                                    )}
+
+                                    {/* File Upload / Photo Document */}
+                                    {qType === "file_upload" && (
+                                      <div>
+                                        {currentVal ? (
+                                          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl border border-gray-200">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                              src={currentVal}
+                                              alt="Document"
+                                              className="w-12 h-12 rounded-lg object-cover border border-gray-200 bg-white shrink-0"
+                                            />
+                                            <span className="text-xs font-bold text-gray-700 flex-1 truncate">Document Uploaded</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => updateAttendeeCustomAnswer(idx, qId, "")}
+                                              className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 hover:border-indigo-400 rounded-xl cursor-pointer bg-white transition-colors">
+                                            <Upload size={14} className="text-gray-400" />
+                                            <span className="text-xs font-bold text-gray-600">
+                                              {placeholder || "Upload photo / ID document"}
+                                            </span>
+                                            <input
+                                              type="file"
+                                              accept="image/*"
+                                              className="hidden"
+                                              onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                try {
+                                                  const compressed = await compressImageFile(file);
+                                                  updateAttendeeCustomAnswer(idx, qId, compressed);
+                                                } catch {
+                                                  const reader = new FileReader();
+                                                  reader.onload = () => {
+                                                    if (typeof reader.result === "string") {
+                                                      updateAttendeeCustomAnswer(idx, qId, reader.result);
+                                                    }
+                                                  };
+                                                  reader.readAsDataURL(file);
+                                                }
+                                              }}
+                                            />
+                                          </label>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Dropdown */}
+                                    {qType === "dropdown" && (
+                                      <select
+                                        value={currentVal}
+                                        onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+                                        className={`w-full text-sm border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 ${
+                                          fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                        }`}
+                                      >
+                                        <option value="">{placeholder || "Select an option..."}</option>
+                                        {options.map((opt: string, optIdx: number) => (
+                                          <option key={optIdx} value={opt}>{opt}</option>
+                                        ))}
+                                      </select>
+                                    )}
+
+                                    {/* Radio */}
+                                    {qType === "radio" && (
+                                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                        {options.map((opt: string, optIdx: number) => (
+                                          <button
+                                            key={optIdx}
+                                            type="button"
+                                            onClick={() => updateAttendeeCustomAnswer(idx, qId, opt)}
+                                            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                              currentVal === opt
+                                                ? "bg-indigo-600 text-white border-indigo-600"
+                                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                                            }`}
+                                          >
+                                            {opt}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Textarea */}
+                                    {qType === "textarea" && (
+                                      <textarea
+                                        rows={2}
+                                        value={currentVal}
+                                        onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+                                        placeholder={placeholder || "Your answer"}
+                                        className={`w-full text-sm border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 resize-none ${
+                                          fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                        }`}
+                                      />
+                                    )}
+
+                                    {/* Fallback Text / Number / Date */}
+                                    {(qType === "text" || qType === "number" || qType === "date") && (
+                                      <input
+                                        type={qType}
+                                        value={currentVal}
+                                        onChange={(e) => updateAttendeeCustomAnswer(idx, qId, e.target.value)}
+                                        placeholder={placeholder || qText}
+                                        className={`w-full text-sm border rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 ${
+                                          fieldError ? "border-rose-400 focus:ring-rose-200" : "border-gray-300 focus:ring-indigo-200"
+                                        }`}
+                                      />
+                                    )}
+
+                                    {fieldError && (
+                                      <p className="text-[10px] text-rose-600 font-bold mt-0.5">{fieldError}</p>
+                                    )}
+                                    {helpText && !fieldError && (
+                                      <span className="text-[10px] text-gray-400 block">{helpText}</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

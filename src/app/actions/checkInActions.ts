@@ -50,6 +50,7 @@ export interface CheckInResponse {
     status: string;
     checkedInAt?: string | null;
   }>;
+  customAnswers?: Record<string, any>;
 }
 
 export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInResponse> {
@@ -399,6 +400,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
         bulkGroupTotal,
         bulkGroupCheckedIn,
         bulkGroupMembers,
+        customAnswers: ticket.custom_answers || {},
         message: `ALREADY SCANNED at ${formattedTime} (${ticket.checked_in_gate || "Gate"}). Pass re-use prevented.`,
       };
     }
@@ -468,6 +470,7 @@ export async function checkInTicketAction(req: CheckInRequest): Promise<CheckInR
       bulkGroupTotal,
       bulkGroupCheckedIn,
       bulkGroupMembers,
+      customAnswers: ticket.custom_answers || {},
       message: "VALID ENTRY PASS — ACCESS GRANTED",
     };
   } catch (err: any) {

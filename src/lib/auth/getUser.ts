@@ -28,17 +28,23 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const { userId } = await auth();
     if (!userId) return null;
 
-    const clerkUser = await currentUser();
-    if (!clerkUser) return null;
+    let clerkUser: Awaited<ReturnType<typeof currentUser>> = null;
+    try {
+      clerkUser = await currentUser();
+    } catch (clerkErr: any) {
+      // Graceful fallback for network / timeout / DNS errors when reaching api.clerk.com
+      logger.warn("Clerk currentUser() network fetch failed; falling back to DB profile lookup", {
+        userId,
+        error: clerkErr?.message || String(clerkErr),
+      });
+    }
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-    if (!email) return null;
-
-    const isDesignatedAdmin = isConfiguredAdminEmail(email);
+    let email = clerkUser?.emailAddresses?.[0]?.emailAddress || "";
 
     // 1. Fetch Profile via Direct SQL with fallback to Supabase Admin
     let profile: Profile | null = null;
     try {
+      const emailCondition = email ? `OR email ILIKE ${escapeSql(email)}` : "";
       const { data: profileRows } = await executeSql(`
         SELECT id, clerk_id, email, full_name, role, 
                COALESCE(status, 'ACTIVE') as status, 
@@ -46,13 +52,16 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
                COALESCE(bio, '') as bio, 
                home_club_id, designation, created_at, updated_at
         FROM rotasphere_profiles
-        WHERE clerk_id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
+        WHERE clerk_id = ${escapeSql(userId)} ${emailCondition}
         LIMIT 1;
       `);
       if (profileRows && profileRows.length > 0) {
         const row = profileRows[0];
+        if (!email && row.email) {
+          email = row.email;
+        }
         // Auto-link clerk_id if user was pre-authorized by email
-        if (!row.clerk_id || row.clerk_id !== userId) {
+        if (email && (!row.clerk_id || row.clerk_id !== userId)) {
           await executeSql(`
             UPDATE rotasphere_profiles
             SET clerk_id = ${escapeSql(userId)}, updated_at = NOW()
@@ -60,13 +69,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           `).catch(() => {});
         }
 
+        const isDesignatedAdmin = isConfiguredAdminEmail(email);
         profile = {
           id: row.clerk_id || userId,
           email: row.email || email,
-          full_name: row.full_name || `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0],
+          full_name:
+            row.full_name ||
+            (clerkUser ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() : "") ||
+            (email ? email.split("@")[0] : "User"),
           role: (VALID_ROLES.includes(row.role as UserRole) ? row.role : "attendee") as UserRole,
           status: row.status || "ACTIVE",
-          image_url: row.image_url || clerkUser.imageUrl || null,
+          image_url: row.image_url || clerkUser?.imageUrl || null,
           bio: row.bio || "",
           home_club_id: row.home_club_id || null,
           designation: row.designation || (isDesignatedAdmin ? "District Super Administrator" : "Rotaract Member"),
@@ -75,21 +88,29 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         };
       } else {
         // Fallback: check standard 'profiles' table
+        const emailCondition = email ? `OR email ILIKE ${escapeSql(email)}` : "";
         const { data: standardProfiles } = await executeSql(`
           SELECT id, email, full_name, role, status, image_url, bio, home_club_id, designation, created_at, updated_at
           FROM profiles
-          WHERE id = ${escapeSql(userId)} OR email ILIKE ${escapeSql(email)}
+          WHERE id = ${escapeSql(userId)} ${emailCondition}
           LIMIT 1;
         `);
         if (standardProfiles && standardProfiles.length > 0) {
           const row = standardProfiles[0];
+          if (!email && row.email) {
+            email = row.email;
+          }
+          const isDesignatedAdmin = isConfiguredAdminEmail(email);
           profile = {
             id: row.id || userId,
             email: row.email || email,
-            full_name: row.full_name || `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0],
+            full_name:
+              row.full_name ||
+              (clerkUser ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() : "") ||
+              (email ? email.split("@")[0] : "User"),
             role: (VALID_ROLES.includes(row.role as UserRole) ? row.role : "attendee") as UserRole,
             status: row.status || "ACTIVE",
-            image_url: row.image_url || clerkUser.imageUrl || null,
+            image_url: row.image_url || clerkUser?.imageUrl || null,
             bio: row.bio || "",
             home_club_id: row.home_club_id || null,
             designation: row.designation || (isDesignatedAdmin ? "District Super Administrator" : "Rotaract Member"),
@@ -104,14 +125,18 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     if (!profile) {
       try {
+        const filterStr = email ? `clerk_id.eq.${userId},email.eq.${email}` : `clerk_id.eq.${userId}`;
         const { data } = await supabaseAdmin
           .from("rotasphere_profiles")
           .select("*")
-          .or(`clerk_id.eq.${userId},email.eq.${email}`)
+          .or(filterStr)
           .limit(1)
           .maybeSingle();
         if (data) {
           profile = data as Profile;
+          if (!email && profile.email) {
+            email = profile.email;
+          }
         }
       } catch (sbErr) {
         logger.warn("supabaseAdmin profile lookup fallback failed", { error: String(sbErr) });
@@ -138,10 +163,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         }
       }
 
+      const emailReqCondition = email ? `OR user_email ILIKE ${escapeSql(email)}` : "";
       const { data: reqRows } = await executeSql(`
         SELECT id, club_name, position, status
         FROM organizer_access_requests
-        WHERE (user_id = ${escapeSql(userId)} OR user_email ILIKE ${escapeSql(email)})
+        WHERE (user_id = ${escapeSql(userId)} ${emailReqCondition})
           AND status = 'APPROVED'
         ORDER BY created_at DESC
         LIMIT 1;
@@ -156,7 +182,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       logger.warn("Club/Organizer membership check error", { error: String(checkErr) });
     }
 
-    const rawRole = clerkUser.publicMetadata?.role as string;
+    const isDesignatedAdmin = isConfiguredAdminEmail(email);
+    const rawRole = clerkUser?.publicMetadata?.role as string;
     const metadataRole: UserRole = VALID_ROLES.includes(rawRole as UserRole) ? (rawRole as UserRole) : "attendee";
 
     // 3. Determine Highest Effective Role
@@ -171,9 +198,14 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       targetRole = "organizer";
     }
 
-    const clerkDesignation = clerkUser.publicMetadata?.designation as string | undefined;
+    const clerkDesignation = clerkUser?.publicMetadata?.designation as string | undefined;
 
     if (!profile) {
+      if (!clerkUser || !email) {
+        // Neither Clerk nor DB profile is available
+        return null;
+      }
+
       const fullName = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || email.split("@")[0];
       const initialDesignation = isDesignatedAdmin
         ? (clerkDesignation || "District Super Administrator")
@@ -281,9 +313,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       return null;
     }
 
+    if (!email) {
+      return null;
+    }
+
     return { clerkId: userId, email, profile };
-  } catch (err) {
-    logger.error("getCurrentUser failed", { error: String(err) });
+  } catch (err: any) {
+    if (err?.message?.includes?.("fetch failed") || String(err).includes("fetch failed")) {
+      logger.warn("getCurrentUser fetch failed gracefully", { error: err?.message || String(err) });
+    } else {
+      logger.error("getCurrentUser failed", { error: String(err) });
+    }
     return null;
   }
 }

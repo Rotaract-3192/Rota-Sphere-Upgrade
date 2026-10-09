@@ -44,13 +44,17 @@ import {
   Ban,
   RotateCcw,
   UserPlus,
+  FileText,
+  EyeOff,
+  Phone,
 } from "lucide-react";
-import { verifyOrderPaymentAction } from "@/app/actions/orderActions";
-import { updateEventAction, updateEventStatusAction } from "@/app/actions/eventActions";
+import { verifyOrderPaymentAction, getEventCustomQuestionsAction } from "@/app/actions/orderActions";
+import { updateEventAction, updateEventStatusAction, saveEventCustomQuestionsAction } from "@/app/actions/eventActions";
 import { checkInTicketAction } from "@/app/actions/checkInActions";
 import { exportEventAttendeesToExcel } from "@/lib/utils/excelExporter";
 import { BulkEmailModal } from "@/components/shared/BulkEmailModal";
 import { ManualAttendeeModal } from "@/components/dashboard/ManualAttendeeModal";
+import { EventCustomFormEditor, FormQuestionDraft } from "@/components/dashboard/EventCustomFormEditor";
 
 interface EventDashboardClientProps {
   user: any;
@@ -88,7 +92,7 @@ export function EventDashboardClient({
   useEffect(() => { setTickets(initialTickets); }, [initialTickets]);
   useEffect(() => { setCheckIns(initialCheckIns); }, [initialCheckIns]);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "orders" | "attendees" | "tickets" | "broadcast"
+    "overview" | "orders" | "attendees" | "tickets" | "broadcast" | "form"
   >(
     (initialTab as any) === "edit" || (initialTab as any) === "scanner"
       ? "overview"
@@ -112,6 +116,49 @@ export function EventDashboardClient({
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [rejectionModalOrder, setRejectionModalOrder] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [selectedAttendeeTicket, setSelectedAttendeeTicket] = useState<any | null>(null);
+  const [revealedAadhaarIds, setRevealedAadhaarIds] = useState<Record<string, boolean>>({});
+
+  // Custom Form Questions State
+  const [eventQuestions, setEventQuestions] = useState<FormQuestionDraft[]>([]);
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false);
+
+  useEffect(() => {
+    if (event?.id) {
+      getEventCustomQuestionsAction(event.id).then((res) => {
+        if (res.success && res.questions) {
+          setEventQuestions(
+            res.questions.map((q: any, idx: number) => ({
+              id: q.id,
+              questionText: q.question_text || "",
+              questionType: q.question_type || "short_text",
+              options: Array.isArray(q.options) ? q.options : [],
+              isRequired: Boolean(q.is_required),
+              ticketTierIds: Array.isArray(q.ticket_tier_ids) ? q.ticket_tier_ids : [],
+              displayOrder: q.display_order ?? idx + 1,
+              placeholder: q.placeholder || "",
+              helpText: q.help_text || "",
+            }))
+          );
+        }
+      });
+    }
+  }, [event?.id]);
+
+  async function handleSaveCustomQuestions() {
+    if (!event?.id) return;
+    setIsSavingQuestions(true);
+    const res = await saveEventCustomQuestionsAction(
+      event.id,
+      eventQuestions.filter((q) => q.questionText.trim()) as any
+    );
+    setIsSavingQuestions(false);
+    if (res.success) {
+      showToast("✓ Custom registration form saved successfully!");
+    } else {
+      alert(res.error || "Failed to save custom questions.");
+    }
+  }
 
   // Filters & Search
   const [attendeeSearch, setAttendeeSearch] = useState("");
@@ -595,6 +642,7 @@ export function EventDashboardClient({
               },
               { id: "attendees", label: `Guest List (${tickets.length})`, icon: Users },
               { id: "tickets", label: `Passes & Tiers (${tiers.length})`, icon: Ticket },
+              { id: "form", label: "Registration Form", icon: FileText },
               { id: "broadcast", label: "Broadcast Announcements", icon: Megaphone },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -961,7 +1009,7 @@ export function EventDashboardClient({
                   type="button"
                   onClick={() => {
                     if (filteredOrders.length === 0) return alert("No orders to export");
-                    exportEventAttendeesToExcel(`RotaSphere_Orders_${event.slug}`, tickets);
+                    exportEventAttendeesToExcel(`RotaSphere_Orders_${event.slug}`, tickets, undefined, eventQuestions);
                     showToast("✓ Orders exported to Excel workbook (.xlsx)");
                   }}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 font-bold text-xs px-3 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -1139,7 +1187,7 @@ export function EventDashboardClient({
                   type="button"
                   onClick={() => {
                     if (filteredTickets.length === 0) return alert("No attendees to export");
-                    exportEventAttendeesToExcel(`RotaSphere_Delegates_${event.slug}`, filteredTickets);
+                    exportEventAttendeesToExcel(`RotaSphere_Delegates_${event.slug}`, filteredTickets, undefined, eventQuestions);
                     showToast("✓ Delegate roster exported to Excel (.xlsx)");
                   }}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -1211,35 +1259,48 @@ export function EventDashboardClient({
                               </span>
                             </td>
                             <td className="py-3.5 px-6 text-right whitespace-nowrap">
-                              {isUsed ? (
-                                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
-                                  <Check size={13} /> Admitted
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const res = await checkInTicketAction({
-                                      rawInput: t.ticket_code,
-                                      eventId: event.id,
-                                      gateName: "Dashboard Admin Gate",
-                                    });
-                                    if (res.result === "SUCCESS") {
-                                      setTickets((prev) =>
-                                        prev.map((item) =>
-                                          item.id === t.id ? { ...item, status: "USED", checked_in_at: new Date().toISOString() } : item
-                                        )
-                                      );
-                                      showToast(`✓ Checked in: ${t.attendee_name}`);
-                                    } else {
-                                      alert(res.message || "Failed to check in ticket.");
-                                    }
-                                  }}
-                                  className="bg-gray-100 dark:bg-gray-800 hover:bg-[#0758fc] hover:text-white text-gray-700 dark:text-gray-300 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
-                                >
-                                  <QrCode size={12} /> Check In
-                                </button>
-                              )}
+                              <div className="flex items-center justify-end gap-2">
+                                {t.custom_answers && Object.keys(t.custom_answers).length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedAttendeeTicket(t)}
+                                    className="bg-blue-50 dark:bg-blue-950/60 hover:bg-[#0758fc] text-[#0758fc] hover:text-white dark:text-blue-300 dark:hover:text-white border border-blue-200 dark:border-blue-800 text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                    title="View registration form responses & ID proof"
+                                  >
+                                    <FileText size={12} />
+                                    <span>Responses</span>
+                                  </button>
+                                )}
+                                {isUsed ? (
+                                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
+                                    <Check size={13} /> Admitted
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const res = await checkInTicketAction({
+                                        rawInput: t.ticket_code,
+                                        eventId: event.id,
+                                        gateName: "Dashboard Admin Gate",
+                                      });
+                                      if (res.result === "SUCCESS") {
+                                        setTickets((prev) =>
+                                          prev.map((item) =>
+                                            item.id === t.id ? { ...item, status: "USED", checked_in_at: new Date().toISOString() } : item
+                                          )
+                                        );
+                                        showToast(`✓ Checked in: ${t.attendee_name}`);
+                                      } else {
+                                        alert(res.message || "Failed to check in ticket.");
+                                      }
+                                    }}
+                                    className="bg-gray-100 dark:bg-gray-800 hover:bg-[#0758fc] hover:text-white text-gray-700 dark:text-gray-300 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <QrCode size={12} /> Check In
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1495,6 +1556,41 @@ export function EventDashboardClient({
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 6: REGISTRATION FORM BUILDER
+            ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "form" && (
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs animate-in fade-in-50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-5">
+              <div>
+                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                  <FileText size={20} className="text-[#0758fc]" />
+                  Custom Registration Form Builder
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Configure custom fields and identity verification forms that delegates fill during ticket booking for <strong>{event.title}</strong>.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={isSavingQuestions}
+                onClick={handleSaveCustomQuestions}
+                className="px-5 py-2.5 bg-[#0758fc] hover:bg-[#054fe0] text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {isSavingQuestions ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                <span>Save Form Questions</span>
+              </button>
+            </div>
+
+            <EventCustomFormEditor
+              questions={eventQuestions}
+              onChange={setEventQuestions}
+              availableTiers={tiers.map((t: any) => ({ id: t.id, name: t.name }))}
+            />
+          </div>
+        )}
+
       </main>
 
       {/* ── PHOTO PROOF PREVIEW MODAL ────────────────────────────────────── */}
@@ -1563,6 +1659,193 @@ export function EventDashboardClient({
                   <span>Approve Payment &amp; Issue QR Pass</span>
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ATTENDEE FORM RESPONSES & IDENTITY DRAWER/MODAL ───────────────── */}
+      {selectedAttendeeTicket && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in-50">
+          <div className="relative max-w-xl w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-left">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div>
+                <span className="text-[10px] font-black uppercase text-[#0758fc] dark:text-blue-400 block">
+                  Delegate Registration Record
+                </span>
+                <h4 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>{selectedAttendeeTicket.attendee_name || "Delegate"}</span>
+                  <span className="text-xs font-mono text-gray-400 font-normal">
+                    ({selectedAttendeeTicket.ticket_code})
+                  </span>
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAttendeeTicket(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 flex items-center justify-center cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Core Delegate Info Pill */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-gray-50 dark:bg-gray-800 p-3.5 rounded-2xl text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Email</span>
+                <span className="font-mono text-gray-900 dark:text-white truncate block">{selectedAttendeeTicket.attendee_email}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Phone</span>
+                <span className="font-mono text-gray-900 dark:text-white truncate block">{selectedAttendeeTicket.attendee_phone || "Not provided"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Club</span>
+                <span className="font-bold text-gray-900 dark:text-white truncate block">{selectedAttendeeTicket.club_name || selectedAttendeeTicket.custom_answers?.club_name || "District 3192"}</span>
+              </div>
+            </div>
+
+            {/* Custom Form Answers Section */}
+            <div className="space-y-3 pt-2">
+              <h5 className="text-xs font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                <FileText size={13} className="text-[#0758fc]" />
+                <span>Custom Form Answers &amp; Identity Verification</span>
+              </h5>
+
+              {(() => {
+                const answers: Record<string, any> =
+                  selectedAttendeeTicket.custom_answers || selectedAttendeeTicket.customAnswers || {};
+                const answerEntries = Object.entries(answers).filter(
+                  ([k]) => !["member_type", "club_name", "designation", "zone"].includes(k)
+                );
+
+                if (answerEntries.length === 0) {
+                  return (
+                    <div className="py-6 text-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                      No custom questions answered for this ticket.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5">
+                    {answerEntries.map(([qKey, val]) => {
+                      // Find question definition if available
+                      const matchedQ = eventQuestions.find(
+                        (eq) => eq.id === qKey || eq.questionText.toLowerCase() === qKey.toLowerCase()
+                      );
+                      const label = matchedQ?.questionText || qKey;
+                      const qType = matchedQ?.questionType || "text";
+                      const strVal = String(val || "").trim();
+
+                      // Special Aadhaar Display with Masking Toggle
+                      if (qType === "aadhaar" || label.toLowerCase().includes("aadhaar")) {
+                        const isRevealed = revealedAadhaarIds[selectedAttendeeTicket.id];
+                        const digits = strVal.replace(/\D/g, "");
+                        const masked =
+                          digits.length === 12
+                            ? `•••• •••• ${digits.slice(-4)}`
+                            : strVal || "Not Provided";
+                        const displayed = isRevealed ? (digits.replace(/(\d{4})/g, "$1 ").trim() || strVal) : masked;
+
+                        return (
+                          <div key={qKey} className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40 flex items-center justify-between gap-3">
+                            <div>
+                              <span className="text-[11px] font-bold text-blue-900 dark:text-blue-300 block">{label}</span>
+                              <span className="font-mono text-xs font-black text-gray-900 dark:text-white tracking-wider">{displayed}</span>
+                              <span className="text-[10px] text-gray-400 block">DPDP Act: Protected Identity Record</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRevealedAadhaarIds((prev) => ({
+                                  ...prev,
+                                  [selectedAttendeeTicket.id]: !prev[selectedAttendeeTicket.id],
+                                }))
+                              }
+                              className="px-2.5 py-1 bg-white dark:bg-gray-800 hover:bg-gray-100 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-1 cursor-pointer shrink-0"
+                            >
+                              {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                              <span>{isRevealed ? "Mask" : "Reveal"}</span>
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      // Special Emergency Phone Display with Click-to-Call
+                      if (qType === "phone" || label.toLowerCase().includes("emergency") || label.toLowerCase().includes("phone")) {
+                        return (
+                          <div key={qKey} className="p-3 bg-rose-50/60 dark:bg-rose-950/30 rounded-2xl border border-rose-100 dark:border-rose-900/40 flex items-center justify-between gap-3">
+                            <div>
+                              <span className="text-[11px] font-bold text-rose-900 dark:text-rose-300 block">{label}</span>
+                              <span className="font-mono text-xs font-black text-gray-900 dark:text-white">{strVal}</span>
+                            </div>
+                            {strVal && (
+                              <a
+                                href={`tel:${strVal}`}
+                                className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                              >
+                                <Phone size={12} /> Call
+                              </a>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Special File Upload / Photo Document Display
+                      if (qType === "file_upload" || strVal.startsWith("data:image") || strVal.startsWith("http")) {
+                        return (
+                          <div key={qKey} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                            <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">{label}</span>
+                            {strVal ? (
+                              <div className="flex items-center gap-3">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={strVal}
+                                  alt="Identity Document"
+                                  className="w-20 h-20 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0 bg-white"
+                                />
+                                <div>
+                                  <a
+                                    href={strVal}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-bold text-[#0758fc] hover:underline flex items-center gap-1"
+                                  >
+                                    <ExternalLink size={12} />
+                                    <span>Open Full Document</span>
+                                  </a>
+                                  <span className="text-[10px] text-gray-400 block mt-0.5">Verified Document Upload</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400 font-mono">No document uploaded</span>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Default Text / Dropdown / Number Response
+                      return (
+                        <div key={qKey} className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                          <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{label}</span>
+                          <span className="text-xs font-extrabold text-gray-900 dark:text-white text-right">{strVal || "—"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="pt-2 flex justify-end border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setSelectedAttendeeTicket(null)}
+                className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 font-bold text-xs px-5 py-2.5 rounded-xl cursor-pointer"
+              >
+                Close Record
+              </button>
             </div>
           </div>
         </div>

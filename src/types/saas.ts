@@ -204,15 +204,31 @@ export interface EventSponsor {
   display_order: number;
 }
 
+export type CustomQuestionType =
+  | "short_text"
+  | "long_text"
+  | "number"
+  | "phone"
+  | "aadhaar"
+  | "pan"
+  | "dropdown"
+  | "radio"
+  | "checkbox"
+  | "file_upload"
+  | "date";
+
 export interface EventCustomQuestion {
   id: string;
-  event_id: string;
+  event_id?: string;
   question_text: string;
-  question_type: "short_text" | "long_text" | "dropdown" | "radio" | "checkbox" | "file_upload";
-  options: string[];
+  question_type: CustomQuestionType;
+  options?: string[];
   is_required: boolean;
-  ticket_tier_ids: string[];
+  ticket_tier_ids?: string[];
   display_order: number;
+  placeholder?: string;
+  help_text?: string;
+  created_at?: string;
 }
 
 export interface SaasCoupon {
@@ -331,3 +347,4 @@ export interface PlatformFeatureFlag {
   rollout_percentage: number;
   updated_at: string;
 }
+

@@ -8,6 +8,7 @@
  */
 
 import { randomUUID } from "crypto";
+import { auth } from "@clerk/nextjs/server";
 import { getCurrentUser, requireAuth, hasMinimumRole } from "@/lib/auth/getUser";
 import { executeSql, escapeSql } from "@/lib/db/directDb";
 import { calculateOrderFees } from "@/lib/services/feeCalculator";
@@ -159,8 +160,30 @@ async function ensureUpiColumns() {
 
 export async function getEventCustomQuestionsAction(eventId: string) {
   try {
+    try {
+      await executeSql(`
+        CREATE TABLE IF NOT EXISTS event_custom_questions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          event_id UUID NOT NULL REFERENCES saas_events(id) ON DELETE CASCADE,
+          question_text TEXT NOT NULL,
+          question_type VARCHAR(50) NOT NULL,
+          options JSONB DEFAULT '[]'::jsonb,
+          is_required BOOLEAN NOT NULL DEFAULT FALSE,
+          ticket_tier_ids JSONB DEFAULT '[]'::jsonb,
+          display_order INT NOT NULL DEFAULT 0,
+          placeholder TEXT,
+          help_text TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS placeholder TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS help_text TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS ticket_tier_ids JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+      `);
+    } catch {}
+
     const { data: questions } = await executeSql(`
-      SELECT id, question_text, question_type, options, is_required, display_order
+      SELECT id, question_text, question_type, options, is_required, ticket_tier_ids, display_order, placeholder, help_text
       FROM event_custom_questions
       WHERE event_id = ${escapeSql(eventId)}
       ORDER BY display_order ASC, created_at ASC;
@@ -404,11 +427,13 @@ export async function cleanupExpiredTicketHoldsAction(): Promise<{ success: bool
 export async function releaseUserHoldAction(sessionId: string): Promise<{ success: boolean }> {
   if (!sessionId) return { success: true };
   try {
+    const { userId: sessionUserId } = await auth();
     const user = await getCurrentUser();
+    const activeUserId = user?.clerkId || sessionUserId;
     const cleanSession = escapeSql(sessionId);
     // Scope delete to caller's own holds: either matched by session OR by user_id
     // This prevents one user from releasing another user's hold.
-    const userFilter = user?.clerkId ? `AND (session_id = ${cleanSession} OR user_id = ${escapeSql(user.clerkId)})` : `AND session_id = ${cleanSession}`;
+    const userFilter = activeUserId ? `AND (session_id = ${cleanSession} OR user_id = ${escapeSql(activeUserId)})` : `AND session_id = ${cleanSession}`;
     await executeSql(`
       WITH released AS (
         DELETE FROM ticket_inventory_holds
@@ -457,8 +482,10 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
   try {
     // Security H-2: Require authentication to reserve inventory holds.
     // Unauthenticated users could otherwise lock all tickets for an event.
+    const { userId: sessionUserId } = await auth();
     const user = await getCurrentUser();
-    if (!user?.clerkId) {
+    const activeUserId = user?.clerkId || sessionUserId;
+    if (!activeUserId) {
       return {
         success: false,
         error: "You must be signed in to reserve tickets. Please log in and try again.",
@@ -496,7 +523,7 @@ export async function reserveTicketHoldAction(input: ReserveTicketHoldInput): Pr
       input.sessionId || input.existingSessionId || `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const cleanSessionId = escapeSql(targetSessionId);
     const cleanExistingSessionId = input.existingSessionId ? escapeSql(input.existingSessionId) : "NULL";
-    const cleanUserId = user?.clerkId ? escapeSql(user.clerkId) : "NULL";
+    const cleanUserId = escapeSql(activeUserId);
     const cleanEventId = escapeSql(input.eventId);
 
     // 1. Atomically release any previous holds for this session or user on this event
@@ -639,19 +666,20 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
   try {
     await ensureUpiColumns();
 
+    const { userId: sessionUserId } = await auth();
     const user = await getCurrentUser();
+    const customerUserId = user?.clerkId || sessionUserId;
     
     // Strict requirement: users MUST be logged in to purchase tickets
-    if (!user?.clerkId) {
+    if (!customerUserId) {
       return {
         success: false,
         error: "Authentication required: Please sign in or create an account to purchase tickets.",
       };
     }
 
-    const customerUserId = user.clerkId;
-    const customerEmail = input.customerEmail?.trim() || user.email;
-    const customerName = input.customerName?.trim() || user.profile?.full_name || "Attendee";
+    const customerEmail = input.customerEmail?.trim() || user?.email || input.attendees[0]?.email;
+    const customerName = input.customerName?.trim() || user?.profile?.full_name || input.attendees[0]?.name || "Attendee";
 
     if (!customerEmail) {
       return { success: false, error: "Customer email is required for ticket delivery" };
@@ -747,6 +775,67 @@ export async function createCheckoutOrderAction(input: CreateCheckoutInput) {
             success: false,
             error: `Rotary Club Name is required for Attendee #${i + 1} (${att.name || "Rotarian"}). Please specify your Rotary Club.`,
           };
+        }
+      }
+    }
+
+    // 2b. Validate Event Custom Questions (Aadhaar, PAN, Emergency Phone, Document Proof, etc.)
+    const { data: dbQuestions } = await executeSql(`
+      SELECT id, question_text, question_type, is_required, ticket_tier_ids
+      FROM event_custom_questions
+      WHERE event_id = ${escapeSql(input.eventId)}
+      ORDER BY display_order ASC;
+    `);
+
+    if (dbQuestions && dbQuestions.length > 0) {
+      for (let i = 0; i < input.attendees.length; i++) {
+        const att = input.attendees[i];
+        const answers = att.customAnswers || {};
+        for (const q of dbQuestions) {
+          // Check if this question is scoped to specific tiers
+          const allowedTiers = Array.isArray(q.ticket_tier_ids) ? q.ticket_tier_ids : [];
+          if (allowedTiers.length > 0 && !allowedTiers.includes(att.ticketTierId)) {
+            continue; // Not applicable to this tier
+          }
+
+          const val = answers[q.id] ?? answers[q.question_text];
+          const strVal = val != null ? String(val).trim() : "";
+
+          if (q.is_required && !strVal) {
+            return {
+              success: false,
+              error: `Please answer "${q.question_text}" for Attendee #${i + 1} (${att.name || "Delegate"}).`,
+            };
+          }
+
+          // Specific field format validations
+          if (strVal) {
+            if (q.question_type === "aadhaar") {
+              const digitsOnly = strVal.replace(/\D/g, "");
+              if (digitsOnly.length !== 12) {
+                return {
+                  success: false,
+                  error: `Invalid Aadhaar Number for Attendee #${i + 1} (${att.name || "Delegate"}). Aadhaar must be exactly 12 numeric digits.`,
+                };
+              }
+            } else if (q.question_type === "pan") {
+              const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i;
+              if (!panRegex.test(strVal)) {
+                return {
+                  success: false,
+                  error: `Invalid PAN Card Number for Attendee #${i + 1} (${att.name || "Delegate"}). Format must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).`,
+                };
+              }
+            } else if (q.question_type === "phone") {
+              const digitsOnly = strVal.replace(/\D/g, "");
+              if (digitsOnly.length < 10) {
+                return {
+                  success: false,
+                  error: `Invalid Phone Number for "${q.question_text}" for Attendee #${i + 1}. Must be at least 10 digits.`,
+                };
+              }
+            }
+          }
         }
       }
     }
@@ -1844,6 +1933,7 @@ export interface BulkAttendeeInput {
   name: string;
   email: string;
   phone?: string;
+  customAnswers?: Record<string, any>;
 }
 
 export interface CreateBulkTicketOrderInput {
@@ -2057,7 +2147,7 @@ export async function createBulkTicketOrderAction(
           ${escapeSql(qrToken)},
           ${escapeSql(ticketStatus)},
           ${escapeSql(bulkGroupId)}::uuid,
-          '{}'::jsonb,
+          ${escapeSql(JSON.stringify(attendee.customAnswers || {}))}::jsonb,
           NOW(), NOW()
         );
       `);

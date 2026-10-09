@@ -44,15 +44,58 @@ export interface AttendeeExportItem {
 export function exportEventAttendeesToExcel(
   eventTitle: string,
   attendees: AttendeeExportItem[],
-  customFilename?: string
+  customFilename?: string,
+  customQuestions?: Array<{ id?: string; question_text?: string; questionText?: string }>
 ) {
   const sanitizedTitle = (eventTitle || "Event_Delegates").replace(/[^a-zA-Z0-9]/g, "_");
   const filename =
     customFilename ||
     `${sanitizedTitle}_Delegates_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
+  const INTERNAL_KEYS = new Set([
+    "member_type",
+    "club_name",
+    "designation",
+    "zone",
+    "_showCustomAffiliation",
+  ]);
+
+  // Map of question key -> column header name
+  const questionKeyToHeader = new Map<string, string>();
+
+  // 1. Populate known question definitions
+  if (customQuestions && Array.isArray(customQuestions)) {
+    for (const q of customQuestions) {
+      const qId = q.id;
+      const text = q.question_text || q.questionText;
+      if (qId && text) {
+        questionKeyToHeader.set(qId, text);
+      }
+    }
+  }
+
+  // 2. Discover any additional custom answer keys across attendees
+  for (const t of attendees) {
+    const answers = t.custom_answers || t.customAnswers;
+    if (answers && typeof answers === "object") {
+      for (const [key, _val] of Object.entries(answers)) {
+        if (!INTERNAL_KEYS.has(key) && !questionKeyToHeader.has(key)) {
+          const formattedLabel = key
+            .replace(/([A-Z])/g, " $1")
+            .replace(/[_-]/g, " ")
+            .trim()
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+          questionKeyToHeader.set(key, formattedLabel);
+        }
+      }
+    }
+  }
+
+  const customQuestionKeys = Array.from(questionKeyToHeader.keys());
+  const customColumnHeaders = customQuestionKeys.map((k) => questionKeyToHeader.get(k)!);
+
   // 1. Build Header Row for Sheet 1
-  const header = [
+  const baseHeader = [
     "Ticket / Pass Code",
     "Attendee Name",
     "Designation / Role",
@@ -68,9 +111,9 @@ export function exportEventAttendeesToExcel(
     "Checked-In Timestamp",
     "Registration Date",
     "Event Title",
-    "Custom Form Responses",
-    "QR Entry Token",
   ];
+
+  const header = [...baseHeader, ...customColumnHeaders, "QR Entry Token"];
 
   // Zonal Aggregator
   const zoneStats = new Map<string, { total: number; checkedIn: number; clubs: Set<string> }>();
@@ -95,7 +138,19 @@ export function exportEventAttendeesToExcel(
     const paymentStatus = isRejected ? "REJECTED" : isPending ? "PENDING_APPROVAL" : (t.order_status || t.status || "CONFIRMED");
     const checkInTime = t.checked_in_at ? new Date(t.checked_in_at).toLocaleString("en-IN") : "Not Scanned";
     const regDate = t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "";
-    const customResp = JSON.stringify(t.custom_answers || t.customAnswers || {});
+
+    const answers = t.custom_answers || t.customAnswers || {};
+    const customCells = customQuestionKeys.map((key) => {
+      const val = answers[key];
+      if (val === undefined || val === null || val === "") return "";
+      if (typeof val === "string" && val.startsWith("data:image")) {
+        return "[Photo / ID Uploaded]";
+      }
+      if (typeof val === "object") {
+        return JSON.stringify(val);
+      }
+      return String(val);
+    });
 
     // Update Zonal Aggregator
     const currentStats = zoneStats.get(zone) || { total: 0, checkedIn: 0, clubs: new Set<string>() };
@@ -120,7 +175,7 @@ export function exportEventAttendeesToExcel(
       checkInTime,
       regDate,
       t.event_title || t.saas_events?.title || eventTitle,
-      customResp,
+      ...customCells,
       t.qr_token || t.qr_code_hash || "",
     ]);
   }
@@ -189,7 +244,7 @@ export function exportEventAttendeesToExcel(
     { wch: 22 }, // Checked-In Time
     { wch: 22 }, // Reg Date
     { wch: 28 }, // Event Title
-    { wch: 30 }, // Custom answers
+    ...customQuestionKeys.map(() => ({ wch: 24 })), // Dynamic custom question columns
     { wch: 25 }, // QR token
   ];
   XLSX.utils.book_append_sheet(wb, ws1, "Delegates Roster");

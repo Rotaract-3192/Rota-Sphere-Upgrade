@@ -40,6 +40,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { createEventAction, updateEventAction, parseGoogleMapsUrlAction, CreateEventInput } from "@/app/actions/eventActions";
+import { getEventCustomQuestionsAction } from "@/app/actions/orderActions";
+import { EventCustomFormEditor, FormQuestionDraft } from "./EventCustomFormEditor";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
 import { compressImageFile } from "@/lib/utils/imageCompressor";
 import {
@@ -235,6 +237,9 @@ export function CreateEventWizardModal({
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
+  // Step 4: Custom Registration Form
+  const [customQuestions, setCustomQuestions] = useState<FormQuestionDraft[]>([]);
+
   // Initialize or reset form when eventToEdit changes
   useEffect(() => {
     if (eventToEdit) {
@@ -346,7 +351,27 @@ export function CreateEventWizardModal({
           ? "HYBRID"
           : "IN_PERSON"
       );
+
+      // Load existing custom registration questions
+      getEventCustomQuestionsAction(eventToEdit.id).then((res) => {
+        if (res.success && res.questions) {
+          setCustomQuestions(
+            res.questions.map((q: any, idx: number) => ({
+              id: q.id,
+              questionText: q.question_text || "",
+              questionType: q.question_type || "short_text",
+              options: Array.isArray(q.options) ? q.options : [],
+              isRequired: Boolean(q.is_required),
+              ticketTierIds: Array.isArray(q.ticket_tier_ids) ? q.ticket_tier_ids : [],
+              displayOrder: q.display_order ?? idx + 1,
+              placeholder: q.placeholder || "",
+              helpText: q.help_text || "",
+            }))
+          );
+        }
+      });
     } else {
+      setCustomQuestions([]);
       setUpiId("");
       if (!hasUserEditedPayeeRef.current) {
         setUpiPayeeName(defaultClubName || "");
@@ -709,13 +734,20 @@ export function CreateEventWizardModal({
         }
       }
     }
-    if (currentStep === 4 && locationDeliveryType !== "ONLINE" && !venueName.trim()) {
+    if (currentStep === 4) {
+      const emptyPrompt = customQuestions.find((q) => !q.questionText.trim());
+      if (emptyPrompt) {
+        setErrorMessage("Please enter a title for all custom questions or remove blank ones");
+        return;
+      }
+    }
+    if (currentStep === 5 && locationDeliveryType !== "ONLINE" && !venueName.trim()) {
       setErrorMessage("Please enter the venue name");
       return;
     }
 
     setErrorMessage(null);
-    setCurrentStep((s) => Math.min(5, s + 1));
+    setCurrentStep((s) => Math.min(6, s + 1));
   }
 
   function handleBack() {
@@ -847,6 +879,19 @@ export function CreateEventWizardModal({
         category,
         tags: finalTags,
         ticketTiers: formattedTicketTiers,
+        customQuestions: customQuestions
+          .filter((q) => q.questionText.trim())
+          .map((q, idx) => ({
+            id: q.id,
+            questionText: q.questionText.trim(),
+            questionType: q.questionType,
+            options: q.options || [],
+            isRequired: Boolean(q.isRequired),
+            ticketTierIds: q.ticketTierIds || [],
+            displayOrder: idx + 1,
+            placeholder: q.placeholder?.trim() || undefined,
+            helpText: q.helpText?.trim() || undefined,
+          })),
       };
 
       if (eventToEdit?.id) {
@@ -878,8 +923,9 @@ export function CreateEventWizardModal({
     { num: 1, label: "BASIC INFO" },
     { num: 2, label: "DATE & TIME" },
     { num: 3, label: "SETTINGS" },
-    { num: 4, label: "VENUE DETAILS" },
-    { num: 5, label: "ADDITIONAL INFO" },
+    { num: 4, label: "REGISTRATION FORM" },
+    { num: 5, label: "VENUE DETAILS" },
+    { num: 6, label: "ADDITIONAL INFO" },
   ];
 
   const isEditMode = Boolean(eventToEdit?.id);
@@ -2385,8 +2431,21 @@ export function CreateEventWizardModal({
             </div>
           )}
 
-          {/* ──────── STEP 4: VENUE DETAILS (WITH GOOGLE MAPS AUTO-FILL) ─── */}
+          {/* ──────── STEP 4: REGISTRATION FORM BUILDER ─────────────── */}
           {currentStep === 4 && (
+            <div className="space-y-6 animate-in fade-in-50">
+              <EventCustomFormEditor
+                questions={customQuestions}
+                onChange={setCustomQuestions}
+                availableTiers={ticketTiers
+                  .filter((t) => t.name.trim())
+                  .map((t) => ({ id: t.id || t.name, name: t.name }))}
+              />
+            </div>
+          )}
+
+          {/* ──────── STEP 5: VENUE DETAILS (WITH GOOGLE MAPS AUTO-FILL) ─── */}
+          {currentStep === 5 && (
             <div className="space-y-6 animate-in fade-in-50">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight font-serif">
@@ -2568,8 +2627,8 @@ export function CreateEventWizardModal({
             </div>
           )}
 
-          {/* ──────── STEP 5: ADDITIONAL DETAILS ───────────────────────── */}
-          {currentStep === 5 && (
+          {/* ──────── STEP 6: ADDITIONAL DETAILS ───────────────────────── */}
+          {currentStep === 6 && (
             <div className="space-y-6 animate-in fade-in-50">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight font-serif">
@@ -2800,7 +2859,7 @@ export function CreateEventWizardModal({
               Cancel
             </button>
 
-            {currentStep < 5 ? (
+            {currentStep < 6 ? (
               <button
                 type="button"
                 onClick={handleNext}

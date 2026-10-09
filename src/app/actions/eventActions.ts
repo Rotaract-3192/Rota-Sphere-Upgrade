@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger/logger";
 import { revalidatePath } from "next/cache";
 import { broadcastNewEventToAllUsersAsync } from "@/lib/notifications/notificationService";
 import { DISTRICT_3192_CLUBS } from "@/lib/data/districtClubsData";
-import type { EventFormat, EventVisibility, TicketTierType } from "@/types/saas";
+import type { EventFormat, EventVisibility, TicketTierType, CustomQuestionType } from "@/types/saas";
 
 export interface CreateEventInput {
   organizationId?: string;
@@ -78,6 +78,17 @@ export interface CreateEventInput {
     tier: string;
     logoUrl: string;
     websiteUrl?: string;
+  }>;
+  customQuestions?: Array<{
+    id?: string;
+    questionText: string;
+    questionType: CustomQuestionType;
+    options?: string[];
+    isRequired: boolean;
+    ticketTierIds?: string[];
+    displayOrder?: number;
+    placeholder?: string;
+    helpText?: string;
   }>;
 }
 
@@ -343,6 +354,29 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         ALTER TABLE saas_ticket_tiers ALTER COLUMN max_per_order SET DEFAULT 50;
         UPDATE saas_ticket_tiers SET max_per_order = 50 WHERE max_per_order = 10;
         ALTER TABLE saas_events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+      `);
+    } catch {}
+
+    // Auto-migrate event_custom_questions structure
+    try {
+      await executeSql(`
+        CREATE TABLE IF NOT EXISTS event_custom_questions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          event_id UUID NOT NULL REFERENCES saas_events(id) ON DELETE CASCADE,
+          question_text TEXT NOT NULL,
+          question_type VARCHAR(50) NOT NULL,
+          options JSONB DEFAULT '[]'::jsonb,
+          is_required BOOLEAN NOT NULL DEFAULT FALSE,
+          ticket_tier_ids JSONB DEFAULT '[]'::jsonb,
+          display_order INT NOT NULL DEFAULT 0,
+          placeholder TEXT,
+          help_text TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS placeholder TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS help_text TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS ticket_tier_ids JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
       `);
     } catch {}
 
@@ -612,7 +646,41 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
       }
     }
 
-    // 6. Audit Log
+    // 6. Insert Custom Questions if provided
+    if (input.customQuestions && input.customQuestions.length > 0) {
+      for (let i = 0; i < input.customQuestions.length; i++) {
+        const q = input.customQuestions[i];
+        if (!q.questionText?.trim()) continue;
+        const optionsJson = JSON.stringify(q.options || []).replace(/'/g, "''");
+        const tierIdsJson = JSON.stringify(q.ticketTierIds || []).replace(/'/g, "''");
+        const questionSql = `
+          INSERT INTO event_custom_questions (
+            event_id,
+            question_text,
+            question_type,
+            options,
+            is_required,
+            ticket_tier_ids,
+            display_order,
+            placeholder,
+            help_text
+          ) VALUES (
+            ${escapeSql(eventId)},
+            ${escapeSql(q.questionText.trim())},
+            ${escapeSql(q.questionType || "short_text")},
+            '${optionsJson}'::jsonb,
+            ${q.isRequired ? "TRUE" : "FALSE"},
+            '${tierIdsJson}'::jsonb,
+            ${q.displayOrder ?? i + 1},
+            ${q.placeholder ? escapeSql(q.placeholder.trim()) : "NULL"},
+            ${q.helpText ? escapeSql(q.helpText.trim()) : "NULL"}
+          );
+        `;
+        await executeSql(questionSql);
+      }
+    }
+
+    // 7. Audit Log
     await logAuditAction({
       actorId: user.clerkId,
       actorRole: user.profile.role,
@@ -743,6 +811,40 @@ export async function duplicateEventAction(eventId: string): Promise<{ success: 
             TRUE,
             ${Boolean(t.is_bulk_slab || t.tier_type === "BULK") ? "TRUE" : "FALSE"},
             ${t.bulk_slab_size != null ? Number(t.bulk_slab_size) : "NULL"}
+          );
+        `);
+      }
+    }
+
+    // Duplicate custom questions
+    const { data: origQuestions } = await executeSql(`
+      SELECT * FROM event_custom_questions WHERE event_id = ${escapeSql(eventId)} ORDER BY display_order ASC;
+    `);
+    if (origQuestions && origQuestions.length > 0) {
+      for (const q of origQuestions) {
+        const optJson = JSON.stringify(q.options || []).replace(/'/g, "''");
+        const tiersJson = JSON.stringify(q.ticket_tier_ids || []).replace(/'/g, "''");
+        await executeSql(`
+          INSERT INTO event_custom_questions (
+            event_id,
+            question_text,
+            question_type,
+            options,
+            is_required,
+            ticket_tier_ids,
+            display_order,
+            placeholder,
+            help_text
+          ) VALUES (
+            ${escapeSql(newEventId)},
+            ${escapeSql(q.question_text)},
+            ${escapeSql(q.question_type)},
+            '${optJson}'::jsonb,
+            ${q.is_required ? "TRUE" : "FALSE"},
+            '${tiersJson}'::jsonb,
+            ${q.display_order || 1},
+            ${q.placeholder ? escapeSql(q.placeholder) : "NULL"},
+            ${q.help_text ? escapeSql(q.help_text) : "NULL"}
           );
         `);
       }
@@ -1083,6 +1185,62 @@ export async function updateEventAction(
             await executeSql(`DELETE FROM saas_ticket_tiers WHERE id = ${escapeSql(t.id)};`);
           }
         }
+      }
+    }
+
+    // Update Custom Questions if provided
+    if (input.customQuestions !== undefined) {
+      try {
+        await executeSql(`
+          CREATE TABLE IF NOT EXISTS event_custom_questions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            event_id UUID NOT NULL REFERENCES saas_events(id) ON DELETE CASCADE,
+            question_text TEXT NOT NULL,
+            question_type VARCHAR(50) NOT NULL,
+            options JSONB DEFAULT '[]'::jsonb,
+            is_required BOOLEAN NOT NULL DEFAULT FALSE,
+            ticket_tier_ids JSONB DEFAULT '[]'::jsonb,
+            display_order INT NOT NULL DEFAULT 0,
+            placeholder TEXT,
+            help_text TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS placeholder TEXT;
+          ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS help_text TEXT;
+          ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS ticket_tier_ids JSONB DEFAULT '[]'::jsonb;
+          ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+        `);
+      } catch {}
+
+      await executeSql(`DELETE FROM event_custom_questions WHERE event_id = ${escapeSql(eventId)};`);
+      for (let i = 0; i < (input.customQuestions || []).length; i++) {
+        const q = input.customQuestions[i];
+        if (!q.questionText?.trim()) continue;
+        const optionsJson = JSON.stringify(q.options || []).replace(/'/g, "''");
+        const tierIdsJson = JSON.stringify(q.ticketTierIds || []).replace(/'/g, "''");
+        await executeSql(`
+          INSERT INTO event_custom_questions (
+            event_id,
+            question_text,
+            question_type,
+            options,
+            is_required,
+            ticket_tier_ids,
+            display_order,
+            placeholder,
+            help_text
+          ) VALUES (
+            ${escapeSql(eventId)},
+            ${escapeSql(q.questionText.trim())},
+            ${escapeSql(q.questionType || "short_text")},
+            '${optionsJson}'::jsonb,
+            ${q.isRequired ? "TRUE" : "FALSE"},
+            '${tierIdsJson}'::jsonb,
+            ${q.displayOrder ?? i + 1},
+            ${q.placeholder ? escapeSql(q.placeholder.trim()) : "NULL"},
+            ${q.helpText ? escapeSql(q.helpText.trim()) : "NULL"}
+          );
+        `);
       }
     }
 
@@ -1601,3 +1759,95 @@ async function searchPlaceGeocode(query: string): Promise<ParsedLocationResult> 
     pincode: "",
   };
 }
+
+/**
+ * Direct action to save and update an event's custom registration questions
+ */
+export async function saveEventCustomQuestionsAction(
+  eventId: string,
+  questions: Array<{
+    id?: string;
+    questionText: string;
+    questionType: CustomQuestionType;
+    options?: string[];
+    isRequired: boolean;
+    ticketTierIds?: string[];
+    displayOrder?: number;
+    placeholder?: string;
+    helpText?: string;
+  }>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await requireAuth();
+    const isAuthorized = hasMinimumRole(user.profile.role, "organizer");
+    if (!isAuthorized) {
+      return { success: false, error: "Unauthorized: Organizer access required." };
+    }
+
+    const escapedId = escapeSql(eventId);
+
+    // Auto-migrate table columns if not present
+    try {
+      await executeSql(`
+        CREATE TABLE IF NOT EXISTS event_custom_questions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          event_id UUID NOT NULL REFERENCES saas_events(id) ON DELETE CASCADE,
+          question_text TEXT NOT NULL,
+          question_type VARCHAR(50) NOT NULL,
+          options JSONB DEFAULT '[]'::jsonb,
+          is_required BOOLEAN NOT NULL DEFAULT FALSE,
+          ticket_tier_ids JSONB DEFAULT '[]'::jsonb,
+          display_order INT NOT NULL DEFAULT 0,
+          placeholder TEXT,
+          help_text TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS placeholder TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS help_text TEXT;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS ticket_tier_ids JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE event_custom_questions ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+      `);
+    } catch {}
+
+    await executeSql(`DELETE FROM event_custom_questions WHERE event_id = ${escapedId};`);
+
+    if (questions && questions.length > 0) {
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!q.questionText?.trim()) continue;
+        const optionsJson = JSON.stringify(q.options || []).replace(/'/g, "''");
+        const tierIdsJson = JSON.stringify(q.ticketTierIds || []).replace(/'/g, "''");
+        await executeSql(`
+          INSERT INTO event_custom_questions (
+            event_id,
+            question_text,
+            question_type,
+            options,
+            is_required,
+            ticket_tier_ids,
+            display_order,
+            placeholder,
+            help_text
+          ) VALUES (
+            ${escapedId},
+            ${escapeSql(q.questionText.trim())},
+            ${escapeSql(q.questionType || "short_text")},
+            '${optionsJson}'::jsonb,
+            ${q.isRequired ? "TRUE" : "FALSE"},
+            '${tierIdsJson}'::jsonb,
+            ${q.displayOrder ?? i + 1},
+            ${q.placeholder ? escapeSql(q.placeholder.trim()) : "NULL"},
+            ${q.helpText ? escapeSql(q.helpText.trim()) : "NULL"}
+          );
+        `);
+      }
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/events");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
