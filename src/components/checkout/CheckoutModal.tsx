@@ -698,66 +698,41 @@ export function CheckoutModal({
     setAmountMatches(null);
     setScanFailed(false);
 
-    let highResDataUrl = "";
+    // 1. Generate compressed dataUrl for fast display & order submission preview
     try {
-      const reader = new FileReader();
-      highResDataUrl = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-        reader.readAsDataURL(file);
-      });
-    } catch {
-      // fallback
-    }
-
-    let uploadDataUrl = "";
-    try {
-      uploadDataUrl = await compressImageFile(file);
+      const uploadDataUrl = await compressImageFile(file);
       setPaymentProofUrl(uploadDataUrl);
     } catch {
-      uploadDataUrl = highResDataUrl;
-      if (uploadDataUrl) setPaymentProofUrl(uploadDataUrl);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") setPaymentProofUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
 
-    const ocrInputUrl = highResDataUrl || uploadDataUrl;
-    if (!ocrInputUrl) return;
-
-    // Trigger AI OCR Scan for UTR and Amount Paid
+    // 2. Stream raw file directly to dedicated VPS Backend OCR API (/api/ocr/scan-receipt)
     setIsScanningUtr(true);
-    setScanStatusText("AI is scanning receipt to auto-detect 12-digit UTR and amount paid...");
+    setScanStatusText("VPS backend is scanning receipt to auto-detect 12-digit UTR and amount paid...");
 
     try {
-      // 1. Primary: Fast, reliable Next.js Server Action on VPS
-      const { scanReceiptServerAction } = await import("@/app/actions/ocrActions");
-      const serverResult = await scanReceiptServerAction(ocrInputUrl, fees.totalPayable);
-
-      if (serverResult.success && (serverResult.utr || typeof serverResult.detectedAmount === "number")) {
-        if (serverResult.utr) {
-          setDetectedUtr(serverResult.utr);
-          setUpiTransactionId(serverResult.utr);
-        }
-        if (typeof serverResult.detectedAmount === "number") {
-          setDetectedAmount(serverResult.detectedAmount);
-          setAmountMatches(serverResult.amountMatches ?? null);
-        }
-        setScanFailed(!serverResult.utr && typeof serverResult.detectedAmount !== "number");
-        return;
+      const formData = new FormData();
+      formData.append("file", file);
+      if (fees.totalPayable > 0) {
+        formData.append("expectedAmount", String(fees.totalPayable));
       }
-    } catch (serverErr) {
-      console.warn("Server OCR unavailable, trying client fallback:", serverErr);
-    }
 
-    // 2. Fallback: Client-side WebAssembly scanner
-    try {
-      const { extractUtrFromImage } = await import("@/lib/utils/utrScanner");
-      const result = await extractUtrFromImage(
-        ocrInputUrl,
-        (progress, status) => {
-          setScanStatusText(status || "AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
-        },
-        fees.totalPayable
-      );
+      const res = await fetch("/api/ocr/scan-receipt", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (result.success) {
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const result = await res.json();
+
+      if (result.success && (result.utr || typeof result.detectedAmount === "number")) {
         if (result.utr) {
           setDetectedUtr(result.utr);
           setUpiTransactionId(result.utr);
@@ -771,7 +746,7 @@ export function CheckoutModal({
         setScanFailed(true);
       }
     } catch (err) {
-      console.error("AI UTR scan error:", err);
+      console.error("[CheckoutModal] Backend VPS OCR error:", err);
       setScanFailed(true);
     } finally {
       setIsScanningUtr(false);

@@ -196,19 +196,27 @@ export function BulkAttendeeForm({
     if (!dataUrl) return;
 
     setIsScanningUtr(true);
-    setScanStatusText("AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
+    setScanStatusText("VPS backend is scanning screenshot to auto-detect 12-digit UTR and amount...");
 
     try {
-      const { extractUtrFromImage } = await import("@/lib/utils/utrScanner");
-      const result = await extractUtrFromImage(
-        dataUrl,
-        (_p, status) => {
-          setScanStatusText(status || "AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
-        },
-        totalPrice
-      );
+      const formData = new FormData();
+      formData.append("file", file);
+      if (totalPrice > 0) {
+        formData.append("expectedAmount", String(totalPrice));
+      }
 
-      if (result.success) {
+      const res = await fetch("/api/ocr/scan-receipt", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const result = await res.json();
+
+      if (result.success && (result.utr || typeof result.detectedAmount === "number")) {
         if (result.utr) {
           setDetectedUtr(result.utr);
           setUtrInput(result.utr);
@@ -222,7 +230,7 @@ export function BulkAttendeeForm({
         setScanFailed(true);
       }
     } catch (err) {
-      console.error("AI UTR scan error:", err);
+      console.error("[BulkAttendeeForm] Backend VPS OCR error:", err);
       setScanFailed(true);
     } finally {
       setIsScanningUtr(false);
