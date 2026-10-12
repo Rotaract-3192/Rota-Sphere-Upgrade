@@ -2009,7 +2009,7 @@ export function CheckoutModal({
             {/* ── STEP 1: Scan & Pay via UPI ── */}
             <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
               <div className="flex items-center gap-2 self-start">
-                <span className="w-6 h-6 rounded-full bg-pink-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-[#0758fc] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
                   1
                 </span>
                 <span className="text-sm font-extrabold text-gray-900 dark:text-white">
@@ -2041,13 +2041,13 @@ export function CheckoutModal({
                 </p>
               </div>
 
-              {/* Prominent Download / Save QR Button (Circled in User Reference) */}
+              {/* Prominent Download / Save QR Button */}
               <div className="w-full space-y-1.5">
                 <button
                   type="button"
                   onClick={handleSaveQrCode}
                   disabled={!upiQrDataUrl}
-                  className="w-full border-2 border-rose-300 dark:border-rose-800 bg-white dark:bg-gray-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold text-xs py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
+                  className="w-full border-2 border-[#0758fc]/30 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-[#0758fc]/10 dark:hover:bg-[#0758fc]/20 text-[#0758fc] dark:text-blue-400 font-extrabold text-xs py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
                 >
                   {qrSaved ? <Check size={16} className="text-emerald-600 dark:text-emerald-400" /> : <Download size={16} />}
                   <span>{qrSaved ? "✓ Saved to Photos / Gallery" : "Download / Save QR"}</span>
@@ -2099,11 +2099,11 @@ export function CheckoutModal({
               </div>
             </div>
 
-            {/* ── STEP 2: Upload Payment Proof (Matching Screenshot 1) ── */}
+            {/* ── STEP 2: Upload Payment Proof ── */}
             <div className="space-y-4 p-5 bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-pink-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-[#0758fc] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
                     2
                   </span>
                   <div>
@@ -2177,13 +2177,13 @@ export function CheckoutModal({
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-pink-500 dark:hover:border-pink-500 bg-gray-50 dark:bg-gray-900 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-pink-50/20 text-center space-y-1.5">
-                    <Upload size={24} className="text-pink-600 dark:text-pink-400" />
+                  <label className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-[#0758fc] bg-gray-50 dark:bg-gray-900 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-[#0758fc]/5 text-center space-y-1.5">
+                    <Upload size={24} className="text-[#0758fc] dark:text-blue-400" />
                     <span className="text-xs font-extrabold text-gray-900 dark:text-white block">
                       Click to Upload Payment Screenshot
                     </span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
-                      Super.money, GPay, PhonePe, Paytm, CRED or BHIM receipt
+                      Kotak, POP, Paytm, slice, Super.money, GPay, PhonePe, CRED or BHIM receipt
                     </span>
                     <input
                       type="file"
@@ -2276,7 +2276,7 @@ export function CheckoutModal({
                     setUpiTransactionId(cleaned);
                     setErrorMessage(null);
                   }}
-                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/10 block"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
                 />
               </div>
 
@@ -2305,13 +2305,13 @@ export function CheckoutModal({
                 )}
               </div>
 
-              {/* Confirm & Submit Proof Button (Matching Screenshot 1) */}
+              {/* Confirm & Submit Proof Button */}
               <div className="pt-2">
                 <button
                   type="button"
                   disabled={loading || (!paymentProofUrl && !upiTransactionId.trim()) || isHoldExpired}
                   onClick={() => handleSubmitOrder(upiTransactionId)}
-                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 text-center"
+                  className="w-full bg-[#0758fc] hover:bg-[#0648d0] text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all shadow-md shadow-[#0758fc]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 text-center"
                 >
                   {loading ? (
                     <>
