@@ -55,45 +55,56 @@ export async function POST(req: NextRequest) {
     }
 
     // --- STEP 1: Attempt ultra-fast in-memory FastAPI daemon (~2.0s) ---
-    try {
-      const daemonFormData = new FormData();
-      daemonFormData.append(
-        "file",
-        new Blob([inputBuffer], { type: file.type || "image/jpeg" }),
-        file.name || "receipt.jpg"
-      );
-      if (expectedAmount !== undefined && !isNaN(expectedAmount)) {
-        daemonFormData.append("expected_amount", String(expectedAmount));
-      }
+    const candidateUrls = Array.from(
+      new Set(
+        [
+          process.env.OCR_SERVICE_URL,
+          "http://127.0.0.1:5055/scan",
+          "http://host.docker.internal:5055/scan",
+        ].filter(Boolean) as string[]
+      )
+    );
 
-      const controller = new AbortController();
-      const daemonTimeout = setTimeout(() => controller.abort(), 8000);
-
-      const daemonRes = await fetch(OCR_DAEMON_URL, {
-        method: "POST",
-        body: daemonFormData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(daemonTimeout);
-
-      if (daemonRes.ok) {
-        const daemonData: OcrScanResponse = await daemonRes.json();
-        if (daemonData.success) {
-          return NextResponse.json({
-            success: true,
-            utr: daemonData.utr || null,
-            detectedAmount: daemonData.detected_amount ?? null,
-            amountMatches: daemonData.amount_matches ?? null,
-            appName: daemonData.app_name || "UPI Payment App",
-            confidence: daemonData.confidence || 0.9,
-            scanTimeSeconds: daemonData.scan_time_seconds,
-          });
+    for (const daemonUrl of candidateUrls) {
+      try {
+        const daemonFormData = new FormData();
+        daemonFormData.append(
+          "file",
+          new Blob([inputBuffer], { type: file.type || "image/jpeg" }),
+          file.name || "receipt.jpg"
+        );
+        if (expectedAmount !== undefined && !isNaN(expectedAmount)) {
+          daemonFormData.append("expected_amount", String(expectedAmount));
         }
+
+        const controller = new AbortController();
+        const daemonTimeout = setTimeout(() => controller.abort(), 6000);
+
+        const daemonRes = await fetch(daemonUrl, {
+          method: "POST",
+          body: daemonFormData,
+          signal: controller.signal,
+        });
+
+        clearTimeout(daemonTimeout);
+
+        if (daemonRes.ok) {
+          const daemonData: OcrScanResponse = await daemonRes.json();
+          if (daemonData.success) {
+            return NextResponse.json({
+              success: true,
+              utr: daemonData.utr || null,
+              detectedAmount: daemonData.detected_amount ?? null,
+              amountMatches: daemonData.amount_matches ?? null,
+              appName: daemonData.app_name || "UPI Payment App",
+              confidence: daemonData.confidence || 0.9,
+              scanTimeSeconds: daemonData.scan_time_seconds,
+            });
+          }
+        }
+      } catch (daemonErr) {
+        // Try next candidate endpoint or fallback to CLI
       }
-    } catch (daemonErr) {
-      // Daemon not running or timed out; seamlessly fall back to CLI worker below
-      console.warn("[/api/ocr/scan-receipt] Daemon unavailable, falling back to Python worker:", daemonErr);
     }
 
     // --- STEP 2: Deterministic Python CLI worker fallback (~3.5s) ---

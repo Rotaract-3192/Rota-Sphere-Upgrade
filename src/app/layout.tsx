@@ -28,14 +28,12 @@ const openSans = Open_Sans({
   subsets: ["latin"],
   variable: "--font-sans-open",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
