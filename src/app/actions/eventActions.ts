@@ -516,7 +516,7 @@ export async function createEventAction(input: CreateEventInput): Promise<{ succ
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
         const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
-        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 50);
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder != null && !isNaN(Number(tier.maxPerOrder)) && Number(tier.maxPerOrder) >= 1 ? Number(tier.maxPerOrder) : 50);
 
         const tierSql = `
           INSERT INTO saas_ticket_tiers (
@@ -1084,7 +1084,7 @@ export async function updateEventAction(
         const isBulk = Boolean(tier.isBulkSlab || tier.tierType === "BULK");
         const bulkSlabSize = isBulk ? (tier.bulkSlabSize != null && Number(tier.bulkSlabSize) >= 2 ? Number(tier.bulkSlabSize) : 15) : null;
         const minOrder = isBulk && bulkSlabSize ? bulkSlabSize : 1;
-        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder ? Number(tier.maxPerOrder) : 50);
+        const maxOrder = isBulk && bulkSlabSize ? bulkSlabSize : (tier.maxPerOrder != null && !isNaN(Number(tier.maxPerOrder)) && Number(tier.maxPerOrder) >= 1 ? Number(tier.maxPerOrder) : 50);
 
         const match =
           (tier.id ? (existingTiers || []).find((t: any) => t.id === tier.id) : null) ||

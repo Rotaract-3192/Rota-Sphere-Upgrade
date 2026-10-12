@@ -192,7 +192,7 @@ export function CreateEventWizardModal({
       salesStartTime?: string;
       salesEndDate?: string;
       salesEndTime?: string;
-      maxPerOrder?: number;
+      maxPerOrder?: number | string;
       isBulkSlab?: boolean;
       bulkSlabSize?: number | string;
     }>
@@ -333,6 +333,9 @@ export function CreateEventWizardModal({
                     : (Boolean(t.is_bulk_slab || t.tier_type === "BULK") && t.max_per_order && Number(t.max_per_order) > 1
                         ? Number(t.max_per_order)
                         : 15)),
+              maxPerOrder: t.max_per_order != null
+                ? Number(t.max_per_order)
+                : (t.maxPerOrder != null ? Number(t.maxPerOrder) : 50),
             };
           })
         );
@@ -835,7 +838,11 @@ export function CreateEventWizardModal({
           allowedAudience: t.allowedAudience || "ALL",
           salesStart: salesStartISO,
           salesEnd: salesEndISO,
-          maxPerOrder: isBulk && bulkSlabSize ? bulkSlabSize : (t.maxPerOrder ? Number(t.maxPerOrder) : 50),
+          maxPerOrder: isBulk && bulkSlabSize
+            ? bulkSlabSize
+            : (t.maxPerOrder != null && !isNaN(Number(t.maxPerOrder)) && Number(t.maxPerOrder) >= 1
+                ? Number(t.maxPerOrder)
+                : 50),
           isBulkSlab: isBulk,
           bulkSlabSize,
         };
@@ -1827,12 +1834,12 @@ export function CreateEventWizardModal({
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (Number(tier.maxPerOrder) === 1) {
-                                      updateTierField(idx, "maxPerOrder", 50);
+                                    if (Number(tier.maxPerOrder) <= 1) {
+                                      updateTierField(idx, "maxPerOrder", 10);
                                     }
                                   }}
                                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                    Number(tier.maxPerOrder) !== 1
+                                    Number(tier.maxPerOrder) > 1
                                       ? "bg-[#0758fc] text-white shadow-xs"
                                       : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                                   }`}
@@ -1842,78 +1849,88 @@ export function CreateEventWizardModal({
                               </div>
 
                               {/* Interactive Slider Bar and Number Input */}
-                              {Number(tier.maxPerOrder) !== 1 && (
-                                <div className="space-y-2.5 p-3 bg-white dark:bg-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <label className="text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                                      Upper Limit Slider (Max Tickets to Buy):
-                                    </label>
-                                    <div className="flex items-center gap-1.5">
-                                      <input
-                                        type="number"
-                                        min="2"
-                                        max="200"
-                                        value={tier.maxPerOrder ?? 50}
-                                        onChange={(e) => {
-                                          const val = parseInt(e.target.value, 10);
-                                          updateTierField(idx, "maxPerOrder", isNaN(val) ? "" : Math.max(1, Math.min(val, 200)));
-                                        }}
-                                        onBlur={() => {
-                                          const val = Number(tier.maxPerOrder);
-                                          if (!val || isNaN(val) || val < 1) {
-                                            updateTierField(idx, "maxPerOrder", 50);
-                                          }
-                                        }}
-                                        className="w-16 text-center bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs font-black text-gray-900 dark:text-white"
-                                      />
-                                      <span className="text-xs font-bold text-gray-500">tickets</span>
-                                    </div>
-                                  </div>
-
-                                  {/* Slider bar */}
-                                  <div className="space-y-1">
+                              <div className="space-y-2.5 p-3 bg-white dark:bg-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center justify-between gap-3">
+                                  <label className="text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                    Upper Limit Slider (Max Tickets to Buy):
+                                  </label>
+                                  <div className="flex items-center gap-1.5">
                                     <input
-                                      type="range"
-                                      min="2"
-                                      max="100"
-                                      step="1"
-                                      value={Number(tier.maxPerOrder) || 50}
-                                      onChange={(e) => updateTierField(idx, "maxPerOrder", Number(e.target.value))}
-                                      className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#0758fc]"
+                                      type="number"
+                                      min="1"
+                                      max="200"
+                                      value={tier.maxPerOrder !== undefined && tier.maxPerOrder !== null ? tier.maxPerOrder : 1}
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (raw === "") {
+                                          updateTierField(idx, "maxPerOrder", "");
+                                        } else {
+                                          const val = parseInt(raw, 10);
+                                          updateTierField(idx, "maxPerOrder", isNaN(val) ? "" : Math.max(1, Math.min(val, 200)));
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        const val = Number(tier.maxPerOrder);
+                                        if (!val || isNaN(val) || val < 1) {
+                                          updateTierField(idx, "maxPerOrder", 1);
+                                        }
+                                      }}
+                                      className="w-16 text-center bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs font-black text-gray-900 dark:text-white"
                                     />
-                                    <div className="flex justify-between text-[10px] text-gray-400 font-semibold px-0.5">
-                                      <span>2</span>
-                                      <span>10</span>
-                                      <span>25</span>
-                                      <span className="text-[#0758fc] font-bold">50 (Standard)</span>
-                                      <span>100</span>
-                                    </div>
+                                    <span className="text-xs font-bold text-gray-500">tickets</span>
                                   </div>
-
-                                  {/* Quick Presets */}
-                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                    <span className="text-[10px] text-gray-400 mr-1">Quick presets:</span>
-                                    {[5, 10, 20, 30, 50, 100].map((preset) => (
-                                      <button
-                                        key={preset}
-                                        type="button"
-                                        onClick={() => updateTierField(idx, "maxPerOrder", preset)}
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                                          Number(tier.maxPerOrder) === preset
-                                            ? "bg-[#0758fc] text-white"
-                                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                                        }`}
-                                      >
-                                        {preset}
-                                      </button>
-                                    ))}
-                                  </div>
-
-                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
-                                    Buyers will be able to select up to <strong className="text-gray-900 dark:text-white">{tier.maxPerOrder ?? 50}</strong> tickets of this pass tier per checkout booking.
-                                  </p>
                                 </div>
-                              )}
+
+                                {/* Slider bar */}
+                                <div className="space-y-1">
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="100"
+                                    step="1"
+                                    value={Math.max(1, Number(tier.maxPerOrder) || 1)}
+                                    onChange={(e) => updateTierField(idx, "maxPerOrder", Math.max(1, Number(e.target.value)))}
+                                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#0758fc]"
+                                  />
+                                  <div className="flex justify-between text-[10px] text-gray-400 font-semibold px-0.5">
+                                    <span className={Number(tier.maxPerOrder) === 1 ? "text-amber-600 dark:text-amber-400 font-bold" : ""}>1</span>
+                                    <span>5</span>
+                                    <span>10</span>
+                                    <span>25</span>
+                                    <span className="text-[#0758fc] font-bold">50 (Standard)</span>
+                                    <span>100</span>
+                                  </div>
+                                </div>
+
+                                {/* Quick Presets */}
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                  <span className="text-[10px] text-gray-400 mr-1">Quick presets:</span>
+                                  {[1, 2, 5, 10, 20, 30, 50, 100].map((preset) => (
+                                    <button
+                                      key={preset}
+                                      type="button"
+                                      onClick={() => updateTierField(idx, "maxPerOrder", preset)}
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                        Number(tier.maxPerOrder) === preset
+                                          ? preset === 1
+                                            ? "bg-amber-500 text-white shadow-xs"
+                                            : "bg-[#0758fc] text-white shadow-xs"
+                                          : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                      }`}
+                                    >
+                                      {preset}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
+                                  {Number(tier.maxPerOrder) === 1 ? (
+                                    <>Buyers will be strictly limited to <strong className="text-amber-600 dark:text-amber-400">1 ticket</strong> of this pass tier per checkout booking.</>
+                                  ) : (
+                                    <>Buyers will be able to select up to <strong className="text-gray-900 dark:text-white">{tier.maxPerOrder || 50}</strong> tickets of this pass tier per checkout booking.</>
+                                  )}
+                                </p>
+                              </div>
                             </div>
                           )}
                         </div>
