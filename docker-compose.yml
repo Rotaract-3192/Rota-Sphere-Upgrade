@@ -16,12 +16,29 @@ services:
     env_file:
       - .env
 
+    environment:
+      - OCR_SERVICE_URL=http://ocr:5055/scan
+
+    depends_on:
+      - ocr
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     networks:
       - default
       - rotaract
+
+  ocr:
+    container_name: rotasphere-ocr
+    build:
+      context: .
+      dockerfile: Dockerfile.ocr
+    restart: unless-stopped
+    expose:
+      - "5055"
+    networks:
+      - default
 
 networks:
   default:

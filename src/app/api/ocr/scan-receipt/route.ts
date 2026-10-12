@@ -55,10 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     // --- STEP 1: Attempt ultra-fast in-memory FastAPI daemon (~2.0s) ---
+    const primaryUrl = process.env.OCR_SERVICE_URL || "http://127.0.0.1:5055/scan";
     const candidateUrls = Array.from(
       new Set(
         [
-          process.env.OCR_SERVICE_URL,
+          primaryUrl,
+          "http://ocr:5055/scan",
           "http://127.0.0.1:5055/scan",
           "http://host.docker.internal:5055/scan",
         ].filter(Boolean) as string[]
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
         }
 
         const controller = new AbortController();
-        const daemonTimeout = setTimeout(() => controller.abort(), 6000);
+        const daemonTimeout = setTimeout(() => controller.abort(), 4000);
 
         const daemonRes = await fetch(daemonUrl, {
           method: "POST",
@@ -90,7 +92,13 @@ export async function POST(req: NextRequest) {
 
         if (daemonRes.ok) {
           const daemonData: OcrScanResponse = await daemonRes.json();
-          if (daemonData.success) {
+          console.log(`[/api/ocr/scan-receipt] Success from ${daemonUrl}:`, {
+            utr: daemonData.utr,
+            detectedAmount: daemonData.detected_amount,
+            scanTime: daemonData.scan_time_seconds,
+          });
+
+          if (daemonData.success && (daemonData.utr || typeof daemonData.detected_amount === "number")) {
             return NextResponse.json({
               success: true,
               utr: daemonData.utr || null,

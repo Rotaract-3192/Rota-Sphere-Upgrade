@@ -10,6 +10,8 @@ warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"
 
 import easyocr
+from PIL import Image, ImageOps
+import numpy as np
 
 # Initialize reader globally when imported as a module / FastAPI service
 _reader = None
@@ -42,12 +44,37 @@ def detect_app_name(all_text_lower):
         return "Amazon Pay"
     return "UPI Payment App"
 
+def fixup_ocr_digits(s):
+    """Normalize common OCR letter-to-digit misreadings in 12-digit transaction numbers."""
+    replacements = {
+        'O': '0', 'o': '0',
+        'I': '1', 'l': '1', 'i': '1', '|': '1',
+        'S': '5', 's': '5',
+        'B': '8',
+        'Z': '2', 'z': '2'
+    }
+    cleaned = []
+    for ch in s:
+        if ch.isdigit():
+            cleaned.append(ch)
+        elif ch in replacements:
+            cleaned.append(replacements[ch])
+    return "".join(cleaned)
+
 def extract_receipt_data(image_path, expected_amount=None):
     reader = get_reader()
     
+    # 1. Load image and auto-orient according to EXIF tags (critical for mobile camera uploads)
+    try:
+        pil_img = Image.open(image_path)
+        pil_img = ImageOps.exif_transpose(pil_img)
+        img_input = np.array(pil_img.convert('RGB'))
+    except Exception:
+        img_input = image_path
+
     t0 = time.time()
     # readtext returns list of [ [bbox], text, confidence ]
-    results = reader.readtext(image_path)
+    results = reader.readtext(img_input)
     scan_time = round(time.time() - t0, 3)
 
     raw_tokens = [r[1].strip() for r in results if r[1].strip()]
@@ -68,7 +95,8 @@ def extract_receipt_data(image_path, expected_amount=None):
         r"ref(?:erence)?\s*no",
         r"utr(?:\s*no)?",
         r"transaction\s*id",
-        r"bank\s*ref"
+        r"bank\s*ref",
+        r"ref\s*id"
     ]
     utr_keyword_regex = re.compile("|".join(utr_keywords), re.IGNORECASE)
 
@@ -86,42 +114,64 @@ def extract_receipt_data(image_path, expected_amount=None):
     if not utr:
         for i, (bbox, text, conf) in enumerate(results):
             if utr_keyword_regex.search(text):
-                # Check up to 3 following tokens
-                for j in range(i + 1, min(i + 4, len(results))):
+                # Check up to 4 following tokens
+                for j in range(i + 1, min(i + 5, len(results))):
                     adj_text = results[j][1].replace(" ", "").replace("-", "")
+                    
+                    # Direct 12 digits
                     m12 = re.findall(r'\b\d{12}\b', adj_text)
                     if m12:
                         utr = m12[0]
                         utr_confidence = float(results[j][2])
                         break
-                    # Extract any continuous 12-digit sequence
+                    
+                    # Any continuous 12-digit sequence
                     any12 = re.findall(r'\d{12}', adj_text)
                     if any12:
                         utr = any12[0]
                         utr_confidence = float(results[j][2])
                         break
+
+                    # OCR letter-to-digit fixup (e.g. 66512939338O -> 665129393380)
+                    fixed = fixup_ocr_digits(adj_text)
+                    if len(fixed) == 12:
+                        utr = fixed
+                        utr_confidence = float(results[j][2])
+                        break
+
                 if utr:
                     break
 
-    # Strategy C: Standalone 12-digit tokens anywhere in the image
+    # Strategy C: Check combined tokens if digits were split across 2 lines (e.g. 665129 + 393381)
+    if not utr:
+        for i in range(len(results) - 1):
+            combined_digits = re.sub(r'\D', '', results[i][1] + results[i+1][1])
+            if len(combined_digits) == 12:
+                utr = combined_digits
+                utr_confidence = float(results[i][2])
+                break
+
+    # Strategy D: Standalone 12-digit tokens anywhere in the image
     if not utr:
         for bbox, text, conf in results:
             clean = text.replace(" ", "").replace("-", "")
-            # Avoid matching 10-digit mobile numbers or dates
             matches = re.findall(r'\b\d{12}\b', clean)
             if matches:
-                # Prioritize tokens that aren't account numbers with XX
-                utr = matches[0]
-                utr_confidence = float(conf)
-                break
+                # Exclude if it looks like placeholder '429218273849' from screen UI
+                if matches[0] != "429218273849":
+                    utr = matches[0]
+                    utr_confidence = float(conf)
+                    break
 
-    # Strategy D: Fallback regex search on joined full text
+    # Strategy E: Fallback regex search on joined full text
     if not utr:
         full_clean = re.sub(r'[\s\-]', '', all_text)
         all_12 = re.findall(r'\d{12}', full_clean)
-        if all_12:
-            utr = all_12[0]
-            utr_confidence = 0.85
+        for candidate in all_12:
+            if candidate != "429218273849":
+                utr = candidate
+                utr_confidence = 0.85
+                break
 
     # --- 2. AMOUNT DETECTION ---
     detected_amount = None
@@ -168,7 +218,6 @@ def extract_receipt_data(image_path, expected_amount=None):
                     val_str = m.group(1)
                     # Strip leading OCR artifact '8' or '2' if it makes the number abnormally large
                     if len(val_str) >= 4 and val_str[0] in ['8', '2'] and '.' not in val_str:
-                        # Could be 8499 -> 499, 8240 -> 240, 2945 -> 945
                         stripped = float(val_str[1:])
                         candidates.append(stripped)
                     try:

@@ -51,6 +51,7 @@ async def scan_receipt(
 
     try:
         data = extract_receipt_data(tmp_path, expected_amount)
+        print(f"[OCR Service] Processed {file.filename} in {data.get('scan_time_seconds')}s -> UTR: {data.get('utr')}, Amount: {data.get('detected_amount')}, App: {data.get('app_name')}")
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
