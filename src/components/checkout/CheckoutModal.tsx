@@ -698,21 +698,23 @@ export function CheckoutModal({
     setAmountMatches(null);
     setScanFailed(false);
 
-    // 1. Generate compressed dataUrl for fast display & order submission preview
-    try {
-      const uploadDataUrl = await compressImageFile(file);
-      setPaymentProofUrl(uploadDataUrl);
-    } catch {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") setPaymentProofUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    // 1. Generate compressed dataUrl for fast display & order submission preview in background
+    compressImageFile(file)
+      .then((uploadDataUrl) => setPaymentProofUrl(uploadDataUrl))
+      .catch(() => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") setPaymentProofUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+      });
 
     // 2. Stream raw file directly to dedicated VPS Backend OCR API (/api/ocr/scan-receipt)
     setIsScanningUtr(true);
-    setScanStatusText("VPS backend is scanning receipt to auto-detect 12-digit UTR and amount paid...");
+    setScanStatusText("Scanning receipt with AI deep learning (approx 2s)...");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const formData = new FormData();
@@ -724,7 +726,10 @@ export function CheckoutModal({
       const res = await fetch("/api/ocr/scan-receipt", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}`);
@@ -745,8 +750,9 @@ export function CheckoutModal({
       } else {
         setScanFailed(true);
       }
-    } catch (err) {
-      console.error("[CheckoutModal] Backend VPS OCR error:", err);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.warn("[CheckoutModal] Backend VPS OCR error or timeout:", err?.message);
       setScanFailed(true);
     } finally {
       setIsScanningUtr(false);

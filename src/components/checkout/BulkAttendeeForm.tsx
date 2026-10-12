@@ -180,23 +180,23 @@ export function BulkAttendeeForm({
     setDetectedUtr(null);
     setScanFailed(false);
 
-    let dataUrl = "";
-    try {
-      dataUrl = await compressImageFile(file);
-      setPaymentProofUrl(dataUrl);
-    } catch {
-      const reader = new FileReader();
-      dataUrl = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    // 1. Generate compressed dataUrl for fast display & order submission preview in background
+    compressImageFile(file)
+      .then((dataUrl) => setPaymentProofUrl(dataUrl))
+      .catch(() => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") setPaymentProofUrl(reader.result);
+        };
         reader.readAsDataURL(file);
       });
-      if (dataUrl) setPaymentProofUrl(dataUrl);
-    }
 
-    if (!dataUrl) return;
-
+    // 2. Stream raw file directly to dedicated VPS Backend OCR API (/api/ocr/scan-receipt)
     setIsScanningUtr(true);
-    setScanStatusText("VPS backend is scanning screenshot to auto-detect 12-digit UTR and amount...");
+    setScanStatusText("Scanning receipt with AI deep learning (approx 2s)...");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const formData = new FormData();
@@ -208,7 +208,10 @@ export function BulkAttendeeForm({
       const res = await fetch("/api/ocr/scan-receipt", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}`);
@@ -229,8 +232,9 @@ export function BulkAttendeeForm({
       } else {
         setScanFailed(true);
       }
-    } catch (err) {
-      console.error("[BulkAttendeeForm] Backend VPS OCR error:", err);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.warn("[BulkAttendeeForm] Backend VPS OCR error or timeout:", err?.message);
       setScanFailed(true);
     } finally {
       setIsScanningUtr(false);

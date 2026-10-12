@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ocr:service": "python -m execution.ocr_service",
+    "ocr:scan": "python execution/scan_receipt.py"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.7.4",

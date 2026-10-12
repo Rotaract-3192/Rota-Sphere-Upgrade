@@ -44,6 +44,7 @@ next-env.d.ts
 __pycache__/
 *.pyc
 *.py
+!execution/*.py
 /scratch/
 .tmp/
 *.traineddata
