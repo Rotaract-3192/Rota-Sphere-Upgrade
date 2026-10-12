@@ -65,6 +65,16 @@ export async function transferUserTicketAction(ticketId: string, toName: string,
       return { success: false, error: "Unauthorized: You do not own this ticket." };
     }
 
+    // Check Event Policy: allow_ticket_transfer
+    if (ticket.event_id && !isAdmin) {
+      const { data: eventRows } = await executeSql(`
+        SELECT allow_ticket_transfer FROM saas_events WHERE id = ${escapeSql(ticket.event_id)} LIMIT 1;
+      `);
+      if (eventRows?.[0] && eventRows[0].allow_ticket_transfer === false) {
+        return { success: false, error: "Ticket transfers are not permitted for this event per the organizer's ticket policy." };
+      }
+    }
+
     if (ticket.status !== "CONFIRMED") {
       return { success: false, error: `Tickets with status "${ticket.status}" cannot be transferred.` };
     }
@@ -165,6 +175,16 @@ export async function requestTicketRefundAction(ticketId: string, reason: string
 
     if (!isOwner && !isAdmin) {
       return { success: false, error: "Unauthorized: You do not have permission to request a refund for this ticket." };
+    }
+
+    // Check Event Policy: allow_refunds
+    if (ticket.event_id && !isAdmin) {
+      const { data: eventRows } = await executeSql(`
+        SELECT allow_refunds FROM saas_events WHERE id = ${escapeSql(ticket.event_id)} LIMIT 1;
+      `);
+      if (eventRows?.[0] && eventRows[0].allow_refunds === false) {
+        return { success: false, error: "Refunds are not permitted for this event per the organizer's ticket policy." };
+      }
     }
 
     const refundAmount = Number(ticket.price || 0);

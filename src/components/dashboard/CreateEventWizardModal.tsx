@@ -355,6 +355,27 @@ export function CreateEventWizardModal({
           : "IN_PERSON"
       );
 
+      // Load Ticket Policy (Refunds & Transfers)
+      if (eventToEdit.allow_refunds !== undefined && eventToEdit.allow_refunds !== null) {
+        setAllowRefunds(Boolean(eventToEdit.allow_refunds));
+      } else if (eventToEdit.allowRefunds !== undefined && eventToEdit.allowRefunds !== null) {
+        setAllowRefunds(Boolean(eventToEdit.allowRefunds));
+      } else {
+        setAllowRefunds(true);
+      }
+
+      if (eventToEdit.allow_ticket_transfer !== undefined && eventToEdit.allow_ticket_transfer !== null) {
+        setAllowTransfer(Boolean(eventToEdit.allow_ticket_transfer));
+      } else if (eventToEdit.allowTicketTransfer !== undefined && eventToEdit.allowTicketTransfer !== null) {
+        setAllowTransfer(Boolean(eventToEdit.allowTicketTransfer));
+      } else if (eventToEdit.allow_transfer !== undefined && eventToEdit.allow_transfer !== null) {
+        setAllowTransfer(Boolean(eventToEdit.allow_transfer));
+      } else if (eventToEdit.allowTransfer !== undefined && eventToEdit.allowTransfer !== null) {
+        setAllowTransfer(Boolean(eventToEdit.allowTransfer));
+      } else {
+        setAllowTransfer(true);
+      }
+
       // Load existing custom registration questions
       getEventCustomQuestionsAction(eventToEdit.id).then((res) => {
         if (res.success && res.questions) {
@@ -376,6 +397,8 @@ export function CreateEventWizardModal({
     } else {
       setCustomQuestions([]);
       setUpiId("");
+      setAllowRefunds(true);
+      setAllowTransfer(true);
       if (!hasUserEditedPayeeRef.current) {
         setUpiPayeeName(defaultClubName || "");
       }
@@ -2334,14 +2357,14 @@ export function CreateEventWizardModal({
               </div>
 
               {/* 5. TICKET POLICY — REFUNDS & TRANSFERS */}
-              <div className="p-6 bg-gray-50 border border-gray-200 rounded-3xl space-y-4">
+              <div className="p-6 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/80 rounded-3xl space-y-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                     <ShieldCheck size={16} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-gray-900">Ticket Policy</h4>
-                    <p className="text-xs text-gray-500">Control whether attendees can request refunds or transfer their passes to another person.</p>
+                    <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Ticket Policy</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Control whether attendees can request refunds or transfer their passes to another person.</p>
                   </div>
                 </div>
 
@@ -2349,48 +2372,60 @@ export function CreateEventWizardModal({
                   {/* Refund Toggle */}
                   <button
                     type="button"
-                    onClick={() => setAllowRefunds(!allowRefunds)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                    role="switch"
+                    aria-checked={allowRefunds}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setAllowRefunds((prev) => !prev);
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer text-left select-none ${
                       allowRefunds
-                        ? "bg-emerald-50 border-emerald-200 ring-1 ring-emerald-300/50"
-                        : "bg-gray-100 border-gray-200"
+                        ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60 ring-1 ring-emerald-400/40 shadow-xs"
+                        : "bg-gray-100 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-2xs"
                     }`}
                   >
-                    <div className="text-left">
-                      <p className={`text-sm font-extrabold ${allowRefunds ? "text-emerald-700" : "text-gray-500"}`}>
+                    <div className="pointer-events-none select-none">
+                      <p className={`text-sm font-extrabold transition-colors ${allowRefunds ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
                         Refunds
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Attendees can request a refund
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {allowRefunds ? "Attendees can request a refund" : "No refunds permitted"}
                       </p>
                     </div>
                     {/* Toggle pill */}
-                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${allowRefunds ? "bg-emerald-500" : "bg-gray-300"}`}>
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${allowRefunds ? "translate-x-5" : ""}`} />
+                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 pointer-events-none ${allowRefunds ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out ${allowRefunds ? "translate-x-5" : "translate-x-0"}`} />
                     </div>
                   </button>
 
                   {/* Transfer Toggle */}
                   <button
                     type="button"
-                    onClick={() => setAllowTransfer(!allowTransfer)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                    role="switch"
+                    aria-checked={allowTransfer}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setAllowTransfer((prev) => !prev);
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer text-left select-none ${
                       allowTransfer
-                        ? "bg-emerald-50 border-emerald-200 ring-1 ring-emerald-300/50"
-                        : "bg-gray-100 border-gray-200"
+                        ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60 ring-1 ring-emerald-400/40 shadow-xs"
+                        : "bg-gray-100 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-2xs"
                     }`}
                   >
-                    <div className="text-left">
-                      <p className={`text-sm font-extrabold ${allowTransfer ? "text-emerald-700" : "text-gray-500"}`}>
+                    <div className="pointer-events-none select-none">
+                      <p className={`text-sm font-extrabold transition-colors ${allowTransfer ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
                         Ticket Transfers
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Attendees can transfer to others
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {allowTransfer ? "Attendees can transfer to others" : "Passes are non-transferable"}
                       </p>
                     </div>
                     {/* Toggle pill */}
-                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${allowTransfer ? "bg-emerald-500" : "bg-gray-300"}`}>
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${allowTransfer ? "translate-x-5" : ""}`} />
+                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 pointer-events-none ${allowTransfer ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out ${allowTransfer ? "translate-x-5" : "translate-x-0"}`} />
                     </div>
                   </button>
                 </div>
