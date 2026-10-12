@@ -15,7 +15,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   X, Users, Check, AlertCircle, Loader2, Copy, ChevronDown, ChevronUp,
   User, Mail, Phone, ShieldCheck, QrCode, CreditCard, CheckCircle2, Package,
-  Upload, Trash2,
+  Upload, Trash2, Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -76,6 +76,16 @@ export function BulkAttendeeForm({
   const [upiId, setUpiId] = useState(event.upi_id || "");
   const [upiPayeeName, setUpiPayeeName] = useState(event.upi_payee_name || "");
   const [utrInput, setUtrInput] = useState("");
+  const [paymentProofUrl, setPaymentProofUrl] = useState<string>("");
+  const [paymentProofFile, setPaymentProofFile] = useState<{ name: string; sizeFormatted: string } | null>(null);
+  const [isScanningUtr, setIsScanningUtr] = useState(false);
+  const [scanStatusText, setScanStatusText] = useState("");
+  const [detectedUtr, setDetectedUtr] = useState<string | null>(null);
+  const [detectedAmount, setDetectedAmount] = useState<number | null>(null);
+  const [amountMatches, setAmountMatches] = useState<boolean | null>(null);
+  const [scanFailed, setScanFailed] = useState(false);
+  const [qrSaved, setQrSaved] = useState(false);
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{ orderNumber: string; ticketCount: number } | null>(null);
@@ -101,11 +111,145 @@ export function BulkAttendeeForm({
     return true;
   });
 
+  // Generate dynamic UPI QR for bulk booking
+  useEffect(() => {
+    if (isOpen && upiId && totalPrice > 0) {
+      import("qrcode").then((QRCode) => {
+        const orderRef = idempotencyKey.current.slice(0, 12).toUpperCase();
+        const baseUpiQuery = [
+          `pa=${encodeURIComponent(upiId.trim())}`,
+          `pn=${encodeURIComponent((upiPayeeName || event.title).trim())}`,
+          `am=${totalPrice.toFixed(2)}`,
+          `cu=INR`,
+          `tn=${encodeURIComponent(`Bulk Passes for ${event.title}`)}`,
+          `tr=${encodeURIComponent(orderRef)}`,
+        ].join("&");
+        const upiUri = `upi://pay?${baseUpiQuery}`;
+        QRCode.toDataURL(upiUri, {
+          width: 320,
+          margin: 2,
+          errorCorrectionLevel: "H",
+          color: { dark: "#0f172a", light: "#ffffff" },
+        }).then(setUpiQrDataUrl).catch(() => {});
+      });
+    }
+  }, [isOpen, upiId, totalPrice, upiPayeeName, event.title]);
+
+  const handleSaveQrCode = async () => {
+    if (!upiQrDataUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.share) {
+        const res = await fetch(upiQrDataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], `UPI-QR-${event.slug || "bulk-ticket"}-Rs${totalPrice.toFixed(0)}.png`, {
+          type: "image/png",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `UPI QR - ${event.title}`,
+            text: `Scan in UPI app to pay ₹${totalPrice.toLocaleString("en-IN")}`,
+          });
+          setQrSaved(true);
+          setTimeout(() => setQrSaved(false), 3000);
+          return;
+        }
+      }
+    } catch {}
+
+    try {
+      const link = document.createElement("a");
+      link.href = upiQrDataUrl;
+      link.download = `UPI-QR-${event.slug || "bulk-ticket"}-Rs${totalPrice.toFixed(0)}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setQrSaved(true);
+      setTimeout(() => setQrSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to download QR code", e);
+    }
+  };
+
+  async function handlePaymentProofSelected(file: File) {
+    if (!file) return;
+    const sizeInKb = Math.round(file.size / 1024);
+    const sizeFormatted = sizeInKb > 1024 ? `${(sizeInKb / 1024).toFixed(1)} MB` : `${sizeInKb} KB`;
+    setPaymentProofFile({ name: file.name, sizeFormatted });
+    setGlobalError(null);
+    setDetectedUtr(null);
+    setScanFailed(false);
+
+    let dataUrl = "";
+    try {
+      dataUrl = await compressImageFile(file);
+      setPaymentProofUrl(dataUrl);
+    } catch {
+      const reader = new FileReader();
+      dataUrl = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.readAsDataURL(file);
+      });
+      if (dataUrl) setPaymentProofUrl(dataUrl);
+    }
+
+    if (!dataUrl) return;
+
+    setIsScanningUtr(true);
+    setScanStatusText("AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
+
+    try {
+      const { extractUtrFromImage } = await import("@/lib/utils/utrScanner");
+      const result = await extractUtrFromImage(
+        dataUrl,
+        (_p, status) => {
+          setScanStatusText(status || "AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
+        },
+        totalPrice
+      );
+
+      if (result.success) {
+        if (result.utr) {
+          setDetectedUtr(result.utr);
+          setUtrInput(result.utr);
+        }
+        if (typeof result.detectedAmount === "number") {
+          setDetectedAmount(result.detectedAmount);
+          setAmountMatches(result.amountMatches ?? null);
+        }
+        setScanFailed(!result.utr && typeof result.detectedAmount !== "number");
+      } else {
+        setScanFailed(true);
+      }
+    } catch (err) {
+      console.error("AI UTR scan error:", err);
+      setScanFailed(true);
+    } finally {
+      setIsScanningUtr(false);
+    }
+  }
+
+  function handleRemovePaymentProof() {
+    setPaymentProofUrl("");
+    setPaymentProofFile(null);
+    setDetectedUtr(null);
+    setDetectedAmount(null);
+    setAmountMatches(null);
+    setScanFailed(false);
+    setIsScanningUtr(false);
+  }
+
   // Reset when re-opening
   const handleOpen = useCallback(() => {
     setAttendees(buildInitialRows());
     setStep("details");
     setUtrInput("");
+    setPaymentProofUrl("");
+    setPaymentProofFile(null);
+    setDetectedUtr(null);
+    setDetectedAmount(null);
+    setAmountMatches(null);
+    setScanFailed(false);
     setGlobalError(null);
     setSuccessData(null);
     setExpandedRows(new Set([0]));
@@ -242,6 +386,7 @@ export function BulkAttendeeForm({
       buyerEmail: buyerEmail.trim().toLowerCase(),
       buyerPhone: buyerPhone.trim() || undefined,
       upiTransactionId: utrInput.trim() || undefined,
+      paymentProofUrl: paymentProofUrl || undefined,
       idempotencyKey: idempotencyKey.current,
     });
 
@@ -705,12 +850,51 @@ export function BulkAttendeeForm({
 
                 {/* UPI Instructions */}
                 {upiId && (
-                  <div className="space-y-3">
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
+                  <div className="space-y-4">
+                    {/* Step 1: Scan & Pay via UPI */}
+                    <div className="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <QrCode size={16} className="text-indigo-600" />
-                        <p className="text-xs font-extrabold text-indigo-900">Pay via UPI</p>
+                        <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          1
+                        </span>
+                        <p className="text-xs font-extrabold text-indigo-900">Scan & Pay via UPI</p>
                       </div>
+
+                      {/* QR Display */}
+                      <div className="bg-white p-3 rounded-2xl border border-indigo-200 flex flex-col items-center justify-center">
+                        {upiQrDataUrl ? (
+                          <img
+                            src={upiQrDataUrl}
+                            alt="Dynamic UPI QR Code"
+                            className="w-48 h-48 object-contain"
+                          />
+                        ) : (
+                          <div className="w-48 h-48 flex items-center justify-center">
+                            <Loader2 size={20} className="animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        <p className="text-[11px] text-gray-500 font-medium mt-1">
+                          Amount: <strong className="text-gray-900 font-mono">₹{totalPrice.toLocaleString("en-IN")}</strong>
+                        </p>
+                      </div>
+
+                      {/* Download / Save QR Button */}
+                      <div className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={handleSaveQrCode}
+                          disabled={!upiQrDataUrl}
+                          className="w-full border-2 border-indigo-300 bg-white hover:bg-indigo-50 text-indigo-700 font-extrabold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98 disabled:opacity-50"
+                        >
+                          {qrSaved ? <Check size={14} className="text-emerald-600" /> : <Download size={14} />}
+                          <span>{qrSaved ? "✓ Saved to Photos / Gallery" : "Download / Save QR"}</span>
+                        </button>
+                        <p className="text-[10px] text-center text-gray-500">
+                          On mobile? Save QR to Photos and scan it from your UPI app gallery scanner.
+                        </p>
+                      </div>
+
+                      {/* UPI ID copy */}
                       <div className="bg-white border border-indigo-200 rounded-xl p-3 flex items-center justify-between">
                         <div>
                           <p className="text-[10px] text-gray-400 font-semibold">UPI ID</p>
@@ -727,27 +911,156 @@ export function BulkAttendeeForm({
                           <Copy size={11} /> Copy
                         </button>
                       </div>
-                      <p className="text-[11px] text-indigo-700 leading-relaxed">
-                        Send <strong>₹{totalPrice.toLocaleString("en-IN")}</strong> to the UPI ID above, then paste your 12-digit UTR reference below.
-                      </p>
                     </div>
 
-                    {/* UTR Input */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-700 mb-1.5">
-                        UPI UTR / Transaction ID *
-                      </label>
-                      <input
-                        type="text"
-                        value={utrInput}
-                        onChange={(e) => setUtrInput(e.target.value)}
-                        placeholder="12-digit UTR reference number"
-                        maxLength={50}
-                        className="w-full text-sm border border-gray-300 rounded-xl px-3 py-2.5 bg-white outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 font-mono"
-                      />
-                      <p className="text-[10px] text-gray-400 mt-1">
-                        Found in your UPI app under transaction history.
-                      </p>
+                    {/* Step 2: Upload Payment Proof with AI UTR Scanner */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          2
+                        </span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-900">Upload Payment Proof</p>
+                          <p className="text-[10px] text-gray-400">Screenshot will be saved to your order in the backend</p>
+                        </div>
+                      </div>
+
+                      {/* Proof File Attachment */}
+                      {paymentProofUrl ? (
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={paymentProofUrl}
+                              alt="Receipt"
+                              className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0"
+                            />
+                            <div className="min-w-0 space-y-0.5">
+                              <span className="text-xs font-bold text-gray-900 block truncate">
+                                {paymentProofFile?.name || "Payment_Screenshot.jpeg"}
+                              </span>
+                              <span className="text-[10px] text-gray-500 block">
+                                {paymentProofFile?.sizeFormatted || "Attached"}
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {isScanningUtr ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700">
+                                    <Loader2 size={10} className="animate-spin" /> AI reading...
+                                  </span>
+                                ) : (
+                                  <>
+                                    {detectedUtr && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                        <CheckCircle2 size={10} /> AI UTR
+                                      </span>
+                                    )}
+                                    {typeof detectedAmount === "number" && (
+                                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                        amountMatches
+                                          ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                                          : "text-rose-700 bg-rose-50 border border-rose-200"
+                                      }`}>
+                                        {amountMatches ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
+                                        ₹{detectedAmount.toFixed(0)} {amountMatches ? "Verified" : "Mismatch"}
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRemovePaymentProof}
+                            className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="w-full border-2 border-dashed border-gray-300 hover:border-indigo-400 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center space-y-1">
+                          <Upload size={20} className="text-indigo-500" />
+                          <span className="text-xs font-bold text-gray-800">
+                            Upload Payment Screenshot
+                          </span>
+                          <span className="text-[10px] text-gray-400">
+                            Super.money, GPay, PhonePe, Paytm, CRED or BHIM
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePaymentProofSelected(file);
+                            }}
+                          />
+                        </label>
+                      )}
+
+                      {/* AI Banners */}
+                      {isScanningUtr && (
+                        <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-800">
+                          <Loader2 size={14} className="animate-spin shrink-0 text-amber-600" />
+                          <span>{scanStatusText || "AI scanning screenshot for 12-digit UTR and amount paid..."}</span>
+                        </div>
+                      )}
+
+                      {detectedUtr && !isScanningUtr && (
+                        <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-800">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                            <span>Auto-detected UTR: <strong className="font-mono">{detectedUtr}</strong></span>
+                          </div>
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                            Auto-Filled
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Amount Verified / Mismatch Banners */}
+                      {typeof detectedAmount === "number" && !isScanningUtr && (
+                        amountMatches ? (
+                          <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-800">
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                              <span>Verified Amount: <strong className="font-mono">₹{detectedAmount.toFixed(2)}</strong> (Matches ₹{totalPrice.toLocaleString("en-IN")})</span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              Amount Verified
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-2 text-xs text-amber-800">
+                            <div className="flex items-center gap-1.5">
+                              <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                              <span>Amount Notice: Screenshot shows <strong className="font-mono">₹{detectedAmount.toFixed(2)}</strong>, required: <strong className="font-mono">₹{totalPrice.toLocaleString("en-IN")}</strong></span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              Warning
+                            </span>
+                          </div>
+                        )
+                      )}
+
+                      {/* UTR Input */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-bold text-gray-700">
+                            12-Digit UPI UTR / Ref (Optional if screenshot attached)
+                          </label>
+                          <span className="text-[10px] font-mono text-gray-400 font-bold">
+                            {utrInput.length}/12
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={utrInput}
+                          onChange={(e) => setUtrInput(e.target.value.replace(/[^0-9a-zA-Z]/g, ""))}
+                          placeholder="e.g. 429218273849"
+                          maxLength={50}
+                          className="w-full text-sm border border-gray-300 rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

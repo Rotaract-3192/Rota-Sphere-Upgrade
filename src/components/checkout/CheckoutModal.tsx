@@ -146,6 +146,11 @@ export function CheckoutModal({
   useEffect(() => {
     if (!isOpen) {
       isInitializedRef.current = false;
+      setPaymentProofUrl("");
+      setPaymentProofFile(null);
+      setIsScanningUtr(false);
+      setDetectedUtr(null);
+      setScanFailed(false);
       return;
     }
 
@@ -323,6 +328,18 @@ export function CheckoutModal({
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [qrSaved, setQrSaved] = useState(false);
+
+  // Payment Proof & AI UTR Detection State
+  const [paymentProofFile, setPaymentProofFile] = useState<{
+    name: string;
+    sizeFormatted: string;
+  } | null>(null);
+  const [isScanningUtr, setIsScanningUtr] = useState(false);
+  const [scanStatusText, setScanStatusText] = useState("");
+  const [detectedUtr, setDetectedUtr] = useState<string | null>(null);
+  const [detectedAmount, setDetectedAmount] = useState<number | null>(null);
+  const [amountMatches, setAmountMatches] = useState<boolean | null>(null);
+  const [scanFailed, setScanFailed] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<{
@@ -666,6 +683,80 @@ export function CheckoutModal({
       console.error("Failed to download QR code", e);
     }
   };
+
+  async function handlePaymentProofSelected(file: File) {
+    if (!file) return;
+    const sizeInKb = Math.round(file.size / 1024);
+    const sizeFormatted = sizeInKb > 1024 ? `${(sizeInKb / 1024).toFixed(1)} MB` : `${sizeInKb} KB`;
+    setPaymentProofFile({
+      name: file.name,
+      sizeFormatted,
+    });
+    setErrorMessage(null);
+    setDetectedUtr(null);
+    setDetectedAmount(null);
+    setAmountMatches(null);
+    setScanFailed(false);
+
+    let dataUrl = "";
+    try {
+      dataUrl = await compressImageFile(file);
+      setPaymentProofUrl(dataUrl);
+    } catch {
+      const reader = new FileReader();
+      dataUrl = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.readAsDataURL(file);
+      });
+      if (dataUrl) setPaymentProofUrl(dataUrl);
+    }
+
+    if (!dataUrl) return;
+
+    // Trigger AI OCR Scan for UTR and Amount Paid
+    setIsScanningUtr(true);
+    setScanStatusText("AI is scanning screenshot to auto-detect 12-digit UTR and amount paid...");
+
+    try {
+      const { extractUtrFromImage } = await import("@/lib/utils/utrScanner");
+      const result = await extractUtrFromImage(
+        dataUrl,
+        (progress, status) => {
+          setScanStatusText(status || "AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
+        },
+        fees.totalPayable
+      );
+
+      if (result.success) {
+        if (result.utr) {
+          setDetectedUtr(result.utr);
+          setUpiTransactionId(result.utr);
+        }
+        if (typeof result.detectedAmount === "number") {
+          setDetectedAmount(result.detectedAmount);
+          setAmountMatches(result.amountMatches ?? null);
+        }
+        setScanFailed(!result.utr && typeof result.detectedAmount !== "number");
+      } else {
+        setScanFailed(true);
+      }
+    } catch (err) {
+      console.error("AI UTR scan error:", err);
+      setScanFailed(true);
+    } finally {
+      setIsScanningUtr(false);
+    }
+  }
+
+  function handleRemovePaymentProof() {
+    setPaymentProofUrl("");
+    setPaymentProofFile(null);
+    setDetectedUtr(null);
+    setDetectedAmount(null);
+    setAmountMatches(null);
+    setScanFailed(false);
+    setIsScanningUtr(false);
+  }
 
   // Generate dynamic QR code whenever payment amount is calculated
   useEffect(() => {
@@ -1866,20 +1957,30 @@ export function CheckoutModal({
               </div>
             )}
 
-            {/* Price Summary Pill */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            {/* Reference Header Bar (Matching Reference Design) */}
+            <div className="p-3.5 bg-gray-50/80 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2 flex-wrap">
               <div>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-extrabold block">Total Payable Amount</span>
-                <span className="text-xl font-black text-gray-900 dark:text-white">₹{fees.totalPayable.toFixed(2)}</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-wider block">
+                  REFERENCE CODE
+                </span>
+                <span className="text-xs font-mono font-bold text-gray-900 dark:text-white">
+                  {holdSessionId ? `PAY-${holdSessionId.replace(/^chk_/, "").slice(0, 6).toUpperCase()}` : `PAY-${Math.random().toString(36).slice(2, 8).toUpperCase()}`}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => handleCopy(fees.totalPayable.toFixed(2), "amount")}
-                className="text-xs font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                {copiedAmount ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
-                {copiedAmount ? "Copied" : "Copy Amount"}
-              </button>
+              {holdSecondsRemaining !== null && holdSecondsRemaining > 0 && !isHoldExpired && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold font-mono">
+                  <Clock size={13} className="text-amber-600" />
+                  <span>WINDOW {Math.floor(holdSecondsRemaining / 60)}:{String(holdSecondsRemaining % 60).padStart(2, "0")}</span>
+                </div>
+              )}
+              <div className="text-right">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-wider block">
+                  PAYABLE AMOUNT
+                </span>
+                <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                  ₹{fees.totalPayable.toFixed(0)}
+                </span>
+              </div>
             </div>
 
             {/* Mobile 1-Click UPI Payment Button */}
@@ -1905,9 +2006,19 @@ export function CheckoutModal({
               <div className="flex-grow border-t border-gray-200 dark:border-gray-800" />
             </div>
 
-            {/* Dynamic UPI QR Code Box */}
-            <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-3.5">
-              <div className="bg-white p-3 rounded-2xl border-2 border-gray-900 dark:border-gray-600 shadow-md">
+            {/* ── STEP 1: Scan & Pay via UPI ── */}
+            <div className="bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
+              <div className="flex items-center gap-2 self-start">
+                <span className="w-6 h-6 rounded-full bg-pink-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                  1
+                </span>
+                <span className="text-sm font-extrabold text-gray-900 dark:text-white">
+                  Scan & Pay via UPI
+                </span>
+              </div>
+
+              {/* QR Image Box */}
+              <div className="bg-white p-4 rounded-2xl border-2 border-gray-900 dark:border-gray-600 shadow-md flex flex-col items-center justify-center">
                 {upiQrDataUrl ? (
                   <img
                     src={upiQrDataUrl}
@@ -1921,150 +2032,251 @@ export function CheckoutModal({
                 )}
               </div>
 
-              {/* Quick Actions: Save QR for Gallery Scan & Copy UPI ID */}
-              <div className="flex items-center gap-2 w-full max-w-[280px]">
+              <div className="text-center space-y-0.5">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Scan with GPay, PhonePe, Paytm, or BHIM
+                </p>
+                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                  Amount: <span className="font-mono font-extrabold">₹{fees.totalPayable.toFixed(2)}</span>
+                </p>
+              </div>
+
+              {/* Prominent Download / Save QR Button (Circled in User Reference) */}
+              <div className="w-full space-y-1.5">
                 <button
                   type="button"
                   onClick={handleSaveQrCode}
                   disabled={!upiQrDataUrl}
-                  className="flex-1 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                  title="Save QR code to scan from gallery in your UPI app"
+                  className="w-full border-2 border-rose-300 dark:border-rose-800 bg-white dark:bg-gray-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold text-xs py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
                 >
-                  {qrSaved ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Download size={13} />}
-                  <span>{qrSaved ? "Saved" : "Save QR"}</span>
+                  {qrSaved ? <Check size={16} className="text-emerald-600 dark:text-emerald-400" /> : <Download size={16} />}
+                  <span>{qrSaved ? "✓ Saved to Photos / Gallery" : "Download / Save QR"}</span>
                 </button>
+                <p className="text-[11px] text-center text-gray-500 dark:text-gray-400">
+                  On mobile? Save QR to Photos and scan it from your UPI app gallery scanner.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Cards below QR: UPI ID and Amount */}
+            <div className="space-y-2">
+              <div className="p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-400 uppercase font-black tracking-wider block">
+                    OFFICIAL UPI ID (GPAY • PHONEPE • PAYTM • CRED)
+                  </span>
+                  <span className="font-mono font-bold text-xs text-gray-900 dark:text-white truncate block">
+                    {targetUpiId}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleCopy(targetUpiId, "upi")}
-                  className="flex-1 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  title="Copy Organizer UPI ID"
+                  className="text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
                 >
-                  {copiedUpi ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
+                  {copiedUpi ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                   <span>{copiedUpi ? "Copied" : "Copy UPI ID"}</span>
                 </button>
               </div>
 
-              {/* Payee Info */}
-              <div className="w-full bg-white dark:bg-gray-900 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs text-center space-y-1 block">
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase w-full block text-center">Organizer UPI ID (VPA)</span>
-                <span className="font-mono font-bold text-gray-900 dark:text-white w-full block text-center truncate">{targetUpiId}</span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 w-full block text-center truncate">Payee: {targetPayeeName}</span>
+              <div className="p-3.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-400 uppercase font-black tracking-wider block">
+                    EXACT AMOUNT TO TRANSFER
+                  </span>
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">
+                    ₹{fees.totalPayable.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(fees.totalPayable.toFixed(2), "amount")}
+                  className="text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+                >
+                  {copiedAmount ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                  <span>{copiedAmount ? "Copied" : "Copy Amount"}</span>
+                </button>
               </div>
             </div>
 
-            {/* Step 2: Payment Confirmation (Screenshot or UTR Reference) */}
-            <div className="space-y-4 p-5 bg-blue-50/60 dark:bg-gray-800/80 border border-blue-200/80 dark:border-gray-700 rounded-3xl">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <CheckCircle2 size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
-                    Confirm Payment Proof
+            {/* ── STEP 2: Upload Payment Proof (Matching Screenshot 1) ── */}
+            <div className="space-y-4 p-5 bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-pink-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                    2
                   </span>
-                  <span className="text-[10px] font-extrabold text-[#0758fc] dark:text-blue-400 bg-blue-100/70 dark:bg-blue-950/70 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                    Screenshot or UTR
-                  </span>
+                  <div>
+                    <span className="text-sm font-extrabold text-gray-900 dark:text-white block">
+                      Upload Payment Proof
+                    </span>
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold block">
+                      Takes 10 seconds to confirm
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Upload your payment screenshot to confirm instantly, or enter your 12-digit UPI UTR number below.
-                </p>
               </div>
 
-              {/* Option 1: Payment Screenshot Attachment */}
+              {/* Payment App Screenshot Attachment */}
               <div className="space-y-2">
-                <label className="block text-xs font-extrabold text-gray-900 dark:text-white flex items-center justify-between w-full">
-                  <span className="flex items-center gap-1.5">
-                    <Camera size={15} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
-                    Attach Payment Screenshot Proof
-                  </span>
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full font-extrabold">
-                    Instant Verification
-                  </span>
+                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+                  Payment App Screenshot <span className="text-rose-500">*</span>
                 </label>
 
                 {paymentProofUrl ? (
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-between gap-3 shadow-xs w-full">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shadow-xs w-full">
                     <div className="flex items-center gap-3 min-w-0">
-                      <img src={paymentProofUrl} alt="Receipt Preview" className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-gray-900 dark:text-white block truncate">Payment Screenshot Attached</span>
-                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold block">✓ Ready to Confirm (UTR is optional)</span>
+                      <img
+                        src={paymentProofUrl}
+                        alt="Receipt Preview"
+                        className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0"
+                      />
+                      <div className="min-w-0 space-y-1">
+                        <span className="text-xs font-bold text-gray-900 dark:text-white block truncate">
+                          {paymentProofFile?.name || "Payment_Screenshot.jpeg"}
+                        </span>
+                        <span className="text-[11px] text-gray-500 dark:text-gray-400 block">
+                          {paymentProofFile?.sizeFormatted || "Image attached"}
+                        </span>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {isScanningUtr ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                              <Loader2 size={10} className="animate-spin text-amber-600 shrink-0" />
+                              AI reading screenshot...
+                            </span>
+                          ) : (
+                            <>
+                              {detectedUtr && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+                                  <CheckCircle2 size={10} className="text-emerald-600 shrink-0" />
+                                  AI UTR
+                                </span>
+                              )}
+                              {typeof detectedAmount === "number" && (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  amountMatches
+                                    ? "bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700"
+                                    : "bg-rose-50 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-700"
+                                }`}>
+                                  {amountMatches ? <CheckCircle2 size={10} className="text-emerald-600 shrink-0" /> : <AlertCircle size={10} className="text-rose-600 shrink-0" />}
+                                  ₹{detectedAmount.toFixed(0)} {amountMatches ? "Verified" : "Mismatch"}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setPaymentProofUrl("")}
-                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors shrink-0 cursor-pointer"
+                      onClick={handleRemovePaymentProof}
+                      className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors shrink-0 cursor-pointer"
                       title="Remove Screenshot"
                     >
-                      <Trash2 size={16} />
+                      <X size={16} />
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full border-2 border-dashed border-blue-300 dark:border-gray-700 hover:border-[#0758fc] dark:hover:border-blue-500 bg-white dark:bg-gray-900 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-blue-50/40 dark:hover:bg-gray-800/60 group text-center space-y-1">
-                    <Upload size={22} className="text-[#0758fc] dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-extrabold text-gray-900 dark:text-white group-hover:text-[#0758fc] dark:group-hover:text-blue-400 transition-colors block w-full text-center">
-                      Click to Upload Payment Receipt Screenshot
+                  <label className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-pink-500 dark:hover:border-pink-500 bg-gray-50 dark:bg-gray-900 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-pink-50/20 text-center space-y-1.5">
+                    <Upload size={24} className="text-pink-600 dark:text-pink-400" />
+                    <span className="text-xs font-extrabold text-gray-900 dark:text-white block">
+                      Click to Upload Payment Screenshot
                     </span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 block w-full text-center">PNG, JPG, or WebP screenshot from GPay / PhonePe / Paytm</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
+                      Super.money, GPay, PhonePe, Paytm, CRED or BHIM receipt
+                    </span>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const compressed = await compressImageFile(file);
-                            setPaymentProofUrl(compressed);
-                            setErrorMessage(null);
-                          } catch {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              if (typeof reader.result === "string") {
-                                setPaymentProofUrl(reader.result);
-                                setErrorMessage(null);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }
+                        if (file) handlePaymentProofSelected(file);
                       }}
                     />
                   </label>
                 )}
               </div>
 
-              {/* Visual "OR" Divider */}
-              <div className="relative flex items-center justify-center py-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-blue-200/80 dark:border-gray-700" />
+              {/* AI Detection Status Banners */}
+              {isScanningUtr && (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                  <Loader2 size={16} className="animate-spin text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="font-semibold">{scanStatusText || "AI is scanning screenshot to auto-detect 12-digit UTR and amount paid..."}</span>
                 </div>
-                <span className="relative bg-blue-50 dark:bg-gray-800 px-3 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 rounded-full">
-                  OR ENTER UTR NUMBER
-                </span>
-              </div>
+              )}
 
-              {/* Option 2: 12-Digit UTR Reference Input (Optional) */}
+              {detectedUtr && !isScanningUtr && (
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-2xl flex items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="font-semibold truncate">
+                      Auto-detected 12-digit UTR: <strong className="font-mono text-emerald-700 dark:text-emerald-300">{detectedUtr}</strong>
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 shrink-0">
+                    Auto-Filled
+                  </span>
+                </div>
+              )}
+
+              {/* Amount Verified / Mismatch Banners */}
+              {typeof detectedAmount === "number" && !isScanningUtr && (
+                amountMatches ? (
+                  <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-2xl flex items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="font-semibold truncate">
+                        Verified Paid Amount: <strong className="font-mono text-emerald-700 dark:text-emerald-300">₹{detectedAmount.toFixed(2)}</strong> (Matches total ₹{fees.totalPayable.toFixed(2)})
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 shrink-0">
+                      Amount Verified
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-2xl flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="font-semibold">
+                        Amount Notice: Screenshot indicates <strong className="font-mono text-amber-800 dark:text-amber-300">₹{detectedAmount.toFixed(2)}</strong>, but required payable amount is <strong className="font-mono text-gray-900 dark:text-white">₹{fees.totalPayable.toFixed(2)}</strong>.
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 shrink-0">
+                      Amount Warning
+                    </span>
+                  </div>
+                )
+              )}
+
+              {scanFailed && !isScanningUtr && paymentProofUrl && (
+                <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-center gap-2 text-xs text-blue-900 dark:text-blue-300">
+                  <AlertCircle size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>Could not auto-detect details from screenshot. Please enter your 12-digit UTR manually below.</span>
+                </div>
+              )}
+
+              {/* 12-Digit UPI UTR Input Field */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <Clock size={14} className="text-[#0758fc] dark:text-blue-400 shrink-0" />
-                    12-Digit UPI Reference / UTR Number
+                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                    12-Digit UPI UTR / Ref (Optional)
                   </label>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                    {paymentProofUrl ? "Optional (Screenshot attached)" : "Optional if screenshot uploaded"}
+                  <span className="text-[11px] font-mono font-bold text-gray-400 dark:text-gray-500">
+                    {upiTransactionId.length}/12
                   </span>
                 </div>
                 <input
                   type="text"
-                  maxLength={32}
-                  placeholder="e.g. 421893821034 (Optional)"
+                  maxLength={16}
+                  placeholder="e.g. 429218273849"
                   value={upiTransactionId}
                   onChange={(e) => {
-                    setUpiTransactionId(e.target.value);
+                    const cleaned = e.target.value.replace(/[^0-9a-zA-Z]/g, "");
+                    setUpiTransactionId(cleaned);
                     setErrorMessage(null);
                   }}
-                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-[#0758fc] focus:ring-2 focus:ring-[#0758fc]/10 block"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/10 block"
                 />
               </div>
 
@@ -2092,10 +2304,32 @@ export function CheckoutModal({
                   </div>
                 )}
               </div>
+
+              {/* Confirm & Submit Proof Button (Matching Screenshot 1) */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  disabled={loading || (!paymentProofUrl && !upiTransactionId.trim()) || isHoldExpired}
+                  onClick={() => handleSubmitOrder(upiTransactionId)}
+                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 text-center"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Submitting Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Confirm & Submit Proof</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Navigation / Submit Slider */}
-            <div className="space-y-3 pt-2">
+            {/* Navigation Back */}
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -2110,27 +2344,6 @@ export function CheckoutModal({
               >
                 <ArrowLeft size={14} /> {hasApplicableCustomQuestions ? "Back to Extra Details" : "Back to Pass Selection"}
               </button>
-
-              {(() => {
-                const canSubmit =
-                  (isFreeOrder || Boolean(paymentProofUrl || upiTransactionId.trim())) && !isHoldExpired;
-                return (
-                  <HoldToConfirm
-                    onConfirm={() => handleSubmitOrder(upiTransactionId)}
-                    label={
-                      loading
-                        ? "Submitting..."
-                        : isHoldExpired
-                        ? "Hold Expired — Re-lock Seats Above"
-                        : !canSubmit
-                        ? "Attach Screenshot or Enter UTR First"
-                        : "Hold to Submit Ticket for Approval"
-                    }
-                    disabled={loading || !canSubmit || isHoldExpired}
-                    loading={loading}
-                  />
-                );
-              })()}
             </div>
           </div>
         ) : checkoutStep === "REGISTRATION_DETAILS" ? (

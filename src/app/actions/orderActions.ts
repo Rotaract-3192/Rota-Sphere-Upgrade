@@ -76,6 +76,8 @@ async function ensureUpiColumns() {
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS upi_transaction_id VARCHAR(128);
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS upi_payee_id VARCHAR(255);
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS upi_receipt_url TEXT;
+      ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS payment_proof_url TEXT;
+      ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS upi_screenshot_url TEXT;
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS payment_rejection_reason TEXT;
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS verified_by_user_id VARCHAR(128);
       ALTER TABLE saas_orders ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
@@ -122,6 +124,7 @@ async function ensureUpiColumns() {
       ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS club_name VARCHAR(255);
       ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS designation VARCHAR(255);
       ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS zone VARCHAR(100);
+      ALTER TABLE saas_tickets ADD COLUMN IF NOT EXISTS payment_proof_url TEXT;
     `);
   } catch (_) { /* ignore if constraint already updated */ }
 
@@ -2104,7 +2107,7 @@ export async function createBulkTicketOrderAction(
         customer_user_id, customer_name, customer_email, customer_phone,
         subtotal_amount, discount_amount, platform_fee, convenience_fee, tax_amount, total_amount,
         currency, status, payment_method, payment_gateway,
-        upi_transaction_id, upi_receipt_url,
+        upi_transaction_id, upi_receipt_url, payment_proof_url,
         idempotency_key, custom_answers,
         created_at, updated_at
       )
@@ -2127,6 +2130,7 @@ export async function createBulkTicketOrderAction(
         ${isFree ? "'free'" : "'upi_qr'"},
         'UPI_DIRECT',
         ${input.upiTransactionId ? escapeSql(input.upiTransactionId) : "NULL"},
+        ${input.paymentProofUrl ? escapeSql(input.paymentProofUrl) : "NULL"},
         ${input.paymentProofUrl ? escapeSql(input.paymentProofUrl) : "NULL"},
         ${input.idempotencyKey ? escapeSql(input.idempotencyKey) : "NULL"},
         ${escapeSql(JSON.stringify({ bulk_slab_size: slabSize, bulk_group_id: bulkGroupId }))}::jsonb,
@@ -2156,7 +2160,7 @@ export async function createBulkTicketOrderAction(
         INSERT INTO saas_tickets (
           ticket_code, order_id, event_id, ticket_tier_id,
           owner_user_id, attendee_name, attendee_email, attendee_phone,
-          qr_token, status,
+          qr_token, status, payment_proof_url,
           bulk_order_group_id,
           custom_answers,
           created_at, updated_at
@@ -2171,6 +2175,7 @@ export async function createBulkTicketOrderAction(
           ${attendee.phone ? escapeSql(attendee.phone.trim()) : "NULL"},
           ${escapeSql(qrToken)},
           ${escapeSql(ticketStatus)},
+          ${input.paymentProofUrl ? escapeSql(input.paymentProofUrl) : "NULL"},
           ${escapeSql(bulkGroupId)}::uuid,
           ${escapeSql(JSON.stringify(attendee.customAnswers || {}))}::jsonb,
           NOW(), NOW()
