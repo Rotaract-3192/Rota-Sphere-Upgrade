@@ -698,29 +698,59 @@ export function CheckoutModal({
     setAmountMatches(null);
     setScanFailed(false);
 
-    let dataUrl = "";
+    let highResDataUrl = "";
     try {
-      dataUrl = await compressImageFile(file);
-      setPaymentProofUrl(dataUrl);
-    } catch {
       const reader = new FileReader();
-      dataUrl = await new Promise<string>((resolve) => {
+      highResDataUrl = await new Promise<string>((resolve) => {
         reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
         reader.readAsDataURL(file);
       });
-      if (dataUrl) setPaymentProofUrl(dataUrl);
+    } catch {
+      // fallback
     }
 
-    if (!dataUrl) return;
+    let uploadDataUrl = "";
+    try {
+      uploadDataUrl = await compressImageFile(file);
+      setPaymentProofUrl(uploadDataUrl);
+    } catch {
+      uploadDataUrl = highResDataUrl;
+      if (uploadDataUrl) setPaymentProofUrl(uploadDataUrl);
+    }
+
+    const ocrInputUrl = highResDataUrl || uploadDataUrl;
+    if (!ocrInputUrl) return;
 
     // Trigger AI OCR Scan for UTR and Amount Paid
     setIsScanningUtr(true);
-    setScanStatusText("AI is scanning screenshot to auto-detect 12-digit UTR and amount paid...");
+    setScanStatusText("AI is scanning receipt to auto-detect 12-digit UTR and amount paid...");
 
+    try {
+      // 1. Primary: Fast, reliable Next.js Server Action on VPS
+      const { scanReceiptServerAction } = await import("@/app/actions/ocrActions");
+      const serverResult = await scanReceiptServerAction(ocrInputUrl, fees.totalPayable);
+
+      if (serverResult.success && (serverResult.utr || typeof serverResult.detectedAmount === "number")) {
+        if (serverResult.utr) {
+          setDetectedUtr(serverResult.utr);
+          setUpiTransactionId(serverResult.utr);
+        }
+        if (typeof serverResult.detectedAmount === "number") {
+          setDetectedAmount(serverResult.detectedAmount);
+          setAmountMatches(serverResult.amountMatches ?? null);
+        }
+        setScanFailed(!serverResult.utr && typeof serverResult.detectedAmount !== "number");
+        return;
+      }
+    } catch (serverErr) {
+      console.warn("Server OCR unavailable, trying client fallback:", serverErr);
+    }
+
+    // 2. Fallback: Client-side WebAssembly scanner
     try {
       const { extractUtrFromImage } = await import("@/lib/utils/utrScanner");
       const result = await extractUtrFromImage(
-        dataUrl,
+        ocrInputUrl,
         (progress, status) => {
           setScanStatusText(status || "AI is scanning screenshot to auto-detect 12-digit UTR and amount...");
         },
